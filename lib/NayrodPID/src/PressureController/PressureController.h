@@ -5,6 +5,7 @@
 static constexpr float M_PI = 3.14159265358979323846f;
 #endif
 
+#include "FlowLoopGains.h"
 #include "SimpleKalmanFilter/SimpleKalmanFilter.h"
 #include <algorithm>
 #include <cmath> // std::fmax (getCoffeeOutputEstimate())
@@ -39,8 +40,33 @@ class PressureController {
 
     void setDeadVolume(float deadVol) { _puckSaturatedVolume = deadVol; };
 
+    // === Measured-flow control (fork) ===
+    // When enabled, FLOW mode runs closed loop on the flow reported by setMeasuredFlow() and the
+    // pressure setpoint of the phase acts as a ceiling through an outer limiter. With no fresh
+    // measurement the pump is stopped instead of falling back to the pump model.
+    void enableMeasuredFlowControl(bool enabled) { _flowLoopEnabled = enabled; }
+    bool isMeasuredFlowControlEnabled() const { return _flowLoopEnabled; }
+    void setMeasuredFlow(float flow, bool valid) {
+        _measuredFlow = flow;
+        _measuredFlowValid = valid;
+    }
+    float getMeasuredFlow() const { return _measuredFlow; }
+    bool isMeasuredFlowValid() const { return _measuredFlowValid; }
+    void setFlowLoopGains(const FlowLoopGains &gains) { _flowGains = gains; }
+    const FlowLoopGains &getFlowLoopGains() const { return _flowGains; }
+    void resetFlowLoop();                                          // call when leaving FLOW mode
+    float getEffectiveFlowTarget() const { return _flowTargetEff; } // target after the ceiling limiter (ml/s)
+    bool isPressureLimiting() const { return _limBinding; }        // ceiling limiter is trimming the target
+    float getFlowLoopDuty() const { return _flowDuty; }            // last inner-loop output (0..1)
+    float getFlowLoopIntegral() const { return _flowIntegral; }
+    float getRampedFlowSetpoint() const { return _flowSetpointRamped; }
+
   private:
     float getPumpDutyCycleForPressure();
+    float getPumpDutyCycleMeasuredFlow(float target);
+    float applyPressureLimiter(float target);
+    float rampFlowSetpoint(float target);
+    float modelDutyFraction(float flow) const; // pump-model feedforward duty (0..1) for a flow
     void virtualScale();
     void filterSensor(float sampleTime);
     bool _pressureInitialized = false;
@@ -109,6 +135,19 @@ class PressureController {
     int _puckCounter = 0;
     float exportPumpFlowRate = 0.0f; // To disociate the exported value from the internal because of filtering (cosmetic) purpose
     SimpleKalmanFilter *_pressureKalmanFilter;
+
+    // === Measured-flow loop state (fork) ===
+    bool _flowLoopEnabled = false;
+    float _measuredFlow = 0.0f;      // ml/s from the flow meter
+    bool _measuredFlowValid = false; // false = stale or no meter -> pump off in FLOW mode
+    FlowLoopGains _flowGains{};
+    bool _flowLoopArmed = false; // integrator pre-loaded for the current flow phase
+    float _flowSetpointRamped = 0.0f; // slewed flow target (ml/s)
+    float _flowIntegral = 0.0f;  // inner-loop integral term (duty fraction)
+    float _flowDuty = 0.0f;      // last inner-loop output (duty fraction)
+    float _limIntegral = 0.0f;   // ceiling limiter integral (ml/s)
+    bool _limBinding = false;    // ceiling limiter currently trimming the target
+    float _flowTargetEff = 0.0f; // flow target after the limiter (ml/s)
 };
 
 #endif // PRESSURE_CONTROLLER_H

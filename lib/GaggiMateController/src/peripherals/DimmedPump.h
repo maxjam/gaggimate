@@ -1,5 +1,6 @@
 #ifndef DIMMEDPUMP_H
 #define DIMMEDPUMP_H
+#include "MeterLink.h"
 #include "PSM.h"
 #include "PressureController/PressureController.h"
 #include "PressureSensor.h"
@@ -40,11 +41,26 @@ class DimmedPump : public Pump {
     void setValveState(bool open);
     void setBinaryMode(bool binaryMode);
 
+    // Fork: measured-flow control. With a meter link attached, FLOW mode runs closed loop on
+    // the meter's ml/s and telemetry carries measured flow; without one everything is stock.
+    void setMeterLink(MeterLink *link);
+    MeterLink *getMeterLink() const { return _meter; }
+    void setFlowLoopGains(const FlowLoopGains &gains) { _pressureController.setFlowLoopGains(gains); }
+    const FlowLoopGains &getFlowLoopGains() const { return _pressureController.getFlowLoopGains(); }
+    float getMeasuredFlow() const { return _pressureController.getMeasuredFlow(); }
+    bool isMeasuredFlowValid() const { return _pressureController.isMeasuredFlowValid(); }
+    float getEffectiveFlowTarget() const { return _pressureController.getEffectiveFlowTarget(); }
+    bool isPressureLimiting() const { return _pressureController.isPressureLimiting(); }
+    // True while a flow phase is being held at zero because the meter data is missing.
+    bool isFlowLoopFaulted() const { return _mode == ControlMode::FLOW && _ctrlFlow > 0.0f && _meter != nullptr && !isMeasuredFlowValid(); }
+    ControlMode getMode() const { return _mode; }
+
   private:
     uint8_t _ssr_pin;
     uint8_t _sense_pin;
     PSM _psm;
     PressureSensor *_pressureSensor;
+    MeterLink *_meter = nullptr;
     const PressureControlRate _controlRate;
     PressureController _pressureController;
 

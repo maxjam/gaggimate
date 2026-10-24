@@ -66,8 +66,21 @@ void PressureController::update(ControlMode mode, bool freshPressure, float samp
     if (freshPressure)
         filterSensor(sampleTime);
 
-    if ((mode == ControlMode::FLOW || mode == ControlMode::PRESSURE) && *_rawPressureSetpoint > 0.0f &&
-        *_rawFlowSetpoint > 0.0f) {
+    if (mode == ControlMode::FLOW && _flowLoopEnabled) {
+        // Fork: flow phases run closed loop on the flow meter. The phase's pressure setpoint is a
+        // ceiling, enforced by trimming the flow target (cascade) rather than by racing two duty
+        // outputs through min(), which is what stalled stock flow phases below their limit.
+        _errorIntegral = 0.0f; // leave the pressure loop clean for a following pressure phase
+        if (!_measuredFlowValid) {
+            // Fail-safe: no fresh measurement -> no pump. No silent fallback to the model.
+            resetFlowLoop();
+            *_ctrlOutput = 0.0f;
+        } else {
+            const float target = applyPressureLimiter(rampFlowSetpoint(*_rawFlowSetpoint));
+            *_ctrlOutput = getPumpDutyCycleMeasuredFlow(target);
+        }
+    } else if ((mode == ControlMode::FLOW || mode == ControlMode::PRESSURE) && *_rawPressureSetpoint > 0.0f &&
+               *_rawFlowSetpoint > 0.0f) {
         float flowOutput = getPumpDutyCycleForFlowRate();
         float pressureOutput = getPumpDutyCycleForPressure();
         *_ctrlOutput = std::min(flowOutput, pressureOutput);
@@ -125,6 +138,103 @@ float PressureController::getPumpDutyCycleForFlowRate() const {
     return std::clamp(duty, 0.0f, 100.0f);
 }
 
+// ---------------------------------------------------------------------------------------------
+// Measured-flow control (fork)
+// ---------------------------------------------------------------------------------------------
+
+float PressureController::modelDutyFraction(float flow) const {
+    const float geometricFlow = getGeometricFlow();
+    if (flow <= 0.0f || geometricFlow <= 0.0f)
+        return 0.0f;
+    return std::clamp((flow + getSlip()) / geometricFlow, 0.0f, 1.0f);
+}
+
+void PressureController::resetFlowLoop() {
+    _flowLoopArmed = false;
+    _flowSetpointRamped = 0.0f;
+    _flowIntegral = 0.0f;
+    _flowDuty = 0.0f;
+    _limIntegral = 0.0f;
+    _limBinding = false;
+    _flowTargetEff = 0.0f;
+}
+
+// Slews the phase's flow target so a step (phase change, profile ramp, loop start) does not kick
+// the PI into overshoot through the pump's lag. A new phase starts the slew from the flow that
+// is actually running. ramp <= 0 disables the slew.
+float PressureController::rampFlowSetpoint(float target) {
+    if (target <= 0.0f) {
+        _flowSetpointRamped = 0.0f;
+        return 0.0f;
+    }
+    if (!_flowLoopArmed) {
+        _flowSetpointRamped = std::clamp(_measuredFlow, 0.0f, target);
+    }
+    if (_flowGains.ramp <= 0.0f) {
+        _flowSetpointRamped = target;
+        return target;
+    }
+    const float maxStep = _flowGains.ramp * _dt;
+    _flowSetpointRamped += std::clamp(target - _flowSetpointRamped, -maxStep, maxStep);
+    return _flowSetpointRamped;
+}
+
+// Outer loop: the phase's pressure setpoint is a ceiling. Below it the flow target passes
+// through untouched; as pressure approaches it the target is trimmed (P) and the integral
+// settles on whatever flow the puck passes at the ceiling (I). Tracking anti-windup while
+// the limiter is not binding makes it engage from exactly the target, with no wind-up.
+float PressureController::applyPressureLimiter(float target) {
+    const float ceiling = *_rawPressureSetpoint;
+    if (ceiling <= 0.2f || target <= 0.0f) {
+        _limIntegral = 0.0f;
+        _limBinding = false;
+        _flowTargetEff = target;
+        return target;
+    }
+    const float ep = ceiling - _filteredPressureSensor; // > 0 while below the ceiling
+    const float capUnclamped = _flowGains.limKp * ep + _limIntegral;
+    if (capUnclamped >= target && ep > 0.0f) {
+        _limIntegral = target - _flowGains.limKp * ep; // track: cap == target
+        _limBinding = false;
+        _flowTargetEff = target;
+        return target;
+    }
+    _limBinding = true;
+    const float cap = std::clamp(capUnclamped, 0.0f, target);
+    const bool windingDownAtZero = cap <= 0.0f && ep < 0.0f;
+    if (!windingDownAtZero)
+        _limIntegral += _flowGains.limKi * ep * _dt;
+    _limIntegral = std::clamp(_limIntegral, -_flowGains.limKp * _maxPressure, target);
+    _flowTargetEff = cap;
+    return cap;
+}
+
+// Inner loop: PI on the measured flow, output is the pump duty. Integrator pre-loaded with a
+// fixed start duty at the beginning of a flow phase (model-free head start), optional pump-model
+// feedforward weighted by gains.ff, conditional integration against the 0..100 % limits.
+float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
+    if (*_rawFlowSetpoint <= 0.0f) { // the phase asks for no flow (blooming etc.)
+        resetFlowLoop();
+        return 0.0f;
+    }
+    const float ffDuty = _flowGains.ff > 0.0f ? _flowGains.ff * modelDutyFraction(target) : 0.0f;
+    if (!_flowLoopArmed) {
+        _flowIntegral = std::max(0.0f, _flowGains.startDuty - ffDuty);
+        _flowLoopArmed = true;
+    }
+    const float e = target - _measuredFlow;
+    const float p = _flowGains.kp * e;
+    float duty = ffDuty + p + _flowIntegral;
+    const bool saturatedHigh = duty >= 1.0f && e > 0.0f;
+    const bool saturatedLow = duty <= 0.0f && e < 0.0f;
+    if (!saturatedHigh && !saturatedLow)
+        _flowIntegral += _flowGains.ki * e * _dt;
+    _flowIntegral = std::clamp(_flowIntegral, -1.0f, 1.0f);
+    duty = std::clamp(ffDuty + p + _flowIntegral, 0.0f, 1.0f);
+    _flowDuty = duty;
+    return duty * 100.0f;
+}
+
 void PressureController::setPumpFlowCoeff(float oneBarFlow, float nineBarFlow) {
     // Set the affine pump flow model coefficients based on flow measurement at 1 bar and 9 bar
     _pumpFlowCoefficients[0] = 0.0f;
@@ -175,7 +285,9 @@ void PressureController::tare() {
 }
 
 void PressureController::virtualScale() {
-    float newPumpFlowRate = pumpFlowModel(*_ctrlOutput);
+    // Fork: with a live flow meter the estimator runs on measured pump flow instead of the model.
+    const bool useMeasured = _flowLoopEnabled && _measuredFlowValid;
+    float newPumpFlowRate = useMeasured ? std::max(0.0f, _measuredFlow) : pumpFlowModel(*_ctrlOutput);
     applyLowPassFilter(&_pumpFlowRate, newPumpFlowRate, _filterEstimatorFrequency, _dt);
     _pumpVolume += _pumpFlowRate * _dt;
     applyLowPassFilter(&exportPumpFlowRate, newPumpFlowRate, _filterEstimatorFrequency / 2, _dt);

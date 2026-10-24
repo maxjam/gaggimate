@@ -82,6 +82,10 @@ void GaggiMateController::setup() {
     if (_config.waterButtonPin != 0) {
         waterBtn = new DigitalInput(_config.waterButtonPin, [this](const bool state) { _comms.sendButtonState(2, state); });
     }
+#if defined(METER_LINK_PORT) && METER_LINK_PORT == 5
+    // J5 carries the meter link in this build; its HX711 pins are the UART, so no hardware scale.
+    ESP_LOGI(LOG_TAG, "Meter link on J5: hardware scale disabled");
+#else
     this->hardwareScale = new HardwareScale(
         _config.scaleDat0Pin, _config.scaleDat1Pin, _config.scaleClkPin,
         [this](float weight, float cell1Weight, float cell2Weight, bool cell1Valid, bool cell2Valid) {
@@ -90,8 +94,24 @@ void GaggiMateController::setup() {
             }
         },
         [](float, float) {});
+#endif
+
+    setupMeterLink();
 
     // 4-Pin peripheral port
+#if defined(METER_LINK_PORT) && METER_LINK_PORT == 4
+    // J4 is the meter link in this build. With METER_LINK_ALBA the Alba hangs on the meter board:
+    // tank distance arrives as $T and the display's LED commands leave as $L.
+    if (meterLink != nullptr && METER_LINK_ALBA) {
+        _config.capabilites.ledControls = true;
+        _config.capabilites.tof = true;
+        _comms.onLedControl([this](uint8_t channel, uint8_t brightness) { meterLink->sendLed(channel, brightness); });
+        meterLink->onTank([this](int distanceMm) {
+            if (_comms.isConnected())
+                _comms.sendTofMeasurement(static_cast<uint32_t>(distanceMm));
+        });
+    }
+#else
     if (!_config.capabilites.dualBoiler) {
         albaComms = new SoftWire(_config.sunriseSdaPin, _config.sunriseSclPin);
         albaComms->setTxBuffer(albaSwTxBuffer, sizeof(albaSwTxBuffer));
@@ -108,6 +128,7 @@ void GaggiMateController::setup() {
             _comms.onLedControl([this](uint8_t channel, uint8_t brightness) { ledController->setChannel(channel, brightness); });
         }
     }
+#endif
     if (!_config.capabilites.tof && _config.tankLevelPin > 0) {
         tankLevel = new DigitalInput(_config.tankLevelPin, [this](const bool) { sendTankLevel(); }, 5);
     }
@@ -118,7 +139,9 @@ void GaggiMateController::setup() {
     capabilities.led_control = _config.capabilites.ledControls;
     capabilities.dual_boiler = _config.capabilites.dualBoiler;
 
-    this->hardwareScale->setup();
+    if (this->hardwareScale != nullptr) {
+        this->hardwareScale->setup();
+    }
 
     auto addAddon = [&capabilities](uint32_t type) {
         const auto maxAddons = sizeof(capabilities.addons) / sizeof(capabilities.addons[0]);
@@ -132,18 +155,21 @@ void GaggiMateController::setup() {
     if (this->gearpumpAddon != nullptr) {
         addAddon(ADDON_GEARPUMP);
     }
-    if (this->hardwareScale->isAvailable()) {
+    if (this->hardwareScale != nullptr && this->hardwareScale->isAvailable()) {
         addAddon(ADDON_HW_SCALE);
     }
 
     // Steam switch held at power-on opens the BLE pairing window; read it here since steamBtn->setup() runs later.
     _comms.init("GPBLS", _config.name.c_str(), _version, capabilities, isSteamSwitchOn());
 
-    if (_config.capabilites.ledControls) {
+    if (_config.capabilites.ledControls && ledController != nullptr) {
         ledController->setup();
     }
-    if (_config.capabilites.tof) {
+    if (_config.capabilites.tof && distanceSensor != nullptr) {
         distanceSensor->setup();
+    }
+    if (meterLink != nullptr) {
+        meterLink->setup();
     }
 
     if (this->gearpumpAddon != nullptr) {
@@ -273,6 +299,9 @@ void GaggiMateController::setup() {
         if (_config.capabilites.dimming) {
             static_cast<DimmedPump *>(pump)->setValveState(open);
         }
+        if (meterLink != nullptr) {
+            meterLink->sendBrewing(open);
+        }
     });
     // Heaters stay off until the display delivers these; coordination is applied before the gains enable heating.
     _comms.onHeaterSettings([this](const gm::HeaterSettings &settings) {
@@ -323,6 +352,9 @@ void GaggiMateController::setup() {
         if (hardwareScale != nullptr && hardwareScale->isAvailable()) {
             hardwareScale->tare();
         }
+        if (meterLink != nullptr) {
+            meterLink->sendZero(); // display tare = shot start / shot saved: zero the meter's volume counter
+        }
         if (!_config.capabilites.dimming) {
             return;
         }
@@ -354,9 +386,17 @@ void GaggiMateController::loop() {
         handlePingTimeout();
     }
     sendSensorData();
-    if (_config.capabilites.ledControls && now - lastLedHealthCheck >= LED_HEALTH_CHECK_INTERVAL_MS) {
+    if (_config.capabilites.ledControls && ledController != nullptr && now - lastLedHealthCheck >= LED_HEALTH_CHECK_INTERVAL_MS) {
         lastLedHealthCheck = now;
         ledController->healthCheck();
+    }
+    if (meterLink != nullptr && _config.capabilites.dimming) {
+        auto dimmedPump = static_cast<DimmedPump *>(pump);
+        if (dimmedPump->isFlowLoopFaulted() && now - lastFlowFaultLog >= 1000) {
+            lastFlowFaultLog = now;
+            ESP_LOGE(LOG_TAG, "FLOW FAULT: flow phase wants %.2f ml/s but no meter data for %lu ms -> pump held at 0",
+                     dimmedPump->getFlowTarget(), static_cast<unsigned long>(meterLink->flowAgeMs()));
+        }
     }
     if (tankLevel != nullptr && now - lastTankLevelSend >= TANK_LEVEL_SEND_INTERVAL_MS) {
         sendTankLevel();
@@ -380,6 +420,32 @@ void GaggiMateController::sendTankLevel() {
 }
 
 void GaggiMateController::registerBoardConfig(ControllerConfig config) { configs.push_back(config); }
+
+// Fork: serial link to the flow-meter board. Only on boards with a dimmed pump (the Pro); the
+// link feeds the DimmedPump's measured-flow loop and can carry Alba traffic (J4 build).
+void GaggiMateController::setupMeterLink() {
+#ifdef METER_LINK_PORT
+    if (!_config.capabilites.dimming) {
+        ESP_LOGW(LOG_TAG, "Meter link needs a dimmed/BLDC pump board; not enabled on %s", _config.name.c_str());
+        return;
+    }
+#if METER_LINK_PORT == 4
+    const uint8_t rxPin = _config.sunriseSclPin; // J4 "RX" = gpio44 on the Pro
+    const uint8_t txPin = _config.sunriseSdaPin; // J4 "TX" = gpio43
+    const char *port = "J4";
+#else
+    const uint8_t rxPin = _config.scaleDat0Pin; // J5 "SDA"/DT1 = gpio18 on the Pro
+    const uint8_t txPin = _config.scaleClkPin;  // J5 "SCL"/SCK = gpio17
+    const char *port = "J5";
+#endif
+    meterLink = new MeterLink(rxPin, txPin, 1);
+    auto dimmedPump = static_cast<DimmedPump *>(pump);
+    dimmedPump->setMeterLink(meterLink);
+    meterLink->onGains([this](const FlowLoopGains &gains) { static_cast<DimmedPump *>(pump)->setFlowLoopGains(gains); });
+    ESP_LOGI(LOG_TAG, "Meter link configured on %s (RX gpio%u, TX gpio%u), Alba over link: %d", port, rxPin, txPin,
+             METER_LINK_ALBA);
+#endif
+}
 
 void GaggiMateController::detectBoard() {
     constexpr int MAX_DETECT_RETRIES = 3;
@@ -519,54 +585,123 @@ void GaggiMateController::sendSensorData() {
 }
 
 void GaggiMateController::handleSerialCommand(char c) {
-    if (c == 'S') {
-        ESP_LOGI("Controller", "");
-        ESP_LOGI("Controller", "╔════════════════╗");
-        ESP_LOGI("Controller", "║ Status Summary ║");
-        ESP_LOGI("Controller", "╠════════════════╝");
-        ESP_LOGI("Controller", "║");
-        ESP_LOGI("Controller", "╠═ Error codes");
-        ESP_LOGI("Controller", "║  ├─ Controller Error: %d", errorState);
-        ESP_LOGI("Controller", "║  └─ Thermocouple Error: %d", brewTemperature->isErrorState());
-        ESP_LOGI("Controller", "║");
-        ESP_LOGI("Controller", "╠═ Readings");
-        if (_config.capabilites.pressure) {
-            auto dimmedPump = static_cast<DimmedPump *>(pump);
-            ESP_LOGI("Controller", "║  ├─ Pressure: %.2f", pressureSensor->getPressure());
-            ESP_LOGI("Controller", "║  ├─ Flow: %.2f", dimmedPump->getPumpFlow());
-            ESP_LOGI("Controller", "║  ├─ Pump Power: %.2f", dimmedPump->getPowerTarget());
+    // Console on the USB port. 'S' alone still prints the status (as before); other commands
+    // are whole lines: "G" shows the flow-loop gains, "G kp ki start% ff limKp limKi" sets them.
+    if (c == '\r' || c == '\n') {
+        if (consoleLen > 0) {
+            consoleLine[consoleLen] = '\0';
+            handleConsoleLine(consoleLine);
+            consoleLen = 0;
         }
-        if (_config.capabilites.dualBoiler) {
-            ESP_LOGI("Controller", "║  ├─ Steam Boiler Low: %.2f", waterSense->getState());
-            ESP_LOGI("Controller", "║  ├─ Temperature2: %.2f", steamTemperature->read());
-        }
-        ESP_LOGI("Controller", "║  └─ Temperature: %.2f", brewTemperature->read());
-        ESP_LOGI("Controller", "║");
-        ESP_LOGI("Controller", "╠═ Control");
-        if (_config.capabilites.dualBoiler) {
-            ESP_LOGI("Controller", "║  ├─ Refill: %d", refill->getState());
-            ESP_LOGI("Controller", "║  ├─ Aux: %d", aux->getState());
-            ESP_LOGI("Controller", "║  ├─ Steam Temperature: %d", heater2->getSetpoint());
-        }
-        if (_config.capabilites.pressure) {
-            auto dimmedPump = static_cast<DimmedPump *>(pump);
-            ESP_LOGI("Controller", "║  ├─ Pressure: %.2f", dimmedPump->getPressureTarget());
-            ESP_LOGI("Controller", "║  ├─ Flow: %.2f", dimmedPump->getFlowTarget());
-            ESP_LOGI("Controller", "║  ├─ Pump Power: %.2f", dimmedPump->getPowerTarget());
-            ESP_LOGI("Controller", "║  ├─ Pump Power: %.2f", dimmedPump->getPowerTarget());
-        }
-        ESP_LOGI("Controller", "║  └─ Temperature: %.2f", heater->getSetpoint());
-        ESP_LOGI("Controller", "║");
-
-        size_t free = heap_caps_get_free_size(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
-        size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
-        size_t total = heap_caps_get_total_size(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
-        float fragmentation = 100 - (largest * 100) / free;
-        ESP_LOGI("Controller", "╠═ Memory");
-        ESP_LOGI("Controller", "║  ├─ Heap: %d / %d (%.2f%%)", (total - free), total, (100.0f * (total - free)) / total);
-        ESP_LOGI("Controller", "║  └─ Fragmentation: %.2f%%", fragmentation);
-        ESP_LOGI("Controller", "");
-    } else {
-        ESP_LOGI("Controller", "Unrecognized Input! Available commands: S (Status)");
+        return;
     }
+    if (consoleLen == 0 && c == 'S') {
+        printStatus();
+        return;
+    }
+    if (consoleLen < sizeof(consoleLine) - 1) {
+        consoleLine[consoleLen++] = c;
+    } else {
+        consoleLen = 0;
+    }
+}
+
+void GaggiMateController::handleConsoleLine(const char *line) {
+    if (line[0] == 'S' && line[1] == '\0') {
+        printStatus();
+        return;
+    }
+    if (line[0] == 'G' && _config.capabilites.dimming) {
+        auto dimmedPump = static_cast<DimmedPump *>(pump);
+        FlowLoopGains g = dimmedPump->getFlowLoopGains();
+        if (line[1] == '\0') {
+            ESP_LOGI("Controller", "Flow loop gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f", g.kp,
+                     g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi);
+            return;
+        }
+        float kp, ki, start, ff, ramp, limKp, limKi;
+        if (sscanf(line + 1, "%f %f %f %f %f %f %f", &kp, &ki, &start, &ff, &ramp, &limKp, &limKi) == 7) {
+            g.kp = kp;
+            g.ki = ki;
+            g.startDuty = start / 100.0f;
+            g.ff = ff;
+            g.ramp = ramp;
+            g.limKp = limKp;
+            g.limKi = limKi;
+            dimmedPump->setFlowLoopGains(g);
+            ESP_LOGI("Controller", "Flow loop gains set (until restart or the next $G from the meter board)");
+        } else {
+            ESP_LOGI("Controller", "Usage: G <kp> <ki> <start_duty_percent> <ff 0..1> <ramp ml/s/s> <limKp> <limKi>");
+        }
+        return;
+    }
+    ESP_LOGI("Controller", "Unrecognized Input! Available commands: S (Status), G (flow loop gains)");
+}
+
+void GaggiMateController::printStatus() {
+    ESP_LOGI("Controller", "");
+    ESP_LOGI("Controller", "╔════════════════╗");
+    ESP_LOGI("Controller", "║ Status Summary ║");
+    ESP_LOGI("Controller", "╠════════════════╝");
+    ESP_LOGI("Controller", "║");
+    ESP_LOGI("Controller", "╠═ Error codes");
+    ESP_LOGI("Controller", "║  ├─ Controller Error: %d", errorState);
+    ESP_LOGI("Controller", "║  └─ Thermocouple Error: %d", brewTemperature->isErrorState());
+    ESP_LOGI("Controller", "║");
+    ESP_LOGI("Controller", "╠═ Readings");
+    if (_config.capabilites.pressure) {
+        auto dimmedPump = static_cast<DimmedPump *>(pump);
+        ESP_LOGI("Controller", "║  ├─ Pressure: %.2f", pressureSensor->getPressure());
+        ESP_LOGI("Controller", "║  ├─ Flow: %.2f", dimmedPump->getPumpFlow());
+        ESP_LOGI("Controller", "║  ├─ Pump Power: %.2f", dimmedPump->getPowerTarget());
+    }
+    if (_config.capabilites.dualBoiler) {
+        ESP_LOGI("Controller", "║  ├─ Steam Boiler Low: %.2f", waterSense->getState());
+        ESP_LOGI("Controller", "║  ├─ Temperature2: %.2f", steamTemperature->read());
+    }
+    ESP_LOGI("Controller", "║  └─ Temperature: %.2f", brewTemperature->read());
+    ESP_LOGI("Controller", "║");
+    ESP_LOGI("Controller", "╠═ Control");
+    if (_config.capabilites.dualBoiler) {
+        ESP_LOGI("Controller", "║  ├─ Refill: %d", refill->getState());
+        ESP_LOGI("Controller", "║  ├─ Aux: %d", aux->getState());
+        ESP_LOGI("Controller", "║  ├─ Steam Temperature: %d", heater2->getSetpoint());
+    }
+    if (_config.capabilites.pressure) {
+        auto dimmedPump = static_cast<DimmedPump *>(pump);
+        ESP_LOGI("Controller", "║  ├─ Pressure: %.2f", dimmedPump->getPressureTarget());
+        ESP_LOGI("Controller", "║  ├─ Flow: %.2f", dimmedPump->getFlowTarget());
+        ESP_LOGI("Controller", "║  ├─ Pump Power: %.2f", dimmedPump->getPowerTarget());
+    }
+    ESP_LOGI("Controller", "║  └─ Temperature: %.2f", heater->getSetpoint());
+    ESP_LOGI("Controller", "║");
+    if (meterLink != nullptr && _config.capabilites.dimming) {
+        auto dimmedPump = static_cast<DimmedPump *>(pump);
+        const FlowLoopGains &g = dimmedPump->getFlowLoopGains();
+        ESP_LOGI("Controller", "╠═ Meter link (RX gpio%u, TX gpio%u)", meterLink->rxPin(), meterLink->txPin());
+        ESP_LOGI("Controller", "║  ├─ Link: %s, flow data: %s (age %lu ms)", meterLink->linkUp() ? "up" : "down",
+                 meterLink->flowValid() ? "fresh" : "stale",
+                 meterLink->flowAgeMs() == UINT32_MAX ? 0UL : static_cast<unsigned long>(meterLink->flowAgeMs()));
+        ESP_LOGI("Controller", "║  ├─ Measured flow: %.2f ml/s, volume: %.1f ml, seq %lu", meterLink->flow(), meterLink->volume(),
+                 static_cast<unsigned long>(meterLink->flowSeq()));
+        ESP_LOGI("Controller", "║  ├─ Lines ok/bad: %lu/%lu, flow lines: %lu", static_cast<unsigned long>(meterLink->goodLines()),
+                 static_cast<unsigned long>(meterLink->badLines()), static_cast<unsigned long>(meterLink->flowLines()));
+        ESP_LOGI("Controller", "║  ├─ Tank distance: %d mm", meterLink->tankDistance());
+        ESP_LOGI("Controller", "║  ├─ Flow loop: mode %d, target %.2f -> %.2f ml/s%s, duty %.1f%%, fault %d",
+                 static_cast<int>(dimmedPump->getMode()), dimmedPump->getFlowTarget(), dimmedPump->getEffectiveFlowTarget(),
+                 dimmedPump->isPressureLimiting() ? " (ceiling)" : "", dimmedPump->getPowerTarget(),
+                 dimmedPump->isFlowLoopFaulted());
+        ESP_LOGI("Controller", "║  └─ Gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f", g.kp, g.ki,
+                 g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi);
+        ESP_LOGI("Controller", "║");
+    }
+
+    size_t free = heap_caps_get_free_size(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
+    size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
+    size_t total = heap_caps_get_total_size(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
+    float fragmentation = 100 - (largest * 100) / free;
+    ESP_LOGI("Controller", "╠═ Memory");
+    ESP_LOGI("Controller", "║  ├─ Heap: %d / %d (%.2f%%)", (total - free), total, (100.0f * (total - free)) / total);
+    ESP_LOGI("Controller", "║  └─ Fragmentation: %.2f%%", fragmentation);
+    ESP_LOGI("Controller", "");
 }

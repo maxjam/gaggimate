@@ -28,13 +28,25 @@ void DimmedPump::loop() {
     const bool fresh = _pressureSensor->consumeAverage();
     if (fresh)
         _currentPressure = _pressureSensor->getAveragedPressure();
+    if (_meter != nullptr) {
+        // Measured pump flow from the meter board; stale data (> FLOW_TIMEOUT_MS) is flagged invalid
+        // and the flow loop stops the pump rather than guessing.
+        _pressureController.setMeasuredFlow(_meter->flow(), _meter->flowValid());
+    }
     updatePower(fresh, _pressureSensor->getSampleTime(), elapsed);
     _currentFlow = _pressureController.getPumpFlowRate();
+}
+
+void DimmedPump::setMeterLink(MeterLink *link) {
+    _meter = link;
+    _pressureController.enableMeasuredFlowControl(link != nullptr);
 }
 
 void DimmedPump::setPower(float setpoint) {
     ESP_LOGV(LOG_TAG, "Setting power to %2f", setpoint);
     _ctrlPressure = setpoint > 0 ? 20.0f : 0.0f;
+    if (_mode == ControlMode::FLOW)
+        _pressureController.resetFlowLoop();
     _mode = ControlMode::POWER;
     _power = std::clamp(setpoint, 0.0f, 100.0f);
     _controllerPower = _power; // Feed manual control back into pressure controller
@@ -93,6 +105,8 @@ void DimmedPump::setFlowTarget(float targetFlow, float pressureLimit) {
 }
 
 void DimmedPump::setPressureTarget(float targetPressure, float flowLimit) {
+    if (_mode == ControlMode::FLOW)
+        _pressureController.resetFlowLoop();
     _mode = ControlMode::PRESSURE;
     _ctrlFlow = flowLimit;
     _ctrlPressure = targetPressure;
