@@ -66,6 +66,11 @@ class PressureController {
     float getPumpDutyCycleMeasuredFlow(float target);
     float applyPressureLimiter(float target);
     float rampFlowSetpoint(float target);
+    static constexpr float OVER_CEILING_DEADBAND = 0.2f; // bar above the ceiling before the backstop acts
+    static constexpr float OVER_CEILING_BLEED = 0.5f;    // duty fraction per bar of excess per second
+    static constexpr float OVER_CEILING_CUT = 1.0f;      // bar above the ceiling at which the duty is cut to zero
+    static constexpr float BACKSTOP_LOOKAHEAD_S = 0.25f; // the backstop acts on P + dP/dt * this
+    static constexpr float HARD_PRESSURE_CUTOFF = 12.5f; // bar: flow loop refuses to push past this
     float modelDutyFraction(float flow) const; // pump-model feedforward duty (0..1) for a flow
     void virtualScale();
     void filterSensor(float sampleTime);

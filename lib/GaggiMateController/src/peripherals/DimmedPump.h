@@ -67,6 +67,7 @@ class DimmedPump : public Pump {
     xTaskHandle taskHandle;
 
     ControlMode _mode = ControlMode::POWER;
+    ControlMode _lastLoopMode = ControlMode::POWER; // mode seen by the last control cycle (flow-loop reset edge)
     float _power = 0.0f;
     float _controllerPower = 0.0f;
     float _ctrlPressure = 0.0f;

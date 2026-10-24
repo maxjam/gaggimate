@@ -47,6 +47,8 @@ struct Rig {
     float meterAccum = 0.0f;        // ml counted in the current 50 ms window
     float meterClock = 0.0f;
     bool meterValid = true;
+    bool meterStuckAtZero = false; // meter keeps sending fresh lines but reads 0 (pulse wire off)
+    bool sqrtPuck = false;         // puck flow ~ sqrt(P) instead of linear
     float t = 0.0f;
     float maxPressure = 0.0f;
     float maxFlow = 0.0f;
@@ -62,7 +64,7 @@ struct Rig {
         const float dutyCmd = controllerOutput / 100.0f;
         dutyEff += (dutyCmd - dutyEff) * (kDt / pumpLag);
         trueFlow = pumpFlow(dutyEff, pressure);
-        const float puckFlow = puckConductance * pressure;
+        const float puckFlow = sqrtPuck ? puckConductance * 3.0f * std::sqrt(std::max(0.0f, pressure)) : puckConductance * pressure;
         pressure += (trueFlow - puckFlow) / compliance * kDt;
         pressure = std::max(0.0f, pressure);
         rawPressure = pressure;
@@ -74,7 +76,7 @@ struct Rig {
             meterAccum = 0.0f;
             meterClock = 0.0f;
         }
-        controller.setMeasuredFlow(meterReading, meterValid);
+        controller.setMeasuredFlow(meterStuckAtZero ? 0.0f : meterReading, meterValid);
         controller.update(mode, true, kDt, kDt);
         t += kDt;
         maxPressure = std::max(maxPressure, pressure);
@@ -159,7 +161,7 @@ void test_releases_ceiling_when_puck_opens() {
     rig.puckConductance = 0.12f;
     rig.rawFlowSetpoint = 2.0f;
     rig.rawPressureSetpoint = 9.0f;
-    rig.run(10.0f);
+    rig.run(16.0f);
     TEST_ASSERT_TRUE(rig.controller.isPressureLimiting());
     rig.puckConductance = 0.6f; // channel / softening: 2 ml/s now passes at ~3.3 bar
     rig.run(8.0f);
@@ -255,6 +257,113 @@ void test_setpoint_slew_limits_overshoot() {
     TEST_ASSERT_TRUE(rig.controller.getRampedFlowSetpoint() > 2.99f);
 }
 
+
+// Far below the ceiling the limiter must not touch the target: flow stays at target while pressure climbs.
+void test_limiter_idle_far_from_ceiling() {
+    Rig rig;
+    rig.puckConductance = 0.12f;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(3.0f); // pressure is a few bar by now, far from 9
+    TEST_ASSERT_TRUE(rig.pressure > 1.0f && rig.pressure < 9.0f - 2.0f / rig.controller.getFlowLoopGains().limKp - 0.5f);
+    TEST_ASSERT_FALSE(rig.controller.isPressureLimiting());
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 2.0f, rig.controller.getEffectiveFlowTarget());
+    // the inner loop trails the target a little while pressure (and so slip) keeps rising; no limiter involved
+    TEST_ASSERT_FLOAT_WITHIN(0.4f, 2.0f, rig.trueFlow);
+}
+
+// Ceiling lowered mid-shot (9 -> 3 bar): the loop must actively bring pressure down, not coast.
+void test_ceiling_lowered_mid_shot() {
+    Rig rig;
+    rig.puckConductance = 0.12f;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(16.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.3f, 9.0f, rig.pressure);
+    rig.rawPressureSetpoint = 3.0f;
+    rig.run(0.5f);
+    TEST_ASSERT_TRUE_MESSAGE(rig.controllerOutput < 5.0f, "pump should be nearly off right after the ceiling drops");
+    // pump stays off while over the ceiling; the puck alone drains the system (tau = C/g = 11.7 s here)
+    float pPrev = rig.pressure;
+    for (int i = 0; i < 8; i++) {
+        rig.run(1.0f);
+        TEST_ASSERT_TRUE(rig.controllerOutput < 1.0f);
+        TEST_ASSERT_TRUE(rig.pressure < pPrev);
+        pPrev = rig.pressure;
+    }
+    TEST_ASSERT_TRUE(rig.pressure < 9.0f * std::exp(-8.0f / 11.7f) + 0.2f);
+}
+
+// Meter stuck at 0 while lines keep coming: the PI winds up, but the ceiling backstop holds pressure.
+void test_stuck_meter_backstop() {
+    Rig rig;
+    rig.puckConductance = 0.05f;
+    rig.meterStuckAtZero = true;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(20.0f);
+    char msg[64];
+    snprintf(msg, sizeof(msg), "peak %.2f bar with a stuck meter", rig.maxPressure);
+    TEST_ASSERT_TRUE_MESSAGE(rig.maxPressure < 9.8f, msg);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, 9.0f, rig.pressure);
+}
+
+// Choked puck (almost nothing passes): pressure must park at the ceiling, no runaway, no stall.
+void test_choked_puck() {
+    Rig rig;
+    rig.puckConductance = 0.01f;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(15.0f);
+    TEST_ASSERT_TRUE(rig.maxPressure < 9.6f);
+    TEST_ASSERT_FLOAT_WITHIN(0.3f, 9.0f, rig.pressure);
+    TEST_ASSERT_TRUE(rig.trueFlow < 0.3f);
+}
+
+// Flow phase starting with the system already above its ceiling: no pumping until pressure is back under it.
+void test_start_above_ceiling() {
+    Rig rig;
+    rig.puckConductance = 0.05f;
+    rig.pressure = 6.0f;
+    rig.rawPressure = 6.0f;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 3.0f;
+    rig.run(0.5f);
+    TEST_ASSERT_TRUE(rig.controllerOutput < 5.0f); // the start-duty pre-load is bled away within half a second
+    rig.run(6.0f);
+    TEST_ASSERT_TRUE(rig.controllerOutput < 1.0f);
+    TEST_ASSERT_TRUE(rig.pressure < 6.0f * std::exp(-6.0f / 28.0f) + 0.2f); // draining through the puck, pump off
+}
+
+// FLOW -> POWER -> FLOW: the second phase re-arms (start duty pre-load, slew from the running flow).
+void test_mode_round_trip_rearms() {
+    Rig rig;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(3.0f);
+    TEST_ASSERT_TRUE(rig.controller.getFlowLoopIntegral() > 0.0f);
+    rig.controller.resetFlowLoop(); // what DimmedPump::loop does on the FLOW -> POWER edge
+    rig.controllerOutput = 0.0f;
+    rig.run(2.0f, PressureController::ControlMode::POWER);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controller.getFlowLoopIntegral());
+    rig.step();
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 20.0f, rig.controllerOutput); // pre-load again
+    rig.run(4.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.15f, 2.0f, rig.trueFlow);
+}
+
+// Puck in sqrt(P) (closer to a real puck) with the stiff system: same ceiling behaviour.
+void test_sqrt_puck_ceiling() {
+    Rig rig;
+    rig.sqrtPuck = true;
+    rig.puckConductance = 0.12f;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(20.0f);
+    TEST_ASSERT_TRUE(rig.maxPressure < 9.5f);
+    TEST_ASSERT_FLOAT_WITHIN(0.3f, 9.0f, rig.pressure);
+}
+
 // Pure PRESSURE mode is untouched by the fork: identical output with the flow loop enabled or not.
 void test_pressure_mode_unchanged() {
     Rig withLink;
@@ -297,6 +406,13 @@ int main(int, char **) {
     RUN_TEST(test_start_duty_preload);
     RUN_TEST(test_feedforward_option);
     RUN_TEST(test_setpoint_slew_limits_overshoot);
+    RUN_TEST(test_limiter_idle_far_from_ceiling);
+    RUN_TEST(test_ceiling_lowered_mid_shot);
+    RUN_TEST(test_stuck_meter_backstop);
+    RUN_TEST(test_choked_puck);
+    RUN_TEST(test_start_above_ceiling);
+    RUN_TEST(test_mode_round_trip_rearms);
+    RUN_TEST(test_sqrt_puck_ceiling);
     RUN_TEST(test_pressure_mode_unchanged);
     RUN_TEST(test_exported_flow_is_measured);
     return UNITY_END();

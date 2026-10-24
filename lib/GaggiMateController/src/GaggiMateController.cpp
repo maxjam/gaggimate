@@ -99,10 +99,11 @@ void GaggiMateController::setup() {
     setupMeterLink();
 
     // 4-Pin peripheral port
-#if defined(METER_LINK_PORT) && METER_LINK_PORT == 4
-    // J4 is the meter link in this build. With METER_LINK_ALBA the Alba hangs on the meter board:
-    // tank distance arrives as $T and the display's LED commands leave as $L.
-    if (meterLink != nullptr && METER_LINK_ALBA) {
+    // J4 build: the pins are the meter link. With METER_LINK_ALBA the Alba hangs on the meter board: tank
+    // distance arrives as $T and the display's LED commands leave as $L. Without a link (board without a
+    // dimmed pump) the stock Alba bus is kept.
+    const bool j4IsMeterLink = (kMeterLinkPort == 4) && meterLink != nullptr;
+    if (j4IsMeterLink && METER_LINK_ALBA) {
         _config.capabilites.ledControls = true;
         _config.capabilites.tof = true;
         _comms.onLedControl([this](uint8_t channel, uint8_t brightness) { meterLink->sendLed(channel, brightness); });
@@ -110,9 +111,7 @@ void GaggiMateController::setup() {
             if (_comms.isConnected())
                 _comms.sendTofMeasurement(static_cast<uint32_t>(distanceMm));
         });
-    }
-#else
-    if (!_config.capabilites.dualBoiler) {
+    } else if (!j4IsMeterLink && !_config.capabilites.dualBoiler) {
         albaComms = new SoftWire(_config.sunriseSdaPin, _config.sunriseSclPin);
         albaComms->setTxBuffer(albaSwTxBuffer, sizeof(albaSwTxBuffer));
         albaComms->setRxBuffer(albaSwRxBuffer, sizeof(albaSwRxBuffer));
@@ -128,7 +127,6 @@ void GaggiMateController::setup() {
             _comms.onLedControl([this](uint8_t channel, uint8_t brightness) { ledController->setChannel(channel, brightness); });
         }
     }
-#endif
     if (!_config.capabilites.tof && _config.tankLevelPin > 0) {
         tankLevel = new DigitalInput(_config.tankLevelPin, [this](const bool) { sendTankLevel(); }, 5);
     }
@@ -628,6 +626,10 @@ void GaggiMateController::handleConsoleLine(const char *line) {
             g.ramp = ramp;
             g.limKp = limKp;
             g.limKi = limKi;
+            if (!g.valid()) {
+                ESP_LOGI("Controller", "Rejected: gains out of range (kp 0-1, ki 0-5, start 0-100, ff 0-1, ramp 0-100, lim 0-20)");
+                return;
+            }
             dimmedPump->setFlowLoopGains(g);
             ESP_LOGI("Controller", "Flow loop gains set (until restart or the next $G from the meter board)");
         } else {
@@ -684,8 +686,9 @@ void GaggiMateController::printStatus() {
                  meterLink->flowAgeMs() == UINT32_MAX ? 0UL : static_cast<unsigned long>(meterLink->flowAgeMs()));
         ESP_LOGI("Controller", "║  ├─ Measured flow: %.2f ml/s, volume: %.1f ml, seq %lu", meterLink->flow(), meterLink->volume(),
                  static_cast<unsigned long>(meterLink->flowSeq()));
-        ESP_LOGI("Controller", "║  ├─ Lines ok/bad: %lu/%lu, flow lines: %lu", static_cast<unsigned long>(meterLink->goodLines()),
-                 static_cast<unsigned long>(meterLink->badLines()), static_cast<unsigned long>(meterLink->flowLines()));
+        ESP_LOGI("Controller", "║  ├─ Lines ok/bad: %lu/%lu, flow lines: %lu, duplicate seq: %lu",
+                 static_cast<unsigned long>(meterLink->goodLines()), static_cast<unsigned long>(meterLink->badLines()),
+                 static_cast<unsigned long>(meterLink->flowLines()), static_cast<unsigned long>(meterLink->duplicateLines()));
         ESP_LOGI("Controller", "║  ├─ Tank distance: %d mm", meterLink->tankDistance());
         ESP_LOGI("Controller", "║  ├─ Flow loop: mode %d, target %.2f -> %.2f ml/s%s, duty %.1f%%, fault %d",
                  static_cast<int>(dimmedPump->getMode()), dimmedPump->getFlowTarget(), dimmedPump->getEffectiveFlowTarget(),

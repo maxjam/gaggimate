@@ -38,8 +38,10 @@ constexpr int DETECT_VALUE_PIN = 11;
 #ifndef METER_LINK_ALBA
 #define METER_LINK_ALBA (METER_LINK_PORT == 4 ? 1 : 0)
 #endif
+constexpr int kMeterLinkPort = METER_LINK_PORT;
 #else
 #define METER_LINK_ALBA 0
+constexpr int kMeterLinkPort = 0;
 #endif
 
 class GaggiMateController {

@@ -141,6 +141,65 @@ void test_two_lines_back_to_back() {
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 2.1f, last);
 }
 
+void test_star_inside_field_truncates_but_checksum_rules() {
+    // "$F,1*5,2*XX": the parser takes the LAST '*' as the checksum marker; the inner '*' stays in a field.
+    char line[] = "F,1*5,2";
+    char out[64];
+    frame(line, out, sizeof(out));
+    LineReader r;
+    Message m;
+    TEST_ASSERT_TRUE(feedAll(r, out, m));
+    TEST_ASSERT_EQUAL_UINT(2, m.count);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.0f, m.f(0)); // strtof stops at '*'
+}
+
+void test_empty_fields_fall_back() {
+    char out[64];
+    frame("F,,,", out, sizeof(out));
+    LineReader r;
+    Message m;
+    TEST_ASSERT_TRUE(feedAll(r, out, m));
+    TEST_ASSERT_EQUAL_UINT(3, m.count);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, -1.0f, m.f(0, -1.0f));
+    TEST_ASSERT_EQUAL_INT(7, m.i(2, 7));
+}
+
+void test_too_many_fields_rejected() {
+    char out[96];
+    frame("X,1,2,3,4,5,6,7,8,9,10", out, sizeof(out));
+    LineReader r;
+    Message m;
+    TEST_ASSERT_FALSE(feedAll(r, out, m));
+}
+
+void test_lowercase_hex_accepted() {
+    char out[64];
+    frame("H,5", out, sizeof(out));
+    for (char *p = out; *p; p++)
+        if (*p >= 'A' && *p <= 'F' && p > strchr(out, '*'))
+            *p = static_cast<char>(*p - 'A' + 'a');
+    LineReader r;
+    Message m;
+    TEST_ASSERT_TRUE(feedAll(r, out, m));
+}
+
+void test_lone_dollar_and_bare_newlines() {
+    LineReader r;
+    Message m;
+    TEST_ASSERT_FALSE(feedAll(r, "\r\n\r\n$\r\n$*\n", m));
+    char out[64];
+    frame("Z", out, sizeof(out));
+    TEST_ASSERT_TRUE(feedAll(r, out, m)); // and the reader is still usable afterwards
+}
+
+void test_long_type_rejected() {
+    char out[64];
+    frame("FLOW,1", out, sizeof(out));
+    LineReader r;
+    Message m;
+    TEST_ASSERT_FALSE(feedAll(r, out, m));
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -156,5 +215,11 @@ int main(int, char **) {
     RUN_TEST(test_missing_fields_fallback);
     RUN_TEST(test_gains_line);
     RUN_TEST(test_two_lines_back_to_back);
+    RUN_TEST(test_star_inside_field_truncates_but_checksum_rules);
+    RUN_TEST(test_empty_fields_fall_back);
+    RUN_TEST(test_too_many_fields_rejected);
+    RUN_TEST(test_lowercase_hex_accepted);
+    RUN_TEST(test_lone_dollar_and_bare_newlines);
+    RUN_TEST(test_long_type_rejected);
     return UNITY_END();
 }

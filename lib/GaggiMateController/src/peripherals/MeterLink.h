@@ -49,6 +49,7 @@ class MeterLink {
     uint32_t goodLines() const { return _good.load(); }
     uint32_t badLines() const { return _bad.load(); }
     uint32_t flowLines() const { return _flowLines.load(); }
+    uint32_t duplicateLines() const { return _duplicates.load(); }
 
     // --- command side (any task) ---
     void sendZero();
@@ -83,6 +84,7 @@ class MeterLink {
     std::atomic<uint32_t> _good{0};
     std::atomic<uint32_t> _bad{0};
     std::atomic<uint32_t> _flowLines{0};
+    std::atomic<uint32_t> _duplicates{0};
     bool _everValid = false;
     bool _reportedLoss = false;
 

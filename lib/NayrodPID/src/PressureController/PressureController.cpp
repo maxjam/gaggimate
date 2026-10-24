@@ -179,10 +179,10 @@ float PressureController::rampFlowSetpoint(float target) {
     return _flowSetpointRamped;
 }
 
-// Outer loop: the phase's pressure setpoint is a ceiling. Below it the flow target passes
-// through untouched; as pressure approaches it the target is trimmed (P) and the integral
-// settles on whatever flow the puck passes at the ceiling (I). Tracking anti-windup while
-// the limiter is not binding makes it engage from exactly the target, with no wind-up.
+// Outer loop: the phase's pressure setpoint is a ceiling. The flow target passes through untouched
+// until pressure is within target/limKp bar of the ceiling; inside that band the target is trimmed
+// in proportion (P) and the integral (I, >= 0) settles on whatever flow the puck passes at the
+// ceiling. Out of the band the integral decays back to zero, so the band is the same every time.
 float PressureController::applyPressureLimiter(float target) {
     const float ceiling = *_rawPressureSetpoint;
     if (ceiling <= 0.2f || target <= 0.0f) {
@@ -194,7 +194,7 @@ float PressureController::applyPressureLimiter(float target) {
     const float ep = ceiling - _filteredPressureSensor; // > 0 while below the ceiling
     const float capUnclamped = _flowGains.limKp * ep + _limIntegral;
     if (capUnclamped >= target && ep > 0.0f) {
-        _limIntegral = target - _flowGains.limKp * ep; // track: cap == target
+        _limIntegral -= _limIntegral * std::min(1.0f, _dt / 2.0f); // not binding: forget the last episode (tau 2 s)
         _limBinding = false;
         _flowTargetEff = target;
         return target;
@@ -204,7 +204,7 @@ float PressureController::applyPressureLimiter(float target) {
     const bool windingDownAtZero = cap <= 0.0f && ep < 0.0f;
     if (!windingDownAtZero)
         _limIntegral += _flowGains.limKi * ep * _dt;
-    _limIntegral = std::clamp(_limIntegral, -_flowGains.limKp * _maxPressure, target);
+    _limIntegral = std::clamp(_limIntegral, 0.0f, target); // the puck's flow at the ceiling is never negative
     _flowTargetEff = cap;
     return cap;
 }
@@ -212,6 +212,8 @@ float PressureController::applyPressureLimiter(float target) {
 // Inner loop: PI on the measured flow, output is the pump duty. Integrator pre-loaded with a
 // fixed start duty at the beginning of a flow phase (model-free head start), optional pump-model
 // feedforward weighted by gains.ff, conditional integration against the 0..100 % limits.
+// Pressure backstop: above the ceiling the integral is bled in proportion to the excess, so a
+// stuck or under-reading meter (or a ceiling lowered mid-shot) cannot leave the pump pushing.
 float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     if (*_rawFlowSetpoint <= 0.0f) { // the phase asks for no flow (blooming etc.)
         resetFlowLoop();
@@ -225,10 +227,29 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     const float e = target - _measuredFlow;
     const float p = _flowGains.kp * e;
     float duty = ffDuty + p + _flowIntegral;
+    const float ceiling = *_rawPressureSetpoint;
+    // Backstop works on a short look-ahead of the pressure: a blind loop (stuck meter) can push the
+    // pressure up at several bar per second, and the pump needs ~0.15 s to answer.
+    const float P = _filteredPressureSensor + BACKSTOP_LOOKAHEAD_S * _filteredPressureDerivative;
+    const bool overCeiling = ceiling > 0.2f && P > ceiling + OVER_CEILING_DEADBAND;
     const bool saturatedHigh = duty >= 1.0f && e > 0.0f;
     const bool saturatedLow = duty <= 0.0f && e < 0.0f;
-    if (!saturatedHigh && !saturatedLow)
+    // Over the ceiling the integral may only come down: no winding up on a flow error that a stuck or
+    // under-reading meter would otherwise keep feeding, and a bleed proportional to the excess.
+    if (!saturatedHigh && !saturatedLow && !(overCeiling && e > 0.0f))
         _flowIntegral += _flowGains.ki * e * _dt;
+    if (overCeiling)
+        _flowIntegral -= OVER_CEILING_BLEED * (P - ceiling) * _dt; // 1 bar over -> -50 % duty per second
+    if (ceiling > 0.2f && P > ceiling + OVER_CEILING_CUT) {
+        // A full bar over the ceiling means the flow loop has lost the plot (stuck meter, choked puck at
+        // full wind-up): take the duty to zero right now, the PI may build it back up from there.
+        _flowIntegral = std::min(_flowIntegral, -(ffDuty + p));
+    }
+    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) { // well past any OPV: something is wrong, stop pushing
+        _flowIntegral = 0.0f;
+        _flowDuty = 0.0f;
+        return 0.0f;
+    }
     _flowIntegral = std::clamp(_flowIntegral, -1.0f, 1.0f);
     duty = std::clamp(ffDuty + p + _flowIntegral, 0.0f, 1.0f);
     _flowDuty = duty;

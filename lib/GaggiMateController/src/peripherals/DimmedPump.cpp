@@ -33,6 +33,14 @@ void DimmedPump::loop() {
         // and the flow loop stops the pump rather than guessing.
         _pressureController.setMeasuredFlow(_meter->flow(), _meter->flowValid());
     }
+    // Leaving FLOW mode resets the measured-flow loop here, in the control task, so the reset can never
+    // land halfway through a control cycle (the mode itself is set from the BLE callbacks).
+    const ControlMode mode = _mode;
+    if (mode != _lastLoopMode) {
+        if (_lastLoopMode == ControlMode::FLOW)
+            _pressureController.resetFlowLoop();
+        _lastLoopMode = mode;
+    }
     updatePower(fresh, _pressureSensor->getSampleTime(), elapsed);
     _currentFlow = _pressureController.getPumpFlowRate();
 }
@@ -45,8 +53,6 @@ void DimmedPump::setMeterLink(MeterLink *link) {
 void DimmedPump::setPower(float setpoint) {
     ESP_LOGV(LOG_TAG, "Setting power to %2f", setpoint);
     _ctrlPressure = setpoint > 0 ? 20.0f : 0.0f;
-    if (_mode == ControlMode::FLOW)
-        _pressureController.resetFlowLoop();
     _mode = ControlMode::POWER;
     _power = std::clamp(setpoint, 0.0f, 100.0f);
     _controllerPower = _power; // Feed manual control back into pressure controller
@@ -105,8 +111,6 @@ void DimmedPump::setFlowTarget(float targetFlow, float pressureLimit) {
 }
 
 void DimmedPump::setPressureTarget(float targetPressure, float flowLimit) {
-    if (_mode == ControlMode::FLOW)
-        _pressureController.resetFlowLoop();
     _mode = ControlMode::PRESSURE;
     _ctrlFlow = flowLimit;
     _ctrlPressure = targetPressure;

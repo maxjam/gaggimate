@@ -8,7 +8,7 @@ void MeterLink::setup() {
     _serial.setRxBufferSize(1024);
     _serial.begin(BAUD, SERIAL_8N1, _rxPin, _txPin);
     ESP_LOGI(LOG_TAG, "Meter link on RX=%u TX=%u, %lu baud", _rxPin, _txPin, static_cast<unsigned long>(BAUD));
-    xTaskCreate(loopTask, "MeterLink::loop", configMINIMAL_STACK_SIZE * 6, this, 2, &taskHandle);
+    xTaskCreate(loopTask, "MeterLink::loop", configMINIMAL_STACK_SIZE * 10, this, 2, &taskHandle); // $T callback encodes protobuf + BLE notify
 }
 
 uint32_t MeterLink::flowAgeMs() const {
@@ -55,12 +55,20 @@ void MeterLink::handle(const lineproto::Message &msg) {
     case 'F': {
         if (msg.count < 2)
             return;
-        const float flow = msg.f(0, -1.0f);
-        if (flow < 0.0f || flow > 50.0f || std::isnan(flow)) // 50 ml/s: far above any espresso pump
+        float flow = msg.f(0, -1.0f);
+        if (std::isnan(flow) || flow < -0.5f || flow > 50.0f) // 50 ml/s: far above any espresso pump
             return;
+        if (flow < 0.0f)
+            flow = 0.0f; // a direction-aware meter's backflow reads as "no forward flow", not as missing data
+        const uint32_t seq = static_cast<uint32_t>(msg.i(2, 0));
+        if (_flowLines.load() > 0 && seq == _seq.load()) {
+            // Same sequence number again: a board stuck re-sending one line is not fresh data.
+            _duplicates.fetch_add(1);
+            return;
+        }
         _flow.store(flow);
         _volume.store(std::max(0.0f, msg.f(1, 0.0f)));
-        _seq.store(static_cast<uint32_t>(msg.i(2, 0)));
+        _seq.store(seq);
         _lastFlowMs.store(millis());
         _flowLines.fetch_add(1);
         if (!_everValid) {
@@ -89,10 +97,7 @@ void MeterLink::handle(const lineproto::Message &msg) {
         g.ramp = msg.f(4, g.ramp);
         g.limKp = msg.f(5, g.limKp);
         g.limKi = msg.f(6, g.limKi);
-        const bool sane = g.kp >= 0.0f && g.kp <= 1.0f && g.ki >= 0.0f && g.ki <= 5.0f && g.startDuty >= 0.0f &&
-                          g.startDuty <= 1.0f && g.ff >= 0.0f && g.ff <= 1.0f && g.ramp >= 0.0f && g.ramp <= 100.0f &&
-                          g.limKp >= 0.0f && g.limKp <= 20.0f && g.limKi >= 0.0f && g.limKi <= 20.0f;
-        if (!sane) {
+        if (!g.valid()) {
             ESP_LOGW(LOG_TAG, "Rejected $G with out-of-range gains");
             return;
         }
