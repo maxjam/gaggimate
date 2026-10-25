@@ -38,6 +38,15 @@ void MeterLink::loop() {
     _good.store(_reader.goodLines());
     _bad.store(_reader.badLines());
 
+    // Heartbeat to the meter board once a second, so its page can show "Pro connected".
+    const uint32_t now = millis();
+    if (now - _lastHeartbeatMs >= HEARTBEAT_MS) {
+        _lastHeartbeatMs = now;
+        char payload[20];
+        snprintf(payload, sizeof(payload), "H,%lu", static_cast<unsigned long>(now / 1000));
+        sendLine(payload);
+    }
+
     // One log line on each flow-data loss / recovery, not a flood.
     const bool valid = flowValid();
     if (_everValid && !valid && !_reportedLoss) {

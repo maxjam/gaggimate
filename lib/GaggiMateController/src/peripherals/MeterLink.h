@@ -12,6 +12,7 @@
 //     $Z*XX                                  zero the volume counter (display tare / shot start)
 //     $L,<channel>,<brightness>*XX           LED command from the display, for the Alba's PCA9634
 //     $B,<0|1>*XX                            brew valve / pump active flag (shot bookkeeping on the board)
+//     $H,<uptime_s>*XX                       1 per second, so the meter board knows the Pro is there
 //
 // A fresh $F is one younger than FLOW_TIMEOUT_MS; the flow loop stops the pump without one.
 
@@ -31,6 +32,7 @@ class MeterLink {
 
     static constexpr uint32_t FLOW_TIMEOUT_MS = 500;  // per the plan: half a second without $F -> pump off
     static constexpr uint32_t LINK_TIMEOUT_MS = 2500; // no valid line at all -> link down
+    static constexpr uint32_t HEARTBEAT_MS = 1000;    // $H to the meter board
     static constexpr uint32_t BAUD = 115200;
 
     MeterLink(uint8_t rxPin, uint8_t txPin, uint8_t uartNum = 1);
@@ -87,6 +89,7 @@ class MeterLink {
     std::atomic<uint32_t> _duplicates{0};
     bool _everValid = false;
     bool _reportedLoss = false;
+    uint32_t _lastHeartbeatMs = 0;
 
     tank_callback_t _tankCb;
     gains_callback_t _gainsCb;
