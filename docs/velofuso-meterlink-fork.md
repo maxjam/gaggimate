@@ -6,7 +6,7 @@ Two pieces of firmware, one serial cable between them.
 |---|---|---|
 | **Pro controller fork** | GaggiMate controller firmware (base: master `b78beee`, Oct 18 2026) with a serial link to the meter board and flow phases closed loop on the measured ml/s. Version string `v1.99.0-meterlink.2`. | `controller/gaggimate-controller-meterlink-j4_*.bin`, `…-j5_*.bin` |
 | **Meter board v1.7.1** | Your `digmesa-flow-display` v1.6.4 plus the serial link and a cap of 20 shot logs (oldest deleted first, also applied at boot). Display, Decent Scale emulation and BOOKOO pass-through are unchanged. | `meter/digmesa-flow-display_v1.7.1_*.bin`, `meter/digmesa-flow-display.ino` |
-| **Source** | Controller fork as a git patch (two commits on upstream `b78beee`); meter sketch as .ino + the patch script that produced it from v1.6.4. | `source/` |
+| **Source** | Controller fork as a git patch (the fork's commits on upstream `b78beee`); meter sketch as .ino + the patch script that produced it from v1.6.4. | `source/` |
 
 ## Read this first
 
@@ -100,6 +100,11 @@ Pro → meter board:
 - **Scale board / J5 `$W`** — you're keeping the BOOKOO for now.
 - **On-screen fault message** for a lost meter — display is stock.
 - **PRESSURE phases with a flow limit** still use the stock model-based limit (your pressure tune is untouched). Say if you want the measured limit there too.
+
+## Changes
+
+- **meterlink.2** (Oct 27 2026): the pressure ceiling is an override PI instead of the target-trimming limiter plus bleed/cut backstop; slip-band guard; a flow phase starts from the duty already running. Fixes the 6.5 / 5.3 bar dips of shot 292. Meter board unchanged (v1.7.1).
+- **meterlink.1** (Oct 25 2026): first release; Pro sends the `$H` heartbeat.
 
 ## Source
 
