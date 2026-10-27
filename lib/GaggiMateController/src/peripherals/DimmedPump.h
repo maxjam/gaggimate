@@ -54,6 +54,8 @@ class DimmedPump : public Pump {
     // True while a flow phase is being held at zero because the meter data is missing.
     bool isFlowLoopFaulted() const { return _mode == ControlMode::FLOW && _ctrlFlow > 0.0f && _meter != nullptr && !isMeasuredFlowValid(); }
     ControlMode getMode() const { return _mode; }
+    // Pump diagnostics for the meter board's shot log ($D, sent by the meter link 10 times a second).
+    void fillDiagnostics(MeterDiagnostics &d) const;
 
   private:
     uint8_t _ssr_pin;

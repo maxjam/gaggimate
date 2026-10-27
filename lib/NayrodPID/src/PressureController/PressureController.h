@@ -62,6 +62,12 @@ class PressureController {
     float getPressureLoopIntegral() const { return _pressReset; }   // ceiling PI reset state (duty)
     float getRampedFlowSetpoint() const { return _flowSetpointRamped; }
 
+    // === Diagnostics (fork, for the meter board's shot log) ===
+    float getModelPumpFlow(float powerPct) const;                   // pump model: ml/s at this power and the current pressure
+    float getFilteredSetpoint() const { return _filteredSetpoint; } // what the stock pressure loop tracks (bar)
+    float getFilteredPressure() const { return _filteredPressureSensor; }
+    float getPressureITerm() const { return _pressureITerm; }       // stock pressure loop: duty added by its integral (0..1)
+
   private:
     float getPumpDutyCycleForPressure();
     float getPumpDutyCycleMeasuredFlow(float target);
@@ -123,6 +129,7 @@ class PressureController {
     float _previousPressure = 0.0f; // Previous pressure reading (bar)
     float _errorIntegral = 0.0f;    // Integral of pressure error
     float _pumpDutyCycle = 0.0f;    // Calculated pump duty cycle (0-100%)
+    float _pressureITerm = 0.0f;    // diagnostics (fork): duty fraction the integral adds
 
     // === Flow estimation ===
     float _waterThroughPuckFlowRate = 0.0f; // Water through puck flow rate (ml/s)

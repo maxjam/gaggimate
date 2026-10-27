@@ -17,7 +17,9 @@ struct FlowLoopGains {
     float limKi = 1.5f;       // % duty per bar per second
     // Pump dead zone: the pump power (0..1) below which the pump does not turn / delivers nothing. The loop
     // then never commands a power between 0 and this: its output u (0..1) goes to the pump as
-    // deadZone + u * (1 - deadZone), and u = 0 is off. 0 = no dead zone (plain duty).
+    // deadZone + u * (1 - deadZone), and u = 0 is the pump's slowest speed. In a flow phase the pump only stops
+    // for the pressure ceiling, the hard cutoff, a zero target or missing meter data (since meterlink.4; in
+    // meterlink.3 u = 0 was off). 0 = no dead zone (plain duty, u = 0 is off).
     float deadZone = 0.0f;
 
     // Range check shared by every input path ($G line, USB console). NaN fails every comparison.

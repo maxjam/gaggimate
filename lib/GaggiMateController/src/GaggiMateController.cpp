@@ -690,13 +690,14 @@ void GaggiMateController::printStatus() {
                  meterLink->flowAgeMs() == UINT32_MAX ? 0UL : static_cast<unsigned long>(meterLink->flowAgeMs()));
         ESP_LOGI("Controller", "║  ├─ Measured flow: %.2f ml/s, volume: %.1f ml, seq %lu", meterLink->flow(), meterLink->volume(),
                  static_cast<unsigned long>(meterLink->flowSeq()));
-        ESP_LOGI("Controller", "║  ├─ Lines ok/bad: %lu/%lu, flow lines: %lu, duplicate seq: %lu",
+        ESP_LOGI("Controller", "║  ├─ Lines ok/bad: %lu/%lu, flow lines: %lu, duplicate seq: %lu, diagnostics sent: %lu",
                  static_cast<unsigned long>(meterLink->goodLines()), static_cast<unsigned long>(meterLink->badLines()),
-                 static_cast<unsigned long>(meterLink->flowLines()), static_cast<unsigned long>(meterLink->duplicateLines()));
+                 static_cast<unsigned long>(meterLink->flowLines()), static_cast<unsigned long>(meterLink->duplicateLines()),
+                 static_cast<unsigned long>(meterLink->diagnosticsSent()));
         ESP_LOGI("Controller", "║  ├─ Tank distance: %d mm", meterLink->tankDistance());
         ESP_LOGI("Controller", "║  ├─ Flow loop: mode %d, target %.2f -> %.2f ml/s%s, duty %.1f%%, fault %d",
                  static_cast<int>(dimmedPump->getMode()), dimmedPump->getFlowTarget(), dimmedPump->getEffectiveFlowTarget(),
-                 dimmedPump->isPressureLimiting() ? " (ceiling)" : "", dimmedPump->getPowerTarget(),
+                 dimmedPump->isPressureLimiting() ? " (ceiling)" : "", *dimmedPump->getPumpPowerPtr(),
                  dimmedPump->isFlowLoopFaulted());
         ESP_LOGI("Controller", "║  └─ Gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%%", g.kp,
                  g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f);

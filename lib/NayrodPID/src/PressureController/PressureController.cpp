@@ -189,9 +189,12 @@ float PressureController::rampFlowSetpoint(float target) {
 // This matters on a vane pump: at 9 bar about half the duty only covers slip, so a controller whose
 // integral has been pushed far below that has to climb through a dead band before water moves again.
 // Pump dead zone (gains.deadZone): the two PIs below work on u (0..1), the share of the pump's power range
-// above the dead zone. Pump power = deadZone + u * (1 - deadZone) for u > 0, and off for u = 0, so the loop
-// never parks the pump in the band where it does not turn and has to climb back through it (on/off
-// cycling at low flow and low pressure). With deadZone = 0, u is the pump power itself.
+// above the dead zone. Pump power = deadZone + u * (1 - deadZone), so the loop never parks the pump in the
+// band where it does not turn and has to climb back through it. u = 0 is the pump's slowest speed, not off:
+// a flow target below what the pump gives at its slowest speed runs at that speed instead of switching the
+// pump on and off (the pulses at low flow and low pressure). Only the pressure ceiling (its PI asking for
+// nothing) or the hard cutoff stops the pump in a flow phase. With deadZone = 0, u is the pump power itself
+// and u = 0 is off, as before.
 float PressureController::loopFromPump(float duty) const {
     const float dz = _flowGains.deadZone;
     if (dz <= 0.0f)
@@ -201,7 +204,7 @@ float PressureController::loopFromPump(float duty) const {
 
 float PressureController::pumpFromLoop(float u) const {
     const float dz = _flowGains.deadZone;
-    if (dz <= 0.0f || u <= 0.0f)
+    if (dz <= 0.0f)
         return u;
     return dz + u * (1.0f - dz);
 }
@@ -237,8 +240,12 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
 
     float applied = std::min(flowOut, pressOut);
     _limBinding = hasCeiling && pressOut < flowOut;
-    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) // well past any OPV: something is wrong, stop pushing
+    // The pump stops only when the ceiling PI asks for nothing; the flow PI at u = 0 leaves it at its slowest speed.
+    bool stop = hasCeiling && pressOut <= 0.0f;
+    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) { // well past any OPV: something is wrong, stop pushing
         applied = 0.0f;
+        stop = true;
+    }
     applied = std::clamp(applied, 0.0f, 1.0f);
 
     // Reset feedback (see above). ki = 0 turns a controller into a pure P controller.
@@ -269,9 +276,11 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
         _pressReset = applied;
     }
 
-    _flowDuty = pumpFromLoop(applied);
+    _flowDuty = stop ? 0.0f : pumpFromLoop(applied);
     return _flowDuty * 100.0f;
 }
+
+float PressureController::getModelPumpFlow(float powerPct) const { return pumpFlowModel(std::clamp(powerPct, 0.0f, 100.0f)); }
 
 void PressureController::setPumpFlowCoeff(float oneBarFlow, float nineBarFlow) {
     // Set the affine pump flow model coefficients based on flow measurement at 1 bar and 9 bar
@@ -408,6 +417,7 @@ float PressureController::getPumpDutyCycleForPressure() {
     if (*_rawPressureSetpoint < 0.2f) {
         initSetpointFilter();
         _errorIntegral = 0.0f;
+        _pressureITerm = 0.0f;
         *_ctrlOutput = 0.0f;
         _previousPressure = 0.0f;
         return 0.0f;
@@ -462,6 +472,7 @@ float PressureController::getPumpDutyCycleForPressure() {
     }
 
     _pumpDutyCycle = Ceq / Qa * (-_convergenceGain * error - K * sat_s) - iterm;
+    _pressureITerm = -iterm; // diagnostics (fork): what the integral adds to the duty
     return std::clamp(_pumpDutyCycle * 100.0f, 0.0f, 100.0f);
 }
 

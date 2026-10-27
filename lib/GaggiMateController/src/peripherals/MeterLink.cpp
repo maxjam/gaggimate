@@ -47,6 +47,17 @@ void MeterLink::loop() {
         sendLine(payload);
     }
 
+    // Pump diagnostics for the meter board's shot log, 10 per second.
+    if (_diagCb && now - _lastDiagMs >= DIAGNOSTICS_MS) {
+        _lastDiagMs = now;
+        Diagnostics d;
+        char payload[lineproto::MAX_LINE];
+        if (_diagCb(d) && d.format(payload, sizeof(payload)) > 0) {
+            sendLine(payload);
+            _diagSent.fetch_add(1);
+        }
+    }
+
     // One log line on each flow-data loss / recovery, not a flood.
     const bool valid = flowValid();
     if (_everValid && !valid && !_reportedLoss) {

@@ -7,6 +7,8 @@
 #include <string>
 
 #include "peripherals/LineProtocol.h"
+#include "peripherals/MeterDiagnostics.h"
+#include <cmath>
 
 using namespace lineproto;
 
@@ -166,7 +168,7 @@ void test_empty_fields_fall_back() {
 
 void test_too_many_fields_rejected() {
     char out[96];
-    frame("X,1,2,3,4,5,6,7,8,9,10", out, sizeof(out));
+    frame("X,1,2,3,4,5,6,7,8,9,10,11,12", out, sizeof(out));
     LineReader r;
     Message m;
     TEST_ASSERT_FALSE(feedAll(r, out, m));
@@ -200,6 +202,65 @@ void test_long_type_rejected() {
     TEST_ASSERT_FALSE(feedAll(r, out, m));
 }
 
+// $D (meterlink.4): the diagnostics line goes through the same framing and parses back field by field.
+void test_diagnostics_line_round_trip() {
+    MeterDiagnostics d;
+    d.pumpPct = 37.5f;
+    d.pressure = 8.93f;
+    d.mode = 1;
+    d.targetBar = 9.0f;
+    d.targetFlow = 0.0f;
+    d.ctrlBar = 8.71f;
+    d.ctrlFlow = 0.0f;
+    d.modelFlow = 1.23f;
+    d.iPct = -4.2f;
+    d.flags = MeterDiagnostics::VALVE_OPEN;
+    char payload[MAX_LINE];
+    TEST_ASSERT_TRUE(d.format(payload, sizeof(payload)) > 0);
+    TEST_ASSERT_EQUAL_STRING("D,37.5,8.93,1,9.0,0.00,8.71,0.00,1.23,-4.2,1", payload);
+    char out[MAX_LINE + 8];
+    TEST_ASSERT_TRUE(frame(payload, out, sizeof(out)) > 0);
+    LineReader r;
+    Message m;
+    TEST_ASSERT_TRUE(feedAll(r, out, m));
+    TEST_ASSERT_EQUAL_STRING("D", m.type);
+    TEST_ASSERT_EQUAL_UINT(10, m.count);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 37.5f, m.f(0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 8.93f, m.f(1));
+    TEST_ASSERT_EQUAL_INT(1, m.i(2));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, -4.2f, m.f(8));
+    TEST_ASSERT_EQUAL_INT(1, m.i(9));
+}
+
+// Worst-case values (and NaN/inf from a broken sensor) still make a line that fits and parses.
+void test_diagnostics_line_worst_case() {
+    MeterDiagnostics d;
+    d.pumpPct = NAN;
+    d.pressure = -1e9f;
+    d.mode = 2;
+    d.targetBar = 1e9f;
+    d.targetFlow = -INFINITY;
+    d.ctrlBar = -12345.0f;
+    d.ctrlFlow = -9999.99f;
+    d.modelFlow = -9999.99f;
+    d.iPct = -9999.99f;
+    d.flags = 15;
+    char payload[MAX_LINE];
+    const size_t n = d.format(payload, sizeof(payload));
+    TEST_ASSERT_TRUE(n > 0);
+    TEST_ASSERT_NULL(strstr(payload, "nan"));
+    TEST_ASSERT_NULL(strstr(payload, "inf"));
+    char out[MAX_LINE + 8];
+    TEST_ASSERT_TRUE(frame(payload, out, sizeof(out)) > 0);
+    TEST_ASSERT_TRUE(strlen(out) - 2 <= MAX_LINE); // the reader's limit excludes "\r\n"
+    LineReader r;
+    Message m;
+    TEST_ASSERT_TRUE(feedAll(r, out, m));
+    TEST_ASSERT_EQUAL_UINT(10, m.count);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, m.f(0, -1.0f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-2f, -9999.0f, m.f(1));
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -221,5 +282,7 @@ int main(int, char **) {
     RUN_TEST(test_lowercase_hex_accepted);
     RUN_TEST(test_lone_dollar_and_bare_newlines);
     RUN_TEST(test_long_type_rejected);
+    RUN_TEST(test_diagnostics_line_round_trip);
+    RUN_TEST(test_diagnostics_line_worst_case);
     return UNITY_END();
 }

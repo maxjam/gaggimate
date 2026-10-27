@@ -48,6 +48,45 @@ void DimmedPump::loop() {
 void DimmedPump::setMeterLink(MeterLink *link) {
     _meter = link;
     _pressureController.enableMeasuredFlowControl(link != nullptr);
+    if (link != nullptr) {
+        link->onDiagnostics([this](MeterDiagnostics &d) {
+            fillDiagnostics(d);
+            return true;
+        });
+    }
+}
+
+// Runs in the meter link's task. Every value is a single aligned float or int written by the pump task, so a
+// read never tears; the fields may straddle one control cycle, which is fine for a 10 Hz log.
+void DimmedPump::fillDiagnostics(MeterDiagnostics &d) const {
+    const ControlMode mode = _mode;
+    const float power = _power;
+    const bool measuredLoop = mode == ControlMode::FLOW && _meter != nullptr;
+    d.pumpPct = power;
+    d.pressure = _currentPressure;
+    d.mode = static_cast<uint8_t>(mode);
+    d.targetBar = _ctrlPressure;
+    d.targetFlow = _ctrlFlow;
+    d.ctrlBar = _pressureController.getFilteredSetpoint();
+    d.ctrlFlow = measuredLoop ? _pressureController.getEffectiveFlowTarget() : 0.0f;
+    d.modelFlow = _pressureController.getModelPumpFlow(power);
+    if (measuredLoop)
+        d.iPct = _pressureController.getFlowLoopIntegral() * 100.0f;
+    else if (mode != ControlMode::POWER)
+        d.iPct = _pressureController.getPressureITerm() * 100.0f;
+    else
+        d.iPct = 0.0f;
+    uint8_t flags = 0;
+    if (_valveStatus)
+        flags |= MeterDiagnostics::VALVE_OPEN;
+    if (measuredLoop) {
+        flags |= MeterDiagnostics::MEASURED_LOOP;
+        if (_pressureController.isPressureLimiting())
+            flags |= MeterDiagnostics::CEILING;
+        if (isFlowLoopFaulted())
+            flags |= MeterDiagnostics::FLOW_FAULT;
+    }
+    d.flags = flags;
 }
 
 void DimmedPump::setPower(float setpoint) {

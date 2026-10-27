@@ -19,7 +19,7 @@
 namespace lineproto {
 
 constexpr size_t MAX_LINE = 96;   // longest line incl. '$' and '*XX', excluding the newline
-constexpr size_t MAX_FIELDS = 10; // type + up to 9 values
+constexpr size_t MAX_FIELDS = 12; // type + up to 11 values ($D carries 10)
 
 inline uint8_t checksum(const char *payload, size_t len) {
     uint8_t x = 0;

@@ -486,6 +486,109 @@ void test_dead_zone_start_and_off() {
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controllerOutput);
 }
 
+// No stall (meterlink.4): with a dead zone set, a flow target below what the pump gives at its slowest speed runs the
+// pump at that speed. Before, the loop switched the pump off and on around the target (the pulses of flush 301).
+// The rig pump starts delivering at 21 % on an open group, so a 25 % dead zone gives ~1.2 ml/s at the slowest speed.
+void test_dead_zone_no_stall_below_min_flow() {
+    Rig rig;
+    FlowLoopGains g;
+    g.deadZone = 0.25f;
+    rig.controller.setFlowLoopGains(g);
+    rig.rawFlowSetpoint = 0.5f; // below the slowest-speed flow
+    rig.rawPressureSetpoint = 0.0f;
+    rig.run(1.0f);
+    float lo = 1e9f, hi = -1e9f, fmin = 1e9f, fmax = -1e9f;
+    for (int i = 0; i < 60 * 8; i++) {
+        rig.step();
+        lo = std::min(lo, rig.controllerOutput);
+        hi = std::max(hi, rig.controllerOutput);
+        fmin = std::min(fmin, rig.trueFlow);
+        fmax = std::max(fmax, rig.trueFlow);
+    }
+    char msg[96];
+    snprintf(msg, sizeof(msg), "pump power %.2f..%.2f %%, flow %.2f..%.2f ml/s", lo, hi, fmin, fmax);
+    TEST_ASSERT_TRUE_MESSAGE(lo >= 25.0f - 1e-3f, msg);          // never off
+    TEST_ASSERT_TRUE_MESSAGE(hi <= 25.0f + 0.5f, msg);           // parked at the slowest speed
+    TEST_ASSERT_TRUE_MESSAGE(fmax - fmin < 0.05f, msg);          // steady flow, no pulses
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.1f, 1.17f, rig.trueFlow, msg);
+    // A target the pump can reach is tracked as before.
+    rig.rawFlowSetpoint = 2.0f;
+    rig.run(4.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.10f, 2.0f, rig.trueFlow);
+    // Zero target still means off.
+    rig.rawFlowSetpoint = 0.0f;
+    rig.step();
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controllerOutput);
+}
+
+// The pressure ceiling may still stop the pump when even its slowest speed pushes the pressure past the ceiling
+// (here 25 % holds ~0.8 bar against the puck, the ceiling is 0.5 bar).
+void test_dead_zone_ceiling_still_stops_the_pump() {
+    Rig rig;
+    FlowLoopGains g;
+    g.deadZone = 0.25f;
+    rig.controller.setFlowLoopGains(g);
+    rig.puckConductance = 0.1f;
+    rig.rawFlowSetpoint = 0.5f;
+    rig.rawPressureSetpoint = 0.5f;
+    rig.run(3.0f);
+    bool sawOff = false;
+    float pmax = 0.0f;
+    for (int i = 0; i < 60 * 10; i++) {
+        rig.step();
+        if (rig.controllerOutput == 0.0f)
+            sawOff = true;
+        TEST_ASSERT_TRUE(rig.controllerOutput == 0.0f || rig.controllerOutput >= 25.0f - 1e-3f);
+        pmax = std::max(pmax, rig.pressure);
+    }
+    TEST_ASSERT_TRUE_MESSAGE(sawOff, "the ceiling never stopped the pump");
+    char msg[64];
+    snprintf(msg, sizeof(msg), "max pressure %.2f bar over a 0.5 bar ceiling", pmax);
+    TEST_ASSERT_TRUE_MESSAGE(pmax < 0.75f, msg);
+}
+
+// The hard cutoff stops the pump with a dead zone too (no ceiling, closed outlet).
+void test_dead_zone_hard_cutoff() {
+    Rig rig;
+    FlowLoopGains g;
+    g.deadZone = 0.25f;
+    rig.controller.setFlowLoopGains(g);
+    rig.puckConductance = 0.0f;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 0.0f;
+    bool sawOff = false;
+    for (int i = 0; i < 60 * 30; i++) {
+        rig.step();
+        if (rig.controller.getFilteredPressure() > 12.5f && rig.controllerOutput == 0.0f)
+            sawOff = true;
+    }
+    TEST_ASSERT_TRUE_MESSAGE(sawOff, "pump not stopped past the hard cutoff");
+    char msg[64];
+    snprintf(msg, sizeof(msg), "max pressure %.2f bar", rig.maxPressure);
+    TEST_ASSERT_TRUE_MESSAGE(rig.maxPressure < 13.5f, msg);
+}
+
+// Diagnostics getters used by the $D line.
+void test_diagnostics_getters() {
+    Rig rig;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(4.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 2.0f, rig.controller.getEffectiveFlowTarget());
+    // model flow at the running power and pressure matches the rig's pump (same coefficients)
+    TEST_ASSERT_FLOAT_WITHIN(0.15f, pumpFlow(rig.controllerOutput / 100.0f, rig.controller.getFilteredPressure()),
+                             rig.controller.getModelPumpFlow(rig.controllerOutput));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controller.getModelPumpFlow(0.0f));
+    // stock pressure loop: the integral term is reported while it holds a pressure
+    Rig p;
+    p.puckConductance = 0.3f;
+    p.rawPressureSetpoint = 6.0f;
+    p.rawFlowSetpoint = 0.0f;
+    p.run(10.0f, PressureController::ControlMode::PRESSURE);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, 6.0f, p.controller.getFilteredSetpoint());
+    TEST_ASSERT_TRUE(p.controller.getPressureITerm() > 0.0f);
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -514,5 +617,9 @@ int main(int, char **) {
     RUN_TEST(test_exported_flow_is_measured);
     RUN_TEST(test_dead_zone_never_parks_the_pump_in_it);
     RUN_TEST(test_dead_zone_start_and_off);
+    RUN_TEST(test_dead_zone_no_stall_below_min_flow);
+    RUN_TEST(test_dead_zone_ceiling_still_stops_the_pump);
+    RUN_TEST(test_dead_zone_hard_cutoff);
+    RUN_TEST(test_diagnostics_getters);
     return UNITY_END();
 }
