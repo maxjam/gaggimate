@@ -3556,6 +3556,7 @@ msgstr "Pompa spenta"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
+#: src/pages/ShotHistory/HistoryChart.jsx
 #: src/utils/metricDefinitions.js
 msgid "Pump Power"
 msgstr "Potenza pompa"

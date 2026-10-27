@@ -3552,6 +3552,7 @@ msgstr "泵关闭"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
+#: src/pages/ShotHistory/HistoryChart.jsx
 #: src/utils/metricDefinitions.js
 msgid "Pump Power"
 msgstr "泵功率"

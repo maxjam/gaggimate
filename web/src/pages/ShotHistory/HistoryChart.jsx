@@ -28,6 +28,7 @@ function getChartData(shot) {
   const tf = [];
   const v = [];
   const vf = [];
+  const pp = [];
 
   // Process all samples to build data arrays
   for (let i = 0; i < data.length; i++) {
@@ -43,6 +44,7 @@ function getChartData(shot) {
     tf.push({ x, y: s.tf });
     v.push({ x, y: s.v });
     vf.push({ x, y: s.vf });
+    if (Number.isFinite(s.pp)) pp.push({ x, y: s.pp });
   }
 
   // For v5+ files, use phase transitions from header
@@ -69,6 +71,8 @@ function getChartData(shot) {
   // Check if weight data has any non-zero values
   const hasWeight = v.some(point => point.y > 0);
   const hasWeightFlow = vf.some(point => point.y > 0);
+  // Pump power is only in shots recorded by the meter-link fork (field pp)
+  const hasPumpPower = pp.length > 0;
 
   // Create phase annotations
   const phaseAnnotations = {};
@@ -213,6 +217,17 @@ function getChartData(shot) {
               },
             ]
           : []),
+        ...(hasPumpPower
+          ? [
+              {
+                label: t`Pump Power`,
+                borderColor: '#E11D48',
+                pointStyle: false,
+                yAxisID: 'y3',
+                data: pp,
+              },
+            ]
+          : []),
       ],
     },
     options: {
@@ -297,6 +312,23 @@ function getChartData(shot) {
                 offset: true,
                 ticks: {
                   callback: value => `${value.toFixed()} g`,
+                  font: {
+                    size: window.innerWidth < 640 ? 10 : 12,
+                  },
+                },
+                grid: { drawOnChartArea: false },
+              },
+            }
+          : {}),
+        ...(hasPumpPower
+          ? {
+              y3: {
+                type: 'linear',
+                min: 0,
+                max: 100,
+                position: 'right',
+                ticks: {
+                  callback: value => `${value.toFixed()} %`,
                   font: {
                     size: window.innerWidth < 640 ? 10 : 12,
                   },

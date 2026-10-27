@@ -2,7 +2,9 @@
 
 #include <LittleFS.h>
 #include <SD_MMC.h>
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <display/core/Controller.h>
 #include <display/core/ProfileManager.h>
 #include <display/core/process/BrewProcess.h>
@@ -17,11 +19,13 @@ constexpr float PRESSURE_SCALE = 10.0f;
 constexpr float FLOW_SCALE = 100.0f;
 constexpr float WEIGHT_SCALE = 10.0f;
 constexpr float RESISTANCE_SCALE = 100.0f;
+constexpr float PUMP_POWER_SCALE = 10.0f;
 
 constexpr uint16_t TEMP_MAX_VALUE = 2000;    // 200.0 °C
 constexpr uint16_t PRESSURE_MAX_VALUE = 200; // 20.0 bar
 constexpr uint16_t WEIGHT_MAX_VALUE = 10000; // 1000.0 g
 constexpr uint16_t RESISTANCE_MAX_VALUE = 0xFFFF;
+constexpr uint16_t PUMP_POWER_MAX_VALUE = 1000; // 100.0 %
 constexpr int16_t FLOW_MIN_VALUE = -2000; // -20.00 ml/s
 constexpr int16_t FLOW_MAX_VALUE = 2000;  //  20.00 ml/s
 
@@ -193,6 +197,7 @@ void ShotHistoryPlugin::record() {
         sample.pr = encodeUnsigned(currentPuckResistance, RESISTANCE_SCALE, RESISTANCE_MAX_VALUE);
         sample.si = getSystemInfo(); // Pack system state information
         sample.wp = encodeUnsigned(controller->getCurrentWaterPumped(), WEIGHT_SCALE, WEIGHT_MAX_VALUE);
+        sample.pp = encodeUnsigned(controller->getCurrentPumpPower(), PUMP_POWER_SCALE, PUMP_POWER_MAX_VALUE);
         // Apply the same spike rejection to the final-weight maximum. A real
         // sustained step is accepted on the following stable sample, whereas a
         // one-sample excursion cannot permanently inflate the shot total.
@@ -1059,15 +1064,16 @@ void ShotHistoryPlugin::rebuildIndex() {
                 // Decode old scale ticks as well as upstream elapsed-time and
                 // pumped-water records when rebuilding the existing history.
                 const size_t sampleSize = shotLogSampleSize(shotHeader);
-                if (sampleSize == 0) {
+                uint8_t raw[64]{}; // room for records with fields this build doesn't know yet
+                if (sampleSize == 0 || sampleSize > sizeof(raw)) {
                     break;
                 }
-                uint8_t raw[sizeof(ShotLogSample)]{};
                 if (shotFile.read(raw, sampleSize) != sampleSize) {
                     break;
                 }
                 const size_t valueOffset = shotLogHasElapsedTimestamp(shotHeader) ? 4 : 2;
-                memcpy(reinterpret_cast<uint8_t *>(&sample.tt), raw + valueOffset, sampleSize - valueOffset);
+                const size_t room = sizeof(ShotLogSample) - offsetof(ShotLogSample, tt);
+                memcpy(reinterpret_cast<uint8_t *>(&sample.tt), raw + valueOffset, std::min(sampleSize - valueOffset, room));
                 tempSum += sample.ct;
                 tempCount++;
                 if (sample.cp > maxPressure) {

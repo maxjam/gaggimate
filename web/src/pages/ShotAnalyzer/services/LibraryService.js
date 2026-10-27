@@ -45,6 +45,7 @@ function normalizeShotSampleForHistoryExport(sample = {}) {
     ev: round2(sample.ev),
     pr: round2(sample.pr),
     wp: round2(sample.wp),
+    pp: round2(sample.pp),
     systemInfo: sample.systemInfo,
     phaseNumber: sample.phaseNumber,
     phaseDisplayNumber: sample.phaseDisplayNumber,
