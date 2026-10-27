@@ -38,6 +38,7 @@ export function getLegendColorByLabel(colors) {
     'Target P': colors.pressure,
     'Pump Flow': colors.flow,
     'Target F': colors.flow,
+    'Pump Power': colors.pumpPower,
     'Puck Flow': colors.puckFlow,
     'Puck Resistance': colors.puckResistance,
     'Liquid Resistance': colors.liquidResistance,

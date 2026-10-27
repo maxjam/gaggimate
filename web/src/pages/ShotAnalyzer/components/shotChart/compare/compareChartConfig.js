@@ -32,6 +32,7 @@ export function getMainAxisUnitLabels({
   showWeightAxis,
   showPuckResistanceAxis,
   showLiquidResistanceAxis,
+  showPumpPowerAxis = false,
 }) {
   const labels = [
     {
@@ -58,6 +59,13 @@ export function getMainAxisUnitLabels({
     rightAxisUnitLabels.push({
       scaleId: 'yLiquidResistance',
       label: UNIT_BY_LABEL['Liquid Resistance'],
+      side: 'right',
+    });
+  }
+  if (showPumpPowerAxis) {
+    rightAxisUnitLabels.push({
+      scaleId: 'yPumpPower',
+      label: UNIT_BY_LABEL['Pump Power'],
       side: 'right',
     });
   }
@@ -135,10 +143,12 @@ export function getCompareMainChartConfig({
   neutralAxisTickColor,
   puckResistanceAxisRange,
   liquidResistanceAxisRange,
+  pumpPowerAxisRange = { min: 0, max: 100 },
   showStopAnnotations,
   showWeightAxis,
   showPuckResistanceAxis,
   showLiquidResistanceAxis,
+  showPumpPowerAxis = false,
   weightAxisRange,
   xRange,
 }) {
@@ -276,6 +286,22 @@ export function getCompareMainChartConfig({
           max: liquidResistanceAxisRange.max,
           ticks: {
             display: showLiquidResistanceAxis,
+            font: { size: 10 },
+            color: neutralAxisTickColor,
+            callback: formatUniqueAxisTick,
+          },
+          grid: { display: false },
+          border: { display: false },
+        },
+        yPumpPower: {
+          type: 'linear',
+          display: showPumpPowerAxis,
+          position: 'right',
+          offset: false,
+          min: pumpPowerAxisRange.min,
+          max: pumpPowerAxisRange.max,
+          ticks: {
+            display: showPumpPowerAxis,
             font: { size: 10 },
             color: neutralAxisTickColor,
             callback: formatUniqueAxisTick,

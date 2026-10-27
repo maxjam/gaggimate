@@ -128,6 +128,7 @@ function getReplayDatasetStrategy(label) {
   switch (label) {
     case 'Pressure':
     case 'Pump Flow':
+    case 'Pump Power':
     case 'Puck Flow':
     case 'Weight Flow':
       return 'extrema';

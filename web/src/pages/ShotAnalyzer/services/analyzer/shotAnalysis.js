@@ -7,7 +7,7 @@ import {
   getDelayReviewMessage,
   isAnalyzerDebugEnabled,
 } from './delayTracking';
-import { getMetricStats } from './metricStats';
+import { getMetricStats, getOptionalMetricStats } from './metricStats';
 import { getLiquidResistanceStats, getNativePuckResistanceStats } from './puckResistance';
 import { analyzeExecutedPhase } from './phaseAnalysis';
 import { getBluetoothScaleConnectionState } from './scaleConnection';
@@ -244,6 +244,7 @@ export function calculateShotMetrics(shotData, rawProfileData, settings) {
     f: getMetricStats(gSamples, 'fl'),
     pf: getMetricStats(gSamples, 'pf'),
     tf: getMetricStats(gSamples, 'tf'),
+    pp: getOptionalMetricStats(gSamples, 'pp'),
     t: getMetricStats(gSamples, 'ct'),
     tt: getMetricStats(gSamples, 'tt'),
     w: getMetricStats(gWeightSamples, 'v'),

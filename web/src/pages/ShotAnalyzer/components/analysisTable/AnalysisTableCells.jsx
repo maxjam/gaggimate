@@ -63,6 +63,7 @@ const CELL_METRIC_UNITS = {
   tp: 'bar',
   f: 'ml/s',
   tf: 'ml/s',
+  pp: '%',
   pf: 'ml/s',
   pr: 's·√bar/mL',
   lr: 'bar·s/mL',

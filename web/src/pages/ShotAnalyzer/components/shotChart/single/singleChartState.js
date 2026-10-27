@@ -7,7 +7,13 @@ export const HIDDEN_STATIC_TOOLTIP_STATE = createHiddenExternalTooltipState();
 
 const SINGLE_METRIC_PAGE_SERIES = {
   [SINGLE_METRIC_PAGE_KEYS.BASICS]: ['pressure', 'flow', 'weight'],
-  [SINGLE_METRIC_PAGE_KEYS.PRESSURE_FLOW]: ['pressure', 'targetPressure', 'flow', 'targetFlow'],
+  [SINGLE_METRIC_PAGE_KEYS.PRESSURE_FLOW]: [
+    'pressure',
+    'targetPressure',
+    'flow',
+    'targetFlow',
+    'pumpPower',
+  ],
   [SINGLE_METRIC_PAGE_KEYS.FLOW_VOLUME]: ['weight', 'weightFlow', 'puckFlow'],
   [SINGLE_METRIC_PAGE_KEYS.TEMPERATURE]: [],
   [SINGLE_METRIC_PAGE_KEYS.PUCK_RESISTANCE]: ['puckResistance', 'liquidResistance'],
@@ -16,6 +22,7 @@ const SINGLE_METRIC_PAGE_SERIES = {
     'targetPressure',
     'flow',
     'targetFlow',
+    'pumpPower',
     'puckFlow',
     'puckResistance',
     'liquidResistance',
@@ -29,6 +36,7 @@ const SINGLE_CHART_SERIES_VISIBILITY_KEYS = [
   'targetPressure',
   'flow',
   'targetFlow',
+  'pumpPower',
   'puckFlow',
   'puckResistance',
   'liquidResistance',
@@ -105,10 +113,17 @@ function sampleHasWeightFlowData(sample) {
   return Number.isFinite(value) && value > 0;
 }
 
+// Pump power is only in shots recorded by the meter-link fork's display firmware (field pp).
+function sampleHasPumpPowerData(sample) {
+  const value = sample?.pp ?? sample?.pump_power;
+  return value !== null && value !== undefined && Number.isFinite(Number(value));
+}
+
 export function getShotSampleCapabilities(shotSamples) {
   return {
     hasWeightData: shotSamples.some(sampleHasWeightData),
     hasWeightFlowData: shotSamples.some(sampleHasWeightFlowData),
+    hasPumpPowerData: shotSamples.some(sampleHasPumpPowerData),
   };
 }
 

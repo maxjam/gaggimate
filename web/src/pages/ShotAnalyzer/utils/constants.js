@@ -36,6 +36,7 @@ const groupMessages = {
   target_pressure: msg`Target Pressure (bar)`,
   flow: msg`Pump Flow (ml/s)`,
   target_flow: msg`Target Pump Flow (ml/s)`,
+  pumppower: msg`Pump Power (%)`,
   puckflow: msg`Puck Flow (ml/s)`,
   puckresistance: msg`Puck Resistance (s·√bar/mL)`,
   liquidresistance: msg`Liquid Resistance (bar·s/mL)`,
@@ -130,6 +131,11 @@ export const groupColors = {
     bg: 'bg-green-500/5',
     text: 'text-[var(--analyzer-target-flow-text)]',
     anchor: 'var(--analyzer-target-flow-anchor)',
+  },
+  pumppower: {
+    bg: 'bg-rose-500/5',
+    text: 'text-[var(--analyzer-pumppower-text)]',
+    anchor: 'var(--analyzer-pumppower-anchor)',
   },
   puckflow: {
     bg: 'bg-emerald-500/5',

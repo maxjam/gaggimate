@@ -20,12 +20,14 @@ export function getVisibleLegendItemsForExport({
   visibility,
   hasWeightData,
   hasWeightFlowData,
+  hasPumpPowerData = true,
 }) {
   // Exported legends should reflect the same visibility rules as the live chart,
   // including data-dependent series such as weight and weight flow.
   return LEGEND_ORDER.reduce((items, label) => {
     if (label === 'Weight' && !hasWeightData) return items;
     if (label === 'Weight Flow' && !hasWeightFlowData) return items;
+    if (label === 'Pump Power' && !hasPumpPowerData) return items;
 
     const key = VISIBILITY_KEY_BY_LABEL[label];
     if (key && !visibility[key]) return items;

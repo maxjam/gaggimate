@@ -32,6 +32,7 @@ export const MOBILE_COMPARE_FIXED_SERIES_LABELS = [
   'Target P',
   'Pump Flow',
   'Target F',
+  'Pump Power',
   'Puck Resistance',
   'Liquid Resistance',
 ];
@@ -47,6 +48,7 @@ export const COMPARE_LEGEND_KEY_BY_LABEL = {
   'Target P': 'targetPressure',
   'Pump Flow': 'flow',
   'Target F': 'targetFlow',
+  'Pump Power': 'pumpPower',
   'Puck Flow': 'puckFlow',
   'Puck Resistance': 'puckResistance',
   'Liquid Resistance': 'liquidResistance',
@@ -94,6 +96,7 @@ export const DETAIL_CHARTS = [
     axisColorKey: 'flow',
     beginAtZero: true,
   },
+  createDetailChartWithoutTarget('pump-power', 'Pump Power', 'pumpPower'),
   createDetailChartWithoutTarget('puck-flow', 'Puck Flow', 'puckFlow'),
   createDetailChartWithoutTarget('puck-resistance', 'Puck Resistance', 'puckResistance'),
   createDetailChartWithoutTarget('liquid-resistance', 'Liquid Resistance', 'liquidResistance'),

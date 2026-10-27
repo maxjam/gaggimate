@@ -43,6 +43,12 @@ export function getMetricStats(samples, key) {
   return { start, end, min, max, avg };
 }
 
+// Stats for a field older shots may not have (pump power, pp): empty (shown as '-') when no sample carries it.
+export function getOptionalMetricStats(samples, key) {
+  const hasField = samples.some(sample => sample?.[key] !== null && sample?.[key] !== undefined);
+  return hasField ? getMetricStats(samples, key) : createEmptyMetricStats();
+}
+
 function normalizeMetricValue(value) {
   return value == null ? 0 : value;
 }
@@ -58,6 +64,7 @@ export function createEmptyPhaseStats() {
     f: createEmptyMetricStats(),
     pf: createEmptyMetricStats(),
     tf: createEmptyMetricStats(),
+    pp: createEmptyMetricStats(),
     t: createEmptyMetricStats(),
     tt: createEmptyMetricStats(),
     w: createEmptyMetricStats(),

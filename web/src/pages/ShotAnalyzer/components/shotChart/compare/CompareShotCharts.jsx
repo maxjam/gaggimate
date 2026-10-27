@@ -40,6 +40,7 @@ import {
   getResolvedCompareStyle,
   getScrubberRange,
   getStaticTooltipVariants,
+  hasCompareSampleField,
   hasCompareSampleValue,
 } from './compareModel';
 import {
@@ -132,7 +133,12 @@ export function CompareShotCharts({
           },
     );
   }, []);
-  const hiddenLegendLabels = getHiddenLegendLabels({ showPhaseAnnotations, showStopAnnotations });
+  const hasPumpPowerData = hasCompareSampleField(compareEntries, 'pp');
+  const hiddenLegendLabels = getHiddenLegendLabels({
+    showPhaseAnnotations,
+    showStopAnnotations,
+    hasPumpPowerData,
+  });
   const hasWeightData = hasCompareSampleValue(compareEntries, 'v');
   const hasWeightFlowData = hasCompareSampleValue(compareEntries, 'vf');
 
@@ -194,6 +200,7 @@ export function CompareShotCharts({
   const liquidResistanceDatasets = mainDatasets.filter(
     dataset => dataset.yAxisID === 'yLiquidResistance',
   );
+  const pumpPowerDatasets = mainDatasets.filter(dataset => dataset.yAxisID === 'yPumpPower');
   const weightAxisRange = getCompareWeightAxisRange({
     shotStylePreset,
     weightDatasets,
@@ -207,6 +214,8 @@ export function CompareShotCharts({
   );
   const showPuckResistanceAxis = puckResistanceDatasets.length > 0;
   const showLiquidResistanceAxis = liquidResistanceDatasets.length > 0;
+  const showPumpPowerAxis = pumpPowerDatasets.length > 0;
+  const pumpPowerAxisRange = { min: 0, max: 100 };
   const puckResistanceAxisRange = getAxisRange({
     datasets: puckResistanceDatasets,
     beginAtZero: true,
@@ -223,6 +232,7 @@ export function CompareShotCharts({
     showWeightAxis,
     showPuckResistanceAxis,
     showLiquidResistanceAxis,
+    showPumpPowerAxis,
   });
   const mainAxisUnitPadding = getMainAxisUnitPadding({
     mainAxisUnitLabels,
@@ -240,10 +250,12 @@ export function CompareShotCharts({
     neutralAxisTickColor,
     puckResistanceAxisRange,
     liquidResistanceAxisRange,
+    pumpPowerAxisRange,
     showStopAnnotations,
     showWeightAxis,
     showPuckResistanceAxis,
     showLiquidResistanceAxis,
+    showPumpPowerAxis,
     weightAxisRange,
     xRange,
   });
