@@ -188,17 +188,35 @@ float PressureController::rampFlowSetpoint(float target) {
 // bump and can never wind up, whether the other controller or the 0..100 % limit holds the pump.
 // This matters on a vane pump: at 9 bar about half the duty only covers slip, so a controller whose
 // integral has been pushed far below that has to climb through a dead band before water moves again.
+// Pump dead zone (gains.deadZone): the two PIs below work on u (0..1), the share of the pump's power range
+// above the dead zone. Pump power = deadZone + u * (1 - deadZone) for u > 0, and off for u = 0, so the loop
+// never parks the pump in the band where it does not turn and has to climb back through it (on/off
+// cycling at low flow and low pressure). With deadZone = 0, u is the pump power itself.
+float PressureController::loopFromPump(float duty) const {
+    const float dz = _flowGains.deadZone;
+    if (dz <= 0.0f)
+        return duty;
+    return std::clamp((duty - dz) / (1.0f - dz), 0.0f, 1.0f);
+}
+
+float PressureController::pumpFromLoop(float u) const {
+    const float dz = _flowGains.deadZone;
+    if (dz <= 0.0f || u <= 0.0f)
+        return u;
+    return dz + u * (1.0f - dz);
+}
+
 float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     if (*_rawFlowSetpoint <= 0.0f) { // the phase asks for no flow (blooming etc.)
         resetFlowLoop();
         return 0.0f;
     }
-    const float ffDuty = _flowGains.ff > 0.0f ? _flowGains.ff * modelDutyFraction(target) : 0.0f;
+    const float ffDuty = _flowGains.ff > 0.0f ? _flowGains.ff * loopFromPump(modelDutyFraction(target)) : 0.0f;
     if (!_flowLoopArmed) {
         // Start from the duty already running (a pressure phase holding 9 bar sits well above startDuty;
         // dropping to startDuty would let the pressure fall through the slip band), or from startDuty.
-        const float running = std::clamp(*_ctrlOutput * 0.01f, 0.0f, 1.0f);
-        const float start = std::max(_flowGains.startDuty, running);
+        const float running = loopFromPump(std::clamp(*_ctrlOutput * 0.01f, 0.0f, 1.0f));
+        const float start = std::max(loopFromPump(_flowGains.startDuty), running);
         _flowReset = std::max(0.0f, start - ffDuty);
         _pressReset = start;
         _flowLoopArmed = true;
@@ -251,8 +269,8 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
         _pressReset = applied;
     }
 
-    _flowDuty = applied;
-    return applied * 100.0f;
+    _flowDuty = pumpFromLoop(applied);
+    return _flowDuty * 100.0f;
 }
 
 void PressureController::setPumpFlowCoeff(float oneBarFlow, float nineBarFlow) {

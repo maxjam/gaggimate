@@ -106,12 +106,14 @@ void MeterLink::handle(const lineproto::Message &msg) {
         g.ramp = msg.f(4, g.ramp);
         g.limKp = msg.f(5, g.limKp);
         g.limKi = msg.f(6, g.limKi);
+        g.deadZone = msg.f(7, g.deadZone * 100.0f) / 100.0f; // optional 8th field, percent (meter v1.7.2+)
         if (!g.valid()) {
             ESP_LOGW(LOG_TAG, "Rejected $G with out-of-range gains");
             return;
         }
-        ESP_LOGI(LOG_TAG, "Flow loop gains from meter: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f",
-                 g.kp, g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi);
+        ESP_LOGI(LOG_TAG,
+                 "Flow loop gains from meter: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%%",
+                 g.kp, g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f);
         if (_gainsCb)
             _gainsCb(g);
         break;

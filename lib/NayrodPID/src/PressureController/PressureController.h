@@ -57,7 +57,7 @@ class PressureController {
     void resetFlowLoop();                                          // call when leaving FLOW mode
     float getEffectiveFlowTarget() const { return _flowTargetEff; } // slewed flow target (ml/s)
     bool isPressureLimiting() const { return _limBinding; }        // the pressure ceiling holds the pump
-    float getFlowLoopDuty() const { return _flowDuty; }            // last applied duty (0..1)
+    float getFlowLoopDuty() const { return _flowDuty; }            // last pump power sent (0..1)
     float getFlowLoopIntegral() const { return _flowReset; }        // flow PI reset state (duty)
     float getPressureLoopIntegral() const { return _pressReset; }   // ceiling PI reset state (duty)
     float getRampedFlowSetpoint() const { return _flowSetpointRamped; }
@@ -66,6 +66,8 @@ class PressureController {
     float getPumpDutyCycleForPressure();
     float getPumpDutyCycleMeasuredFlow(float target);
     float rampFlowSetpoint(float target);
+    float loopFromPump(float duty) const; // pump power -> loop output u (dead zone removed)
+    float pumpFromLoop(float u) const;    // loop output u -> pump power
     static constexpr float HARD_PRESSURE_CUTOFF = 12.5f; // bar: flow loop refuses to push past this
     static constexpr float PRESSURE_LOOKAHEAD_S = 0.25f; // ceiling PI acts on P + dP/dt * this
     static constexpr float PRESSURE_TRACK_S = 0.2f;      // ceiling PI reset tracking time while flow is in charge

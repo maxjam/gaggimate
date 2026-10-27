@@ -442,6 +442,50 @@ void test_exported_flow_is_measured() {
     TEST_ASSERT_FLOAT_WITHIN(0.15f, rig.meterReading, rig.controller.getPumpFlowRate());
 }
 
+// Pump dead zone: with gains.deadZone set, the loop never sends a pump power between 0 and the dead zone
+// (the band where the Velofuso does not turn), and still tracks the target and holds a pressure ceiling.
+void test_dead_zone_never_parks_the_pump_in_it() {
+    for (float ceiling : {0.0f, 9.0f}) {
+        Rig rig;
+        FlowLoopGains g;
+        g.deadZone = 0.25f;
+        rig.controller.setFlowLoopGains(g);
+        rig.puckConductance = ceiling > 0.0f ? 0.12f : 1e6f; // tight puck under a ceiling, else open group
+        rig.rawFlowSetpoint = 2.0f;
+        rig.rawPressureSetpoint = ceiling;
+        for (int i = 0; i < 60 * 20; i++) {
+            rig.step();
+            char msg[80];
+            snprintf(msg, sizeof(msg), "pump power %.2f %% inside the 25 %% dead zone", rig.controllerOutput);
+            TEST_ASSERT_TRUE_MESSAGE(rig.controllerOutput == 0.0f || rig.controllerOutput >= 25.0f - 1e-3f, msg);
+        }
+        if (ceiling > 0.0f) {
+            TEST_ASSERT_FLOAT_WITHIN(0.25f, 9.0f, rig.pressure);
+        } else {
+            TEST_ASSERT_FLOAT_WITHIN(0.10f, 2.0f, rig.trueFlow);
+        }
+    }
+}
+
+// A start duty below the dead zone starts at its edge, and the flow loop off (no target) is still 0 %.
+// (The rig pump delivers nothing below 21 % at 0 bar, so a 20 % dead zone is a correct setting for it.)
+void test_dead_zone_start_and_off() {
+    Rig rig;
+    FlowLoopGains g;
+    g.startDuty = 0.10f;
+    g.deadZone = 0.20f;
+    rig.controller.setFlowLoopGains(g);
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.step();
+    TEST_ASSERT_TRUE(rig.controllerOutput >= 20.0f && rig.controllerOutput < 22.0f);
+    rig.run(4.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.10f, 2.0f, rig.trueFlow);
+    rig.rawFlowSetpoint = 0.0f;
+    rig.step();
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controllerOutput);
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -468,5 +512,7 @@ int main(int, char **) {
     RUN_TEST(test_sqrt_puck_ceiling);
     RUN_TEST(test_pressure_mode_unchanged);
     RUN_TEST(test_exported_flow_is_measured);
+    RUN_TEST(test_dead_zone_never_parks_the_pump_in_it);
+    RUN_TEST(test_dead_zone_start_and_off);
     return UNITY_END();
 }

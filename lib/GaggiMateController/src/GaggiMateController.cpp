@@ -584,7 +584,7 @@ void GaggiMateController::sendSensorData() {
 
 void GaggiMateController::handleSerialCommand(char c) {
     // Console on the USB port. 'S' alone still prints the status (as before); other commands
-    // are whole lines: "G" shows the flow-loop gains, "G kp ki start% ff limKp limKi" sets them.
+    // are whole lines: "G" shows the flow-loop gains, "G kp ki start% ff ramp limKp limKi [deadzone%]" sets them.
     if (c == '\r' || c == '\n') {
         if (consoleLen > 0) {
             consoleLine[consoleLen] = '\0';
@@ -613,12 +613,13 @@ void GaggiMateController::handleConsoleLine(const char *line) {
         auto dimmedPump = static_cast<DimmedPump *>(pump);
         FlowLoopGains g = dimmedPump->getFlowLoopGains();
         if (line[1] == '\0') {
-            ESP_LOGI("Controller", "Flow loop gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f", g.kp,
-                     g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi);
+            ESP_LOGI("Controller", "Flow loop gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%%",
+                     g.kp, g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f);
             return;
         }
-        float kp, ki, start, ff, ramp, limKp, limKi;
-        if (sscanf(line + 1, "%f %f %f %f %f %f %f", &kp, &ki, &start, &ff, &ramp, &limKp, &limKi) == 7) {
+        float kp, ki, start, ff, ramp, limKp, limKi, dz = g.deadZone * 100.0f;
+        const int got = sscanf(line + 1, "%f %f %f %f %f %f %f %f", &kp, &ki, &start, &ff, &ramp, &limKp, &limKi, &dz);
+        if (got == 7 || got == 8) {
             g.kp = kp;
             g.ki = ki;
             g.startDuty = start / 100.0f;
@@ -626,14 +627,17 @@ void GaggiMateController::handleConsoleLine(const char *line) {
             g.ramp = ramp;
             g.limKp = limKp;
             g.limKi = limKi;
+            g.deadZone = dz / 100.0f;
             if (!g.valid()) {
-                ESP_LOGI("Controller", "Rejected: gains out of range (kp 0-1, ki 0-5, start 0-100, ff 0-1, ramp 0-100, lim 0-20)");
+                ESP_LOGI("Controller",
+                         "Rejected: gains out of range (kp 0-1, ki 0-5, start 0-100, ff 0-1, ramp 0-100, lim 0-20, deadzone 0-60)");
                 return;
             }
             dimmedPump->setFlowLoopGains(g);
             ESP_LOGI("Controller", "Flow loop gains set (until restart or the next $G from the meter board)");
         } else {
-            ESP_LOGI("Controller", "Usage: G <kp> <ki> <start_duty_percent> <ff 0..1> <ramp ml/s/s> <limKp %%/bar> <limKi %%/bar/s>");
+            ESP_LOGI("Controller",
+                     "Usage: G <kp> <ki> <start_duty_percent> <ff 0..1> <ramp ml/s/s> <limKp %%/bar> <limKi %%/bar/s> [deadzone %%]");
         }
         return;
     }
@@ -694,8 +698,8 @@ void GaggiMateController::printStatus() {
                  static_cast<int>(dimmedPump->getMode()), dimmedPump->getFlowTarget(), dimmedPump->getEffectiveFlowTarget(),
                  dimmedPump->isPressureLimiting() ? " (ceiling)" : "", dimmedPump->getPowerTarget(),
                  dimmedPump->isFlowLoopFaulted());
-        ESP_LOGI("Controller", "║  └─ Gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f", g.kp, g.ki,
-                 g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi);
+        ESP_LOGI("Controller", "║  └─ Gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%%", g.kp,
+                 g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f);
         ESP_LOGI("Controller", "║");
     }
 
