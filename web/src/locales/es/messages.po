@@ -480,6 +480,10 @@ msgstr "Resistencia media de la pastilla"
 msgid "Avg. Pump Flow"
 msgstr "Flujo medio de bomba"
 
+#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
+msgid "Avg. Pump Power"
+msgstr "Potencia media de bomba"
+
 #: src/pages/Statistics/components/MetricsTable.jsx
 msgid "Avg. Target Temperature"
 msgstr "Temperatura objetivo media"
@@ -3552,10 +3556,16 @@ msgstr "Bomba apagada"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
+#: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
 #: src/pages/ShotHistory/HistoryChart.jsx
 #: src/utils/metricDefinitions.js
 msgid "Pump Power"
 msgstr "Potencia de la bomba"
+
+#: src/pages/ShotAnalyzer/utils/columns.js
+#: src/pages/ShotAnalyzer/utils/constants.js
+msgid "Pump Power (%)"
+msgstr "Potencia de la bomba (%)"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx

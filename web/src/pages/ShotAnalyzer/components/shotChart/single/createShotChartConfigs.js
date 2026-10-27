@@ -50,6 +50,7 @@ export function createShotChartConfigs({
   const showLiquidResistanceAxis = Boolean(
     visibility.liquidResistance && model.series.liquidResistance.length > 0,
   );
+  const showPumpPowerAxis = Boolean(visibility.pumpPower && model.series.pumpPower.length > 0);
   const neutralAxisTickColor = getNeutralAxisTickColor();
   const mainAxisUnitLabels = [
     { scaleId: 'yMain', label: 'bar / ml/s' },
@@ -75,6 +76,13 @@ export function createShotChartConfigs({
     rightAxisUnitLabels.push({
       scaleId: 'yLiquidResistance',
       label: 'bar·s/mL',
+      side: 'right',
+    });
+  }
+  if (showPumpPowerAxis) {
+    rightAxisUnitLabels.push({
+      scaleId: 'yPumpPower',
+      label: '%',
       side: 'right',
     });
   }
@@ -192,6 +200,18 @@ export function createShotChartConfigs({
       borderWidth: THIN_LINE_WIDTH,
       tension: 0,
       hidden: !visibility.targetFlow,
+    },
+    {
+      label: 'Pump Power',
+      data: model.series.pumpPower,
+      borderColor: colors.pumpPower,
+      backgroundColor: colors.pumpPower,
+      fill: false,
+      yAxisID: 'yPumpPower',
+      pointRadius: 0,
+      borderWidth: THIN_LINE_WIDTH,
+      tension: 0,
+      hidden: !visibility.pumpPower || model.series.pumpPower.length === 0,
     },
     {
       label: 'Puck Flow',
@@ -476,6 +496,23 @@ export function createShotChartConfigs({
             max: model.liquidResistanceAxisMax,
             ticks: {
               display: showLiquidResistanceAxis,
+              font: { size: 10 },
+              color: neutralAxisTickColor,
+              callback: formatUniqueAxisTick,
+            },
+            grid: { display: false },
+            border: { display: false },
+          },
+          yPumpPower: {
+            type: 'linear',
+            display: showPumpPowerAxis,
+            position: 'right',
+            offset: false,
+            beginAtZero: true,
+            min: 0,
+            max: model.pumpPowerAxisMax,
+            ticks: {
+              display: showPumpPowerAxis,
               font: { size: 10 },
               color: neutralAxisTickColor,
               callback: formatUniqueAxisTick,

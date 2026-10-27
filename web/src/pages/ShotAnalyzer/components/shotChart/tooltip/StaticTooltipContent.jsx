@@ -176,7 +176,13 @@ function getSinglePagedMetricRows({ metricContext = null, rows = [] }) {
   const pageKey = metricContext?.page || SINGLE_METRIC_PAGE_KEYS.BASICS;
   const labelsByPage = {
     [SINGLE_METRIC_PAGE_KEYS.BASICS]: ['Pressure', 'Pump Flow', 'Weight', 'Temp'],
-    [SINGLE_METRIC_PAGE_KEYS.PRESSURE_FLOW]: ['Pressure', 'Target P', 'Pump Flow', 'Target F'],
+    [SINGLE_METRIC_PAGE_KEYS.PRESSURE_FLOW]: [
+      'Pressure',
+      'Target P',
+      'Pump Flow',
+      'Target F',
+      'Pump Power',
+    ],
     [SINGLE_METRIC_PAGE_KEYS.FLOW_VOLUME]: [
       'Weight',
       'Weight Flow',

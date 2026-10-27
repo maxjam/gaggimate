@@ -193,6 +193,8 @@
     var(--statistics-trend-shots-brown) 72%,
     #d97706
   );
+  --analyzer-pumppower-text: #e11d48;
+  --analyzer-pumppower-anchor: #e11d48;
   --analyzer-temp-text: #f0561d;
   --analyzer-temp-anchor: #f0561d;
   --analyzer-target-temp-text: #731f00;
@@ -349,6 +351,8 @@ html[data-theme='nord'] {
   --analyzer-target-flow-anchor: #63993d;
   --analyzer-puckflow-text: #059669;
   --analyzer-puckflow-anchor: #059669;
+  --analyzer-pumppower-text: #e11d48;
+  --analyzer-pumppower-anchor: #e11d48;
   --analyzer-temp-text: #f0561d;
   --analyzer-temp-anchor: #f0561d;
   --analyzer-target-temp-text: #731f00;

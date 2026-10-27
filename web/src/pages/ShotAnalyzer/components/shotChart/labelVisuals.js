@@ -1,3 +1,4 @@
+import { faBolt } from '@fortawesome/free-solid-svg-icons/faBolt';
 import { faBullseye } from '@fortawesome/free-solid-svg-icons/faBullseye';
 import { faClock } from '@fortawesome/free-solid-svg-icons/faClock';
 import { faDroplet } from '@fortawesome/free-solid-svg-icons/faDroplet';
@@ -23,6 +24,7 @@ const DISPLAY_LABEL_BY_LABEL = {
   Stops: msg`Stops`,
   Pressure: msg`Pressure`,
   'Pump Flow': msg`Pump Flow`,
+  'Pump Power': msg`Pump Power`,
   'Puck Flow': msg`Puck Flow`,
   'Puck Resistance': msg`Puck Resistance`,
   'Liquid Resistance': msg`Liquid Resistance`,
@@ -53,6 +55,7 @@ const ICON_BY_LABEL = {
   'Target P': faBullseye,
   'Pump Flow': faFaucet,
   'Target F': faBullseye,
+  'Pump Power': faBolt,
   'Puck Flow': faFilter,
   'Puck Resistance': faGaugeHigh,
   'Liquid Resistance': faGaugeHigh,

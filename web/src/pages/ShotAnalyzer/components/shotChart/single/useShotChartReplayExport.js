@@ -127,6 +127,7 @@ export function useShotChartReplayExport({
   visibility,
   hasWeightData,
   hasWeightFlowData,
+  hasPumpPowerData = true,
 }) {
   const replayRafRef = useRef(null);
   const replayStartPerfMsRef = useRef(0);
@@ -607,6 +608,7 @@ export function useShotChartReplayExport({
       visibility,
       hasWeightData,
       hasWeightFlowData,
+      hasPumpPowerData,
     });
   };
 

@@ -77,6 +77,7 @@ export function buildSeries(samples) {
     targetPressure: [],
     targetFlow: [],
     targetTemp: [],
+    pumpPower: [],
   };
 
   samples.forEach(sample => {
@@ -95,6 +96,8 @@ export function buildSeries(samples) {
     const targetPressure = toNumberOrNull(getSampleValue(sample, ['tp', 'target_pressure']));
     const targetFlow = toNumberOrNull(getSampleValue(sample, ['tf', 'target_flow']));
     const targetTemp = toNumberOrNull(getSampleValue(sample, ['tt', 'tr', 'target_temperature']));
+    // Pump power (%), recorded by the meter-link fork's display firmware (field pp)
+    const pumpPower = toNumberOrNull(getSampleValue(sample, ['pp', 'pump_power']));
 
     if (pressure !== null) series.pressure.push({ x: t, y: pressure });
     if (flow !== null) series.flow.push({ x: t, y: flow });
@@ -112,6 +115,7 @@ export function buildSeries(samples) {
       series.targetFlow.push({ x: t, y: Math.min(targetFlow, TARGET_FLOW_MAX) });
     }
     if (targetTemp !== null) series.targetTemp.push({ x: t, y: targetTemp });
+    if (pumpPower !== null) series.pumpPower.push({ x: t, y: Math.max(0, pumpPower) });
   });
 
   return series;
@@ -177,6 +181,7 @@ export function buildAxisRanges(series) {
     weightAxisMax,
     puckResistanceAxisMax,
     liquidResistanceAxisMax,
+    pumpPowerAxisMax: 100,
     tempAxisMin: tempMinRaw - tempBottomPadding,
     tempAxisMax: tempMaxRaw + tempTopPadding,
   };

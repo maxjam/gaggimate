@@ -225,6 +225,21 @@ function buildMainFlowDatasetSpecs({
           ...compareDatasetMeta,
         }
       : null,
+    visibility.pumpPower && model.series.pumpPower.length > 0
+      ? {
+          label: `${entry.label} Pump Power`,
+          compareTooltipBaseLabel: 'Pump Power',
+          data: model.series.pumpPower,
+          borderColor: applyColorAlpha(colors.pumpPower, shotStyle.opacity),
+          backgroundColor: applyColorAlpha(colors.pumpPower, shotStyle.opacity),
+          yAxisID: 'yPumpPower',
+          borderWidth: Math.max(1.2, shotStyle.lineWidth - 0.8),
+          borderDash: shotStyle.dash,
+          tension: 0,
+          ...getComparePointStyle(false),
+          ...compareDatasetMeta,
+        }
+      : null,
     visibility.puckFlow && model.series.puckFlow.length > 0
       ? {
           label: `${entry.label} Puck Flow`,

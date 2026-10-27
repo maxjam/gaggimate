@@ -42,6 +42,7 @@ export function buildShotChartModel({
     weightAxisMax,
     puckResistanceAxisMax,
     liquidResistanceAxisMax,
+    pumpPowerAxisMax,
     tempAxisMin,
     tempAxisMax,
   } = buildAxisRanges(series);
@@ -87,6 +88,7 @@ export function buildShotChartModel({
     weightAxisMax,
     puckResistanceAxisMax,
     liquidResistanceAxisMax,
+    pumpPowerAxisMax,
     tempAxisMin,
     tempAxisMax,
     phaseAnnotations,

@@ -114,7 +114,8 @@ export function CompareMobileLegend({
     if (
       MOBILE_COMPARE_CONTEXT_LABEL_SET.has(label) ||
       label === 'Puck Resistance' ||
-      label === 'Liquid Resistance'
+      label === 'Liquid Resistance' ||
+      label === 'Pump Power'
     ) {
       onLegendToggle(label);
     }
@@ -358,6 +359,16 @@ function getStatisticsMetricDefinitions(metricLabel = null) {
         getValue: total => total?.f?.avg,
       },
     ],
+    'Pump Power': [
+      {
+        key: 'pumpPower',
+        label: t`Avg. Pump Power`,
+        unit: '%',
+        color: 'var(--analyzer-pumppower-text)',
+        icon: getShotChartLabelIcon('Pump Power'),
+        getValue: total => total?.pp?.avg,
+      },
+    ],
     'Puck Flow': [
       {
         key: 'puckFlow',
@@ -556,6 +567,14 @@ function getCompareMobileDetailMetricDefinitions(labelKey, pageKey = null) {
       color: 'var(--analyzer-pressure-text)',
       icon: getShotChartLabelIcon('Pressure'),
       getValue: nextTotal => nextTotal?.p?.avg,
+    },
+    'Pump Power': {
+      key: 'pumpPower',
+      label: t`Avg. Pump Power`,
+      unit: '%',
+      color: 'var(--analyzer-pumppower-text)',
+      icon: getShotChartLabelIcon('Pump Power'),
+      getValue: nextTotal => nextTotal?.pp?.avg,
     },
     'Puck Flow': {
       key: 'puckFlow',

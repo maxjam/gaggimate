@@ -84,6 +84,9 @@ import {
 
 Chart.register(annotationPlugin);
 
+// Series legend entries hidden when the shot has no data for them (pump power: meter-link fork shots only).
+const NO_HIDDEN_LEGEND_LABELS = [];
+const PUMP_POWER_LEGEND_LABELS = ['Pump Power'];
 export function SingleShotChart({ shotData, profileData, results, desktopCardHeight = 0 }) {
   const { t } = useLingui();
   // These refs point to the mounted DOM and Chart.js instances. They stay local
@@ -141,7 +144,11 @@ export function SingleShotChart({ shotData, profileData, results, desktopCardHei
 
   const shotSamples = Array.isArray(shotData?.samples) ? shotData.samples : EMPTY_SHOT_SAMPLES;
 
-  const { hasWeightData, hasWeightFlowData } = getShotSampleCapabilities(shotSamples);
+  const { hasWeightData, hasWeightFlowData, hasPumpPowerData } =
+    getShotSampleCapabilities(shotSamples);
+  const hiddenSeriesLegendLabels = hasPumpPowerData
+    ? NO_HIDDEN_LEGEND_LABELS
+    : PUMP_POWER_LEGEND_LABELS;
   const chartSeriesCapabilitiesRef = useRef({ hasWeightData, hasWeightFlowData });
   chartSeriesCapabilitiesRef.current = { hasWeightData, hasWeightFlowData };
   const scrubberMax = Math.max(0, Number(chartMaxTime) || 0);
@@ -231,6 +238,7 @@ export function SingleShotChart({ shotData, profileData, results, desktopCardHei
     visibility,
     hasWeightData,
     hasWeightFlowData,
+    hasPumpPowerData,
   });
 
   const chartLifecycleRef = useRef({
@@ -470,6 +478,7 @@ export function SingleShotChart({ shotData, profileData, results, desktopCardHei
     if (!key) return;
     if (label === 'Weight' && !hasWeightData) return;
     if (label === 'Weight Flow' && !hasWeightFlowData) return;
+    if (label === 'Pump Power' && !hasPumpPowerData) return;
     setVisibility(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -859,7 +868,7 @@ export function SingleShotChart({ shotData, profileData, results, desktopCardHei
       >
         <ShotChartLegendToggles
           labels={SHOT_CHART_PRIMARY_LEGEND_LABELS}
-          hiddenLegendLabels={[]}
+          hiddenLegendLabels={hiddenSeriesLegendLabels}
           hasWeightData={hasWeightData}
           hasWeightFlowData={hasWeightFlowData}
           isControlsLocked={isControlsLocked}
@@ -886,7 +895,7 @@ export function SingleShotChart({ shotData, profileData, results, desktopCardHei
         {isMobileSeriesLegendExpanded ? (
           <ShotChartLegendToggles
             labels={SHOT_CHART_SERIES_LEGEND_LABELS}
-            hiddenLegendLabels={[]}
+            hiddenLegendLabels={hiddenSeriesLegendLabels}
             hasWeightData={hasWeightData}
             hasWeightFlowData={hasWeightFlowData}
             isControlsLocked={isControlsLocked}
@@ -900,7 +909,7 @@ export function SingleShotChart({ shotData, profileData, results, desktopCardHei
       <div ref={desktopLegendRef}>
         <ShotChartLegendToggles
           labels={SHOT_CHART_SERIES_LEGEND_LABELS}
-          hiddenLegendLabels={[]}
+          hiddenLegendLabels={hiddenSeriesLegendLabels}
           hasWeightData={hasWeightData}
           hasWeightFlowData={hasWeightFlowData}
           isControlsLocked={isControlsLocked}

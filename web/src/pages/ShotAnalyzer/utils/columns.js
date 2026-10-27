@@ -148,6 +148,26 @@ export const columnConfig = [
     type: COLUMN_TYPES.AVG,
     group: 'target_flow',
   }),
+  // Pump power (%): only in shots recorded by the meter-link fork's display firmware
+  createColumn({
+    id: 'pp_se',
+    label: msg`Pump Power (%)`,
+    type: COLUMN_TYPES.SE,
+    group: 'pumppower',
+  }),
+  createColumn({
+    id: 'pp_mm',
+    label: msg`Pump Power (%)`,
+    type: COLUMN_TYPES.MM,
+    group: 'pumppower',
+  }),
+  createColumn({
+    id: 'pp_avg',
+    label: msg`Pump Power (%)`,
+    type: COLUMN_TYPES.AVG,
+    group: 'pumppower',
+    default: true,
+  }),
   createColumn({
     id: 'pf_se',
     label: msg`Puck Flow (ml/s)`,

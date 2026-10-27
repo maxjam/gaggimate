@@ -484,6 +484,10 @@ msgstr "Resistenza media del puck"
 msgid "Avg. Pump Flow"
 msgstr "Flusso medio pompa"
 
+#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
+msgid "Avg. Pump Power"
+msgstr "Potenza media pompa"
+
 #: src/pages/Statistics/components/MetricsTable.jsx
 msgid "Avg. Target Temperature"
 msgstr "Temperatura obiettivo media"
@@ -3556,10 +3560,16 @@ msgstr "Pompa spenta"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
+#: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
 #: src/pages/ShotHistory/HistoryChart.jsx
 #: src/utils/metricDefinitions.js
 msgid "Pump Power"
 msgstr "Potenza pompa"
+
+#: src/pages/ShotAnalyzer/utils/columns.js
+#: src/pages/ShotAnalyzer/utils/constants.js
+msgid "Pump Power (%)"
+msgstr "Potenza pompa (%)"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx

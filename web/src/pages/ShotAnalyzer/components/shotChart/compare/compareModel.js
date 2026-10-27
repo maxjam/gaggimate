@@ -29,6 +29,7 @@ export function normalizeCompareVisibility(
     stops: false,
     brewModeLabel: Boolean(showBrewModeAnnotation),
     temp: false,
+    pumpPower: false,
     puckFlow: false,
     puckResistance: false,
     liquidResistance: false,
@@ -63,6 +64,7 @@ export function getMobileCompareVisibility(visibility) {
     puckFlow: false,
     puckResistance: Boolean(visibility.puckResistance),
     liquidResistance: Boolean(visibility.liquidResistance),
+    pumpPower: Boolean(visibility.pumpPower),
     temp: false,
     targetTemp: false,
     weight: false,
@@ -179,8 +181,30 @@ export function getCompareEntriesKey(compareEntries) {
   return compareEntries.map((entry, index) => getCompareEntryKey(entry, index)).join('|');
 }
 
-export function getHiddenLegendLabels({ showPhaseAnnotations, showStopAnnotations }) {
-  return [...(showPhaseAnnotations ? [] : ['Phases']), ...(showStopAnnotations ? [] : ['Stops'])];
+export function getHiddenLegendLabels({
+  showPhaseAnnotations,
+  showStopAnnotations,
+  hasPumpPowerData = true,
+}) {
+  return [
+    ...(showPhaseAnnotations ? [] : ['Phases']),
+    ...(showStopAnnotations ? [] : ['Stops']),
+    // Pump power is only in shots recorded by the meter-link fork's display firmware
+    ...(hasPumpPowerData ? [] : ['Pump Power']),
+  ];
+}
+
+export function hasCompareSampleField(compareEntries, sampleKey) {
+  return compareEntries.some(
+    entry =>
+      Array.isArray(entry.shot?.samples) &&
+      entry.shot.samples.some(
+        sample =>
+          sample?.[sampleKey] !== null &&
+          sample?.[sampleKey] !== undefined &&
+          Number.isFinite(Number(sample[sampleKey])),
+      ),
+  );
 }
 
 export function hasCompareSampleValue(compareEntries, sampleKey) {

@@ -1,3 +1,4 @@
+import { faBolt } from '@fortawesome/free-solid-svg-icons/faBolt';
 import { faBullseye } from '@fortawesome/free-solid-svg-icons/faBullseye';
 import { faClock } from '@fortawesome/free-solid-svg-icons/faClock';
 import { faDroplet } from '@fortawesome/free-solid-svg-icons/faDroplet';
@@ -16,6 +17,7 @@ const GROUP_ICON_BY_KEY = {
   target_pressure: faBullseye,
   flow: faFaucet,
   target_flow: faBullseye,
+  pumppower: faBolt,
   puckflow: faFilter,
   puckresistance: faGaugeHigh,
   liquidresistance: faGaugeHigh,
