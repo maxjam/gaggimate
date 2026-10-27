@@ -23,8 +23,8 @@ static constexpr uint32_t SHOT_LOG_MAGIC = 0x544F4853; // 'S''H''O''T' little-en
 static constexpr uint8_t SHOT_LOG_VERSION = 8;
 static constexpr uint16_t SHOT_LOG_HEADER_SIZE = 512;
 static constexpr uint16_t SHOT_LOG_SAMPLE_INTERVAL_MS = 250; // nominal recording interval
-static constexpr uint32_t SHOT_LOG_FIELDS_MASK_ALL = 0x3FFF; // 14 fields present
-static constexpr uint32_t SHOT_LOG_SAMPLE_SIZE = 30;
+static constexpr uint32_t SHOT_LOG_FIELDS_MASK_ALL = 0x103FFF; // 15 fields present (bits 0-13 + pump power, bit 20)
+static constexpr uint32_t SHOT_LOG_SAMPLE_SIZE = 32;
 
 // Field bit positions (for future expansion)
 static constexpr uint32_t SHOT_LOG_FIELD_T = 0x0001;  // elapsed time (bit 0)
@@ -41,7 +41,10 @@ static constexpr uint32_t SHOT_LOG_FIELD_EV = 0x0400; // estimated weight (bit 1
 static constexpr uint32_t SHOT_LOG_FIELD_PR = 0x0800; // puck resistance (bit 11)
 static constexpr uint32_t SHOT_LOG_FIELD_SI = 0x1000; // system info (bit 12)
 static constexpr uint32_t SHOT_LOG_FIELD_WP = 0x2000; // cumulative water pumped (bit 13)
-// Bits 14-31 available for future fields
+// Fork (GaggiMate x Velofuso meter link): pump power. Bit 20, away from the bits upstream will hand out next, so
+// a later upstream field cannot be mistaken for it. Records stay in bit order, so it is the last field.
+static constexpr uint32_t SHOT_LOG_FIELD_PP = 0x100000; // pump power (bit 20)
+// Bits 14-19 and 21-30 available for future fields (bit 31 stays unused: the web parser counts bits with >>=)
 
 // Phase transition structure for version 5+ headers
 // transitionReason was a reserved/padding byte through v5; repurposing it keeps the struct byte-identical,
@@ -110,6 +113,7 @@ struct ShotLogHeader {
 //   pr: puck resistance * 100 (0.01 step, saturates at uint16_t max)
 //   si: system info bit-packed (see SYSTEM_INFO_* constants)
 //   wp: water pumped * 10 (0.1 ml resolution)
+//   pp: pump power in % * 10 (0.1 % resolution), the power the controller sends to the pump (fork)
 #pragma pack(push, 1)
 struct ShotLogSample {
     uint32_t t;  // actual elapsed milliseconds from shotStart
@@ -126,6 +130,7 @@ struct ShotLogSample {
     uint16_t pr; // puck resistance * 100
     uint16_t si; // system info bit-packed
     uint16_t wp; // water pumped * 10
+    uint16_t pp; // pump power % * 10 (fork; files without SHOT_LOG_FIELD_PP stop at wp)
 };
 #pragma pack(pop)
 
@@ -138,9 +143,16 @@ inline bool shotLogHasElapsedTimestamp(const ShotLogHeader &header) {
     return header.version >= 6 && !(header.version == 6 && header.reserved0 == 26 && header.fieldsMask == 0x1FFF);
 }
 
+// Record size from the field mask, as the web parser computes it: 2 bytes per field, plus 2 when t is the 32-bit
+// elapsed time. Upstream v5-v8 files come out at 26, 28 and 30 bytes; fork files with pump power at 32.
 inline uint8_t shotLogSampleSize(const ShotLogHeader &header) {
-    const uint8_t expected = header.version >= 7 ? 30 : (shotLogHasElapsedTimestamp(header) ? 28 : 26);
-    return header.reserved0 == 0 || header.reserved0 == expected ? expected : 0;
+    uint32_t fields = 0;
+    for (uint32_t m = header.fieldsMask; m != 0; m >>= 1)
+        fields += m & 1u;
+    const uint32_t expected = fields * 2 + (shotLogHasElapsedTimestamp(header) ? 2 : 0);
+    if (fields == 0 || expected > 0xFF)
+        return 0;
+    return header.reserved0 == 0 || header.reserved0 == expected ? static_cast<uint8_t>(expected) : 0;
 }
 
 // System info bit definitions for ShotLogSample.si field
