@@ -4,8 +4,8 @@ Two pieces of firmware, one serial cable between them.
 
 | Part | What it is | File |
 |---|---|---|
-| **Pro controller fork** | GaggiMate controller firmware (base: master `b78beee`, Oct 18 2026) with a serial link to the meter board and flow phases closed loop on the measured ml/s. Version string `v1.99.0-meterlink.2`. | `controller/gaggimate-controller-meterlink-j4_*.bin`, `…-j5_*.bin` |
-| **Meter board v1.7.1** | Your `digmesa-flow-display` v1.6.4 plus the serial link and a cap of 20 shot logs (oldest deleted first, also applied at boot). Display, Decent Scale emulation and BOOKOO pass-through are unchanged. | `meter/digmesa-flow-display_v1.7.1_*.bin`, `meter/digmesa-flow-display.ino` |
+| **Pro controller fork** | GaggiMate controller firmware (base: master `b78beee`, Oct 18 2026) with a serial link to the meter board and flow phases closed loop on the measured ml/s. Version string `v1.99.0-meterlink.3`. | `controller/gaggimate-controller-meterlink-j4_*.bin`, `…-j5_*.bin` |
+| **Meter board v1.7.2** | Your `digmesa-flow-display` v1.6.4 plus the serial link, a cap of 20 shot logs (oldest deleted first, also applied at boot) and the pump dead-zone setting. Display, Decent Scale emulation and BOOKOO pass-through are unchanged. | `meter/digmesa-flow-display_v1.7.2_*.bin`, `meter/digmesa-flow-display.ino` |
 | **Source** | Controller fork as a git patch (the fork's commits on upstream `b78beee`); meter sketch as .ino + the patch script that produced it from v1.6.4. | `source/` |
 
 ## Read this first
@@ -13,7 +13,7 @@ Two pieces of firmware, one serial cable between them.
 1. **Display firmware must be the nightly build (Oct 18 2026 or later).** The fork is built from master, BLE protocol version **8**. The stable 1.9.0 display speaks protocol 5 and will show *"Version mismatch, update display"* and refuse to control. Switch the display to the nightly channel before flashing the controller.
 2. **The BOOKOO path does not change.** The meter board still shows up as *Decent Scale FM* and relays the BOOKOO cup weight. Nothing to reconfigure.
 3. **Flow phases need the meter.** With the link down, a flow phase runs the pump at 0 — on purpose, no fallback to the pump model. Pressure and power phases work as stock whether or not the meter is connected. So flash the Pro fork, then check the link status before brewing a flow profile.
-4. **Don't press "Update controller" in the GaggiMate web UI** unless you want stock back. The fork reports `v1.99.0-meterlink.2`, so the UI should not offer it, but the display update itself is separate and fine.
+4. **Don't press "Update controller" in the GaggiMate web UI** unless you want stock back. The fork reports `v1.99.0-meterlink.3`, so the UI should not offer it, but the display update itself is separate and fine.
 5. **Rollback:** stock controller from the GaggiMate web flasher (nightly); meter board back to the v1.6.4 UPDATE bin. Nothing else changes.
 
 ## Which controller build
@@ -47,9 +47,9 @@ J4 build: same three wires into J4 (`GND, RX, TX, +5V` as printed): TXD → J4 *
 - `_UPDATE_flash-at-0x10000.bin` is the app alone: it only takes effect if `app0` is already the active slot — if the Controller Version doesn't change after flashing it, that's the reason; use the 0xe000 file.
 - `_FULL_flash-at-0x0.bin` at **`0x0`** is the last resort (bootloader + partitions + selector + app). It also blanks the Pro's NVS, so the display has to be paired again (hold the steam switch while powering on to open the pairing window) and the controller's stored PID fallback is gone until the display sends settings.
 - Alternative: PlatformIO `pio run -e controller-meterlink-j5 -t upload` from the fork source (that flashes the selector too).
-- Check: GaggiMate web UI → Settings → System & Updates → **Controller Version** must read `v1.99.0-meterlink.2`.
+- Check: GaggiMate web UI → Settings → System & Updates → **Controller Version** must read `v1.99.0-meterlink.3`.
 
-**Meter board**: `digmesa-flow-display_v1.7.1_UPDATE_flash-at-0x10000.bin` at **`0x10000`**, same as every update so far. Wi-Fi, calibration and the BOOKOO setting are kept. (`_FULL_flash-at-0x0.bin` at `0x0` only if you want to start from scratch; that wipes the shot logs.)
+**Meter board**: `digmesa-flow-display_v1.7.2_UPDATE_flash-at-0x10000.bin` at **`0x10000`**, same as every update so far. Wi-Fi, calibration and the BOOKOO setting are kept. (`_FULL_flash-at-0x0.bin` at `0x0` only if you want to start from scratch; that wipes the shot logs.)
 
 ## Checking the link (before coffee)
 
@@ -65,12 +65,13 @@ J4 build: same three wires into J4 (`GND, RX, TX, +5V` as printed): TXD → J4 *
 - **Setpoint slew** `ramp` (ml/s per s): the target moves at most this fast, so a phase change or profile ramp doesn't kick the pump. A new flow phase starts from the flow that is actually running.
 - **Pressure ceiling** (override PI, since meterlink.2): the phase's pressure setpoint. A second PI on `ceiling − pressure` (pressure looked 0.25 s ahead on its slope) proposes a duty too, and the lower of the two duties runs the pump: `limKp` in % duty per bar, `limKi` in % duty per bar per second. Both integrals are kept as reset feedback, i.e. each relaxes toward the duty actually applied, so the one not in charge sits right above it and takes over without a bump; neither can wind up. Stock did `min(flowDuty, pressureDuty)` with a zeroed integrator, which is why flow phases stalled ~2 bar under the limit.
 - **Slip band guard**: on the Velofuso about 55–60 % duty at 9 bar only covers slip. When the pump already delivers nothing (meter < 0.05 ml/s) and the puck is visibly draining the pressure (falling > 0.1 bar/s), the ceiling integral stops going down, so the pump is never parked deep in the slip band and the pressure lands on a lowered ceiling without undershooting. meterlink.1's backstop did exactly that parking (bleed and cut on the flow integral), and shot 292 dipped to 6.5 and 5.3 bar in a 2 ml/s phase with a 9 bar ceiling because of it.
+- **Pump dead zone** (`deadzone`, meter page *dead zone %*, since meterlink.3 / meter v1.7.2): the pump power below which the pump stops turning. The two PIs then work on the range above it: pump power = deadzone + u·(100 − deadzone) %, u = 0 is off, so the loop never parks the pump where it doesn't turn and has to restart it (the on/off cycling of flush 295 at 2–5 ml/s and 0.4 bar). Set it to the lowest power that still keeps the pump running (step the power down with an open group and watch where the flow stops). Too high, and the pump's slowest speed already gives more than a low flow target, so it cycles on/off again. Default 0 = off (plain duty, same as meterlink.2). Flow phases only; pressure and power phases are stock.
 - **Bumpless phase start**: a flow phase starts from the duty that was already running (a pressure phase holding 9 bar), not from `startDuty`, when that is higher. Nothing pushes past 12.5 bar.
 - **ff** (0..1): optional pump-model feedforward on top. 0 = measured flow only (default).
 - **Fail-safe**: no `$F` for 500 ms → duty 0, loop reset, `FLOW FAULT` in the log; resumes when data is back.
 - **Telemetry**: `pump flow`, `water pumped`, the puck-flow/puck-resistance estimator and the heater's thermal feedforward all use measured flow while the link is fresh. PRESSURE and POWER modes are byte-for-byte stock logic (there's a test asserting pressure-mode output is identical with and without the link).
 
-Defaults (`FlowLoopGains.h`, and the meter page's *Defaults* button): `kp 0.05, ki 0.15, start 20 %, ff 0, ramp 4 ml/s², limKp 3.0, limKi 1.5` (the lim numbers kept their values in meterlink.2, so the meter board needs no update, but they now mean % duty per bar and % duty per bar·s). Chosen against a simulated Velofuso (your Oct-20 coefficients) with 150–500 ms pump lag, a Digmesa pulse meter and pressure noise: open-group step settles in ~0.5 s with < 0.1 ml/s overshoot; ceiling held within 0.1 bar, no dips on entering a flow phase at 9 bar, on stiff and soft systems, tight and choked pucks. limKp/limKi up to ~10 work too: faster on a soft system, slightly more ripple from sensor noise. Known trait with `ff 0`: while pressure is still climbing fast (≈1 bar/s) the flow trails the target by ~0.3 ml/s, because slip grows with pressure and the integral has to follow; it catches up once pressure levels off. If that bothers you: `ff 1` (adds the pump model as a head start, the measured loop still corrects it) or `ki 0.25`. If you see overshoot on step changes, lower `ki` first (0.10), then `kp`.
+Defaults (`FlowLoopGains.h`, and the meter page's *Defaults* button): `kp 0.05, ki 0.15, start 20 %, ff 0, ramp 4 ml/s², limKp 3.0, limKi 1.5, deadzone 0` (the lim numbers kept their values in meterlink.2, so the meter board needs no update, but they now mean % duty per bar and % duty per bar·s). Chosen against a simulated Velofuso (your Oct-20 coefficients) with 150–500 ms pump lag, a Digmesa pulse meter and pressure noise: open-group step settles in ~0.5 s with < 0.1 ml/s overshoot; ceiling held within 0.1 bar, no dips on entering a flow phase at 9 bar, on stiff and soft systems, tight and choked pucks. limKp/limKi up to ~10 work too: faster on a soft system, slightly more ripple from sensor noise. Known trait with `ff 0`: while pressure is still climbing fast (≈1 bar/s) the flow trails the target by ~0.3 ml/s, because slip grows with pressure and the integral has to follow; it catches up once pressure levels off. If that bothers you: `ff 1` (adds the pump model as a head start, the measured loop still corrects it) or `ki 0.25`. If you see overshoot on step changes, lower `ki` first (0.10), then `kp`.
 
 ## The serial protocol
 
@@ -82,8 +83,8 @@ Meter board → Pro:
 |---|---|---|
 | `$F,<ml_s>,<ml_total>,<seq>,<ml_s_display>` | 20 Hz | fast flow (150 ms window, for the loop), water since the last zero, sequence, the 0.5 s-window flow the screen shows |
 | `$H,<uptime_s>` | 1 Hz | heartbeat |
-| `$G,<kp>,<ki>,<start_%>,<ff>,<ramp>,<limKp>,<limKi>` | at boot, every 5 s, on save | flow-loop gains |
-| `$T,<mm>` | 4 Hz | tank distance — **not sent yet** (Alba not on the meter board in v1.7.1) |
+| `$G,<kp>,<ki>,<start_%>,<ff>,<ramp>,<limKp>,<limKi>[,<deadzone_%>]` | at boot, every 5 s, on save | flow-loop gains (8th field from meter v1.7.2; missing = unchanged) |
+| `$T,<mm>` | 4 Hz | tank distance — **not sent yet** (Alba not on the meter board in v1.7.x) |
 
 Pro → meter board:
 
@@ -103,12 +104,13 @@ Pro → meter board:
 
 ## Changes
 
+- **meterlink.3** (Oct 27 2026): pump dead-zone setting for flow phases (8th `$G` field, console `G … [deadzone%]`). Default 0 = same behaviour as meterlink.2. Meter board v1.7.2 adds the field to its page.
 - **meterlink.2** (Oct 27 2026): the pressure ceiling is an override PI instead of the target-trimming limiter plus bleed/cut backstop; slip-band guard; a flow phase starts from the duty already running. Fixes the 6.5 / 5.3 bar dips of shot 292. Meter board unchanged (v1.7.1).
 - **meterlink.1** (Oct 25 2026): first release; Pro sends the `$H` heartbeat.
 
 ## Source
 
 - `source/gaggimate-meterlink.patch`: the fork as two commits against upstream `b78beee`. To get a working tree:
-  `git clone https://github.com/jniebuhr/gaggimate.git && cd gaggimate && git checkout -b meterlink-flow-control b78beee && git am ../gaggimate-meterlink.patch && git tag v1.99.0-meterlink.2`
+  `git clone https://github.com/jniebuhr/gaggimate.git && cd gaggimate && git checkout -b meterlink-flow-control b78beee && git am ../gaggimate-meterlink.patch && git tag v1.99.0-meterlink.3`
   then `pio run -e controller-meterlink-j5` (the tag gives the build its version string); tests: `pio test -e native -f test_meter_flow_loop -f test_line_protocol`. Rebasing onto a newer nightly is `git rebase <nightly-commit>`; the change touches `PressureController`, `DimmedPump`, `GaggiMateController`, adds `MeterLink`/`LineProtocol` and two test suites.
-- `meter/digmesa-flow-display.ino`: v1.7.1. `source/patch_v17.py` is the script that turned your v1.6.4 into it (every anchor asserted). Build settings unchanged: ESP32S3 Dev Module, 16 MB, `app3M_fat9M_16MB`, OPI PSRAM, CDC on boot, esp32 core 3.3.10, GFX Library for Arduino 1.6.4 (upstream 1.6.4 needs the three `spiFrequencyToClockDiv` calls patched for core 3.3.x — Waveshare's copy already has that), U8g2.
+- `meter/digmesa-flow-display.ino`: v1.7.2. `source/patch_v17.py` turned your v1.6.4 into v1.7.1, `source/patch_v172.py` v1.7.1 into v1.7.2 (every anchor asserted). Build settings unchanged: ESP32S3 Dev Module, 16 MB, `app3M_fat9M_16MB`, OPI PSRAM, CDC on boot, esp32 core 3.3.10, GFX Library for Arduino 1.6.4 (upstream 1.6.4 needs the three `spiFrequencyToClockDiv` calls patched for core 3.3.x — Waveshare's copy already has that), U8g2.
