@@ -168,7 +168,7 @@ void test_empty_fields_fall_back() {
 
 void test_too_many_fields_rejected() {
     char out[96];
-    frame("X,1,2,3,4,5,6,7,8,9,10,11,12", out, sizeof(out));
+    frame("X,1,2,3,4,5,6,7,8,9,10,11,12,13,14", out, sizeof(out));
     LineReader r;
     Message m;
     TEST_ASSERT_FALSE(feedAll(r, out, m));
@@ -215,21 +215,25 @@ void test_diagnostics_line_round_trip() {
     d.modelFlow = 1.23f;
     d.iPct = -4.2f;
     d.flags = MeterDiagnostics::VALVE_OPEN;
+    d.heaterPct = 64.3f;
+    d.boilerC = 108.2f;
     char payload[MAX_LINE];
     TEST_ASSERT_TRUE(d.format(payload, sizeof(payload)) > 0);
-    TEST_ASSERT_EQUAL_STRING("D,37.5,8.93,1,9.0,0.00,8.71,0.00,1.23,-4.2,1", payload);
+    TEST_ASSERT_EQUAL_STRING("D,37.5,8.93,1,9.0,0.00,8.71,0.00,1.23,-4.2,1,64.3,108.2", payload);
     char out[MAX_LINE + 8];
     TEST_ASSERT_TRUE(frame(payload, out, sizeof(out)) > 0);
     LineReader r;
     Message m;
     TEST_ASSERT_TRUE(feedAll(r, out, m));
     TEST_ASSERT_EQUAL_STRING("D", m.type);
-    TEST_ASSERT_EQUAL_UINT(10, m.count);
+    TEST_ASSERT_EQUAL_UINT(12, m.count);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 37.5f, m.f(0));
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 8.93f, m.f(1));
     TEST_ASSERT_EQUAL_INT(1, m.i(2));
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, -4.2f, m.f(8));
     TEST_ASSERT_EQUAL_INT(1, m.i(9));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 64.3f, m.f(10));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 108.2f, m.f(11));
 }
 
 // Worst-case values (and NaN/inf from a broken sensor) still make a line that fits and parses.
@@ -245,6 +249,8 @@ void test_diagnostics_line_worst_case() {
     d.modelFlow = -9999.99f;
     d.iPct = -9999.99f;
     d.flags = 15;
+    d.heaterPct = -1e9f;
+    d.boilerC = NAN;
     char payload[MAX_LINE];
     const size_t n = d.format(payload, sizeof(payload));
     TEST_ASSERT_TRUE(n > 0);
@@ -256,7 +262,7 @@ void test_diagnostics_line_worst_case() {
     LineReader r;
     Message m;
     TEST_ASSERT_TRUE(feedAll(r, out, m));
-    TEST_ASSERT_EQUAL_UINT(10, m.count);
+    TEST_ASSERT_EQUAL_UINT(12, m.count);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.0f, m.f(0, -1.0f));
     TEST_ASSERT_FLOAT_WITHIN(1e-2f, -9999.0f, m.f(1));
 }

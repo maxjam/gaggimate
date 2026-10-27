@@ -1,6 +1,7 @@
 // Pump diagnostics the controller sends to the flow-meter board (fork, since meterlink.4).
 //
-//   $D,<pump_pct>,<bar>,<mode>,<target_bar>,<target_ml_s>,<ctrl_bar>,<ctrl_ml_s>,<model_ml_s>,<i_pct>,<flags>*XX
+//   $D,<pump_pct>,<bar>,<mode>,<target_bar>,<target_ml_s>,<ctrl_bar>,<ctrl_ml_s>,<model_ml_s>,<i_pct>,<flags>,
+//      <heater_pct>,<boiler_c>*XX          (the last two since meterlink.6; older meter boards read the first ten)
 //
 // 10 lines per second. The meter board writes the fields as extra columns of its shot log, next to the flow it
 // measures itself, so one file holds pump power, pressure and flow on one time base (pump calibration, loop
@@ -33,12 +34,15 @@ struct MeterDiagnostics {
     float iPct = 0.0f;       // integral part of the active loop, %: pressure phase = stock I term (duty),
                              // flow phase = flow PI reset (share of the range above the dead zone)
     uint8_t flags = 0;
+    float heaterPct = 0.0f;  // brew heater output, 0..100 % (since meterlink.6)
+    float boilerC = 0.0f;    // brew boiler sensor, deg C as measured (GaggiMate shows it minus its temperature offset)
 
     // Payload without '$' and checksum; returns its length, 0 if it does not fit.
     size_t format(char *out, size_t size) const {
-        const int n = snprintf(out, size, "D,%.1f,%.2f,%u,%.1f,%.2f,%.2f,%.2f,%.2f,%.1f,%u", clean(pumpPct), clean(pressure),
-                               static_cast<unsigned>(mode), clean(targetBar), clean(targetFlow), clean(ctrlBar), clean(ctrlFlow),
-                               clean(modelFlow), clean(iPct), static_cast<unsigned>(flags));
+        const int n = snprintf(out, size, "D,%.1f,%.2f,%u,%.1f,%.2f,%.2f,%.2f,%.2f,%.1f,%u,%.1f,%.1f", clean(pumpPct),
+                               clean(pressure), static_cast<unsigned>(mode), clean(targetBar), clean(targetFlow), clean(ctrlBar),
+                               clean(ctrlFlow), clean(modelFlow), clean(iPct), static_cast<unsigned>(flags), clean(heaterPct),
+                               clean(boilerC));
         return (n > 0 && static_cast<size_t>(n) < size) ? static_cast<size_t>(n) : 0;
     }
 

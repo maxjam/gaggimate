@@ -440,6 +440,14 @@ void GaggiMateController::setupMeterLink() {
     auto dimmedPump = static_cast<DimmedPump *>(pump);
     dimmedPump->setMeterLink(meterLink);
     meterLink->onGains([this](const FlowLoopGains &gains) { static_cast<DimmedPump *>(pump)->setFlowLoopGains(gains); });
+    // $D: the pump's diagnostics plus the brew heater and boiler temperature, so the meter board's shot log shows
+    // heat input next to pressure and flow (cached values, safe to read from the link task).
+    meterLink->onDiagnostics([this](MeterDiagnostics &d) {
+        static_cast<DimmedPump *>(pump)->fillDiagnostics(d);
+        d.heaterPct = heater != nullptr ? heater->getDutyCycle() : 0.0f;
+        d.boilerC = brewTemperature != nullptr ? brewTemperature->read() : 0.0f;
+        return true;
+    });
     ESP_LOGI(LOG_TAG, "Meter link configured on %s (RX gpio%u, TX gpio%u), Alba over link: %d", port, rxPin, txPin,
              METER_LINK_ALBA);
 #endif

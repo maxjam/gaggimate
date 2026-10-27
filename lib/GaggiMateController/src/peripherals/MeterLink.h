@@ -14,7 +14,8 @@
 //     $L,<channel>,<brightness>*XX           LED command from the display, for the Alba's PCA9634
 //     $B,<0|1>*XX                            brew valve / pump active flag (shot bookkeeping on the board)
 //     $H,<uptime_s>*XX                       1 per second, so the meter board knows the Pro is there
-//     $D,<pump_pct>,<bar>,<mode>,<target_bar>,<target_ml_s>,<ctrl_bar>,<ctrl_ml_s>,<model_ml_s>,<i_pct>,<flags>*XX
+//     $D,<pump_pct>,<bar>,<mode>,<target_bar>,<target_ml_s>,<ctrl_bar>,<ctrl_ml_s>,<model_ml_s>,<i_pct>,<flags>,
+//        <heater_pct>,<boiler_c>*XX
 //                                            10 per second, pump diagnostics for the meter board's shot log
 //                                            (since meterlink.4), see MeterDiagnostics.h
 //
