@@ -7,7 +7,7 @@ Three pieces of firmware (Pro, GaggiMate display, meter board), one serial cable
 | **Pro controller fork** | GaggiMate controller firmware (base: master `b78beee`, Oct 18 2026) with a serial link to the meter board and flow phases closed loop on the measured ml/s. Version string `v1.99.0-meterlink.6`. | `controller/gaggimate-controller-meterlink.6-j4_*.bin`, `…-j5_*.bin` |
 | **Display fork** | GaggiMate display firmware from the same source (same nightly base) with one change: every shot in GaggiMate's shot history also records **pump power %** (line *Pump Power* in the Shot History chart and in the Shot Analyzer, `pp` in the exported shot JSON). Version string `v1.99.0-meterlink.6`. | `display/gaggimate-display-meterlink.6_*.bin` |
 | **Meter board v1.7.4** | Your `digmesa-flow-display` v1.6.4 plus the serial link, a cap of 20 shot logs (oldest deleted first, also applied at boot), the pump dead-zone setting, the Pro's pump diagnostics (with heater output and boiler temperature) in every shot log, and shot logs only for GaggiMate shots. Display, Decent Scale emulation and BOOKOO pass-through are unchanged. | `meter/digmesa-flow-display_v1.7.4_*.bin`, `meter/digmesa-flow-display.ino` |
-| **Calibration profiles** | Four test profiles for the needle-valve rig (see *Calibration runs*). | `profiles/cal-*.json` |
+| **Calibration profiles** | Test profiles for the needle-valve rig: `cal2-*` for the pump model (see *Pump model calibration v2*), `cal-*` (first set, see *Calibration runs*). | `profiles/cal2-*.json`, `profiles/cal-*.json` |
 | **Source** | Controller fork as a git patch (the fork's commits on upstream `b78beee`); meter sketch as .ino + the patch script that produced it from v1.6.4. | `source/` |
 
 ## Read this first
@@ -148,6 +148,29 @@ Then one normal shot of a real profile. Send the meter CSVs (`GM_…csv`); the G
 
 The pump model is Q = d·(full(P) + slip(P)) − slip(P): straight in pump power d at each pressure P. Cal B gives, at each pressure, three (power, flow) points at three valve openings; the line through them is the model at that pressure (slope = full + slip, zero crossing = slip / (full + slip), the power that only covers slip). Cal A checks the result over the whole power range, including where the real pump isn't straight in d (the 34–40 % flat spot of shots 297/298).
 
+## Pump model calibration v2 (Cal2 + `scripts/fit_pump_model.py`)
+
+**Where the two coefficient fields act** (`PressureController.cpp`). Model: S(P) = slip polynomial (clamped ≥ 0), G(P) = *Pump Flow Coefficients* polynomial + S(P), flow = power × G(P) − S(P); P is the pressure the Pro reads, at the T after the hose and the meter.
+- Pressure phases: only G(P) is used, and only in the convergence term (pump power per bar of error = 1.4 ml/bar × convergence / G). With the Oct 20 tune (`-0.00220,0.03818,-1.3725,23.655` / `0.00220,-0.03818,1.3725,6.325`) the cubic terms cancel, so G = 29.98 ml/s at every pressure: the loop gain is the same at every pressure. New coefficients change G, so the fit script also prints the convergence gain that keeps today's gain at 9 bar.
+- Pressure phases with a flow limit (stock): the whole model sets the limit.
+- Flow phases (this fork): the measured flow; the model only with `ff` > 0 (default 0) and in the `model_ml_s` log column.
+
+What the data says about the Oct 20 tune: on the open group (shots 297/298, 0.3–1.3 bar) it predicts no flow below 22–27 % power (depending on the pressure), while the meter measured 1.1 ml/s at 10 % and 4.4–4.8 ml/s at 22 % (RMS error 3.7 ml/s over the 21 steps). The same two runs also bound what any fit can reach: at the same power and nearly the same pressure, run 297 (stepping down) and run 298 (stepping up) differ by up to 0.5 ml/s. Some of those 4 s steps were still drifting, so the Cal2 steps are 10–12 s and one run is repeated to measure the real scatter.
+
+The fit uses the pressure the Pro reads, so the pressure drop across the check valve, the 12" silicone hose and the meter is folded into the coefficients. The hose's give only slows the settling after each step; the script only takes steps that have settled. After any plumbing change between the pump and the pressure sensor, run the calibration again.
+
+**Runs** (needle-valve rig, a container for 0.6 l on the BOOKOO, tank refilled before each run, about 3 l in all). Import the three `profiles/cal2-*.json`.
+
+1. `[Cal2 0] Valve open, power 40-8%`: valve fully open.
+2. For **6, 4, 2.5 and 1.5 ml/s** in turn:
+   - `[Cal2 1] Set valve, ceiling 9-2 bar`: during the first 20 s (9 bar) turn the valve until the meter shows that flow, then hands off;
+   - `[Cal2 2] Power 100-8%, 10 s` straight after, valve untouched.
+3. `[Cal2 1]` once more without touching the valve (still at 1.5 ml/s): the repeat run.
+
+Then meter page → Shot logs → *download all (one CSV)* and send `flowmeter_all.csv` (or the ten `GM_…csv`). `[Cal C]` / `[Cal D]` from the first set still check the pressure and flow loops; Cal A and B are replaced by Cal2 for the fit.
+
+**The fit** (`python3 scripts/fit_pump_model.py flowmeter_all.csv`): cuts every run into its steps, keeps the last 4 s of each step that has settled (pressure slope ≤ 0.05 bar/s, flow first half vs second half within 5 %, pump power spread ≤ 1.5 %), flow = pulses counted over those 4 s. It fits flow = power × G(P) − S(P) for every degree of G and S up to the firmware's cubic, and for G held constant (today's structure), and picks the simplest one that is within 5 % of the best **leave-one-run-out** error, i.e. how well it predicts a run it was not fitted on. Output: the two coefficient strings to paste, G at 0/3/6/9 bar, the convergence gain that keeps today's 9-bar loop gain, every point with the error of the new and the current coefficients (evaluated exactly like the firmware, with the rounded numbers), BOOKOO g/s vs meter ml/s per step (a check of the meter's pulses per litre), and the repeatability from the repeat run. No model gets below that last number.
+
 ## Not in this version (deliberately)
 
 - **Alba on the meter board** (VL53L0X tank distance, PCA9634 lights, chime). The J4 controller build already forwards `$T` and `$L`; the meter side needs an I²C master + the bench check of the Alba's bus voltage from the plan. Until then: use the J5 build and leave the Alba on J4.
@@ -157,6 +180,7 @@ The pump model is Q = d·(full(P) + slip(P)) − slip(P): straight in pump power
 
 ## Changes
 
+- **Pump model calibration v2** (Oct 27 2026, no firmware change): `profiles/cal2-*.json` and `scripts/fit_pump_model.py`, see *Pump model calibration v2*.
 - **meterlink.6** (Oct 27 2026): Shot Analyzer draws pump power (chart line, legend toggle, compare mode, *Avg. Pump Power* in the analysis table; display). `$D` carries the brew heater output and the boiler temperature (controller), `LineProtocol` takes up to 14 fields per line. Meter board v1.7.4 logs them, and opens shot logs only for GaggiMate shots.
 - **meterlink.5** (Oct 27 2026): display fork — pump power % in every GaggiMate shot (shot file field `pp`, Shot History chart line, JSON export). Controller unchanged from meterlink.4 apart from the version string.
 - **meterlink.4** (Oct 27 2026): `$D` pump diagnostics to the meter board (logged by meter v1.7.3); with a dead zone set, a flow phase keeps the pump at its slowest speed instead of switching it off below the slowest flow. Dead zone 0 behaves as before. `LineProtocol` takes up to 11 fields per line.
