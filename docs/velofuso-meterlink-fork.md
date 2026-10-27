@@ -4,9 +4,9 @@ Three pieces of firmware (Pro, GaggiMate display, meter board), one serial cable
 
 | Part | What it is | File |
 |---|---|---|
-| **Pro controller fork** | GaggiMate controller firmware (base: master `b78beee`, Oct 18 2026) with a serial link to the meter board and flow phases closed loop on the measured ml/s. Version string `v1.99.0-meterlink.5`. | `controller/gaggimate-controller-meterlink-j4_*.bin`, `…-j5_*.bin` |
-| **Display fork** | GaggiMate display firmware from the same source (same nightly base) with one change: every shot in GaggiMate's shot history also records **pump power %** (chart line *Pump Power* and `pp` in the exported shot JSON). Version string `v1.99.0-meterlink.5`. | `display/gaggimate-display-meterlink.5_*.bin` |
-| **Meter board v1.7.3** | Your `digmesa-flow-display` v1.6.4 plus the serial link, a cap of 20 shot logs (oldest deleted first, also applied at boot), the pump dead-zone setting and the Pro's pump diagnostics in every shot log. Display, Decent Scale emulation and BOOKOO pass-through are unchanged. | `meter/digmesa-flow-display_v1.7.3_*.bin`, `meter/digmesa-flow-display.ino` |
+| **Pro controller fork** | GaggiMate controller firmware (base: master `b78beee`, Oct 18 2026) with a serial link to the meter board and flow phases closed loop on the measured ml/s. Version string `v1.99.0-meterlink.6`. | `controller/gaggimate-controller-meterlink.6-j4_*.bin`, `…-j5_*.bin` |
+| **Display fork** | GaggiMate display firmware from the same source (same nightly base) with one change: every shot in GaggiMate's shot history also records **pump power %** (line *Pump Power* in the Shot History chart and in the Shot Analyzer, `pp` in the exported shot JSON). Version string `v1.99.0-meterlink.6`. | `display/gaggimate-display-meterlink.6_*.bin` |
+| **Meter board v1.7.4** | Your `digmesa-flow-display` v1.6.4 plus the serial link, a cap of 20 shot logs (oldest deleted first, also applied at boot), the pump dead-zone setting, the Pro's pump diagnostics (with heater output and boiler temperature) in every shot log, and shot logs only for GaggiMate shots. Display, Decent Scale emulation and BOOKOO pass-through are unchanged. | `meter/digmesa-flow-display_v1.7.4_*.bin`, `meter/digmesa-flow-display.ino` |
 | **Calibration profiles** | Four test profiles for the needle-valve rig (see *Calibration runs*). | `profiles/cal-*.json` |
 | **Source** | Controller fork as a git patch (the fork's commits on upstream `b78beee`); meter sketch as .ino + the patch script that produced it from v1.6.4. | `source/` |
 
@@ -15,7 +15,7 @@ Three pieces of firmware (Pro, GaggiMate display, meter board), one serial cable
 1. **Display firmware must be the nightly build (Oct 18 2026 or later).** The fork is built from master, BLE protocol version **8**. The stable 1.9.0 display speaks protocol 5 and will show *"Version mismatch, update display"* and refuse to control. Switch the display to the nightly channel before flashing the controller.
 2. **The BOOKOO path does not change.** The meter board still shows up as *Decent Scale FM* and relays the BOOKOO cup weight. Nothing to reconfigure.
 3. **Flow phases need the meter.** With the link down, a flow phase runs the pump at 0 — on purpose, no fallback to the pump model. Pressure and power phases work as stock whether or not the meter is connected. So flash the Pro fork, then check the link status before brewing a flow profile.
-4. **Don't press "Update controller" or "Update display" in the GaggiMate web UI** unless you want stock back. Both report `v1.99.0-meterlink.5`, higher than any 1.9 nightly, so the UI should not offer an update.
+4. **Don't press "Update controller" or "Update display" in the GaggiMate web UI** unless you want stock back. Both report `v1.99.0-meterlink.6`, higher than any 1.9 nightly, so the UI should not offer an update.
 5. **Rollback:** stock controller and display from the GaggiMate web flasher (nightly); meter board back to the v1.6.4 UPDATE bin. Shots recorded by the display fork still open in the stock web UI (pump power shows up there as an unnamed extra field, `unknown_20`, and isn't drawn).
 
 ## Which controller build
@@ -44,16 +44,16 @@ J4 build: same three wires into J4 (`GND, RX, TX, +5V` as printed): TXD → J4 *
 ## Flashing
 
 **Pro controller** (USB-C on the Pro, machine unplugged from mains, display can stay on):
-- Chrome/Edge → https://espressif.github.io/esptool-js/ → Connect → add file `gaggimate-controller-meterlink-j5_BOOTSLOT+APP_flash-at-0xe000.bin` at address **`0xe000`** → Program. Don't tick *Erase flash*.
+- Chrome/Edge → https://espressif.github.io/esptool-js/ → Connect → add file `gaggimate-controller-meterlink.6-j5_BOOTSLOT+APP_flash-at-0xe000.bin` at address **`0xe000`** → Program. Don't tick *Erase flash*.
   Why 0xe000 and not 0x10000: the Pro has two app slots. Every OTA from the display flips between them, so a Pro that has been updated over BLE may be running from the second slot (`app1` at 0x340000). This file is the 8 KB boot-slot selector (points the bootloader back at `app0`) followed by the app at 0x10000, in one piece. It leaves the bootloader, partition table and NVS (BLE pairing, stored PID) untouched.
 - `_UPDATE_flash-at-0x10000.bin` is the app alone: it only takes effect if `app0` is already the active slot — if the Controller Version doesn't change after flashing it, that's the reason; use the 0xe000 file.
 - `_FULL_flash-at-0x0.bin` at **`0x0`** is the last resort (bootloader + partitions + selector + app). It also blanks the Pro's NVS, so the display has to be paired again (hold the steam switch while powering on to open the pairing window) and the controller's stored PID fallback is gone until the display sends settings.
 - Alternative: PlatformIO `pio run -e controller-meterlink-j5 -t upload` from the fork source (that flashes the selector too).
-- Check: GaggiMate web UI → Settings → System & Updates → **Controller Version** must read `v1.99.0-meterlink.5`.
+- Check: GaggiMate web UI → Settings → System & Updates → **Controller Version** must read `v1.99.0-meterlink.6`.
 
-**GaggiMate display** (USB-C on the display's Waveshare board, same esptool page): `gaggimate-display-meterlink.5_BOOTSLOT+APP_flash-at-0xe000.bin` at **`0xe000`**, don't tick *Erase flash*. Same reason as on the Pro: the display updates itself over the air into its second app slot, so the boot-slot selector has to come along. It writes nothing past the app, so profiles, shot history (LittleFS at 0xc90000) and settings/Wi-Fi (NVS) stay. `_UPDATE_flash-at-0x10000.bin` is the app alone (only if app0 is already active). No FULL image for the display on purpose: it would blank the display's settings. Check: **Display Version** reads `v1.99.0-meterlink.5`; the next shot's chart in Shot History has a *Pump Power* line (0–100 % axis on the right). Older shots load as before, without that line.
+**GaggiMate display** (USB-C on the display's Waveshare board, same esptool page): `gaggimate-display-meterlink.6_BOOTSLOT+APP_flash-at-0xe000.bin` at **`0xe000`**, don't tick *Erase flash*. Same reason as on the Pro: the display updates itself over the air into its second app slot, so the boot-slot selector has to come along. It writes nothing past the app, so profiles, shot history (LittleFS at 0xc90000) and settings/Wi-Fi (NVS) stay. `_UPDATE_flash-at-0x10000.bin` is the app alone (only if app0 is already active). No FULL image for the display on purpose: it would blank the display's settings. Check: **Display Version** reads `v1.99.0-meterlink.6`; the next shot's chart in Shot History and in the Shot Analyzer has a *Pump Power* line (0–100 % axis on the right; in the Analyzer it can be toggled in the legend, and the analysis table has an *Avg. Pump Power* column per phase). Older shots load as before, without that line.
 
-**Meter board**: `digmesa-flow-display_v1.7.3_UPDATE_flash-at-0x10000.bin` at **`0x10000`**, same as every update so far. Wi-Fi, calibration and the BOOKOO setting are kept. (`_FULL_flash-at-0x0.bin` at `0x0` only if you want to start from scratch; that wipes the shot logs.)
+**Meter board**: `digmesa-flow-display_v1.7.4_UPDATE_flash-at-0x10000.bin` at **`0x10000`**, same as every update so far. Wi-Fi, calibration and the BOOKOO setting are kept. (`_FULL_flash-at-0x0.bin` at `0x0` only if you want to start from scratch; that wipes the shot logs.)
 
 ## Checking the link (before coffee)
 
@@ -74,8 +74,8 @@ J4 build: same three wires into J4 (`GND, RX, TX, +5V` as printed): TXD → J4 *
 - **ff** (0..1): optional pump-model feedforward on top. 0 = measured flow only (default).
 - **Fail-safe**: no `$F` for 500 ms → duty 0, loop reset, `FLOW FAULT` in the log; resumes when data is back.
 - **Telemetry**: `pump flow`, `water pumped`, the puck-flow/puck-resistance estimator and the heater's thermal feedforward all use measured flow while the link is fresh. PRESSURE and POWER modes are byte-for-byte stock logic (there's a test asserting pressure-mode output is identical with and without the link).
-- **Diagnostics** (since meterlink.4): the Pro sends `$D` to the meter board 10 times a second — the pump power it sends, its pressure reading, the mode, the profile targets and the loop state. Meter v1.7.3 writes them into every shot log next to the metered flow (see *Diagnostics log*).
-- **Pump power in GaggiMate's shot history** (display fork, meterlink.5): the display records the pump power the Pro reports (it already arrives with every sensor update) as a 15th field of each shot sample, 4 times a second: field `pp`, % with 0.1 resolution, fieldsMask bit 20, record 32 bytes instead of 30. The shot history chart draws it, and the shot JSON export has `pp` in every sample.
+- **Diagnostics** (since meterlink.4): the Pro sends `$D` to the meter board 10 times a second — the pump power it sends, its pressure reading, the mode, the profile targets and the loop state. Since meterlink.6 also the brew heater output and the boiler temperature. Meter v1.7.3+ writes them into every shot log next to the metered flow (see *Diagnostics log*).
+- **Pump power in GaggiMate's shot history** (display fork, meterlink.5): the display records the pump power the Pro reports (it already arrives with every sensor update) as a 15th field of each shot sample, 4 times a second: field `pp`, % with 0.1 resolution, fieldsMask bit 20, record 32 bytes instead of 30. The shot history chart and (since meterlink.6) the Shot Analyzer draw it, and the shot JSON export has `pp` in every sample.
 
 Defaults (`FlowLoopGains.h`, and the meter page's *Defaults* button): `kp 0.05, ki 0.15, start 20 %, ff 0, ramp 4 ml/s², limKp 3.0, limKi 1.5, deadzone 0` (the lim numbers kept their values in meterlink.2, so the meter board needs no update, but they now mean % duty per bar and % duty per bar·s). Chosen against a simulated Velofuso (your Oct-20 coefficients) with 150–500 ms pump lag, a Digmesa pulse meter and pressure noise: open-group step settles in ~0.5 s with < 0.1 ml/s overshoot; ceiling held within 0.1 bar, no dips on entering a flow phase at 9 bar, on stiff and soft systems, tight and choked pucks. limKp/limKi up to ~10 work too: faster on a soft system, slightly more ripple from sensor noise. Known trait with `ff 0`: while pressure is still climbing fast (≈1 bar/s) the flow trails the target by ~0.3 ml/s, because slip grows with pressure and the integral has to follow; it catches up once pressure levels off. If that bothers you: `ff 1` (adds the pump model as a head start, the measured loop still corrects it) or `ki 0.25`. If you see overshoot on step changes, lower `ki` first (0.10), then `kp`.
 
@@ -96,15 +96,19 @@ Pro → meter board:
 
 | Line | When |
 |---|---|
-| `$Z` | display tare (every process start and shot save). Zeroes the `$F` volume counter only; shot logs on the meter still start from the BLE scale tare / from flow exactly as in v1.6 |
+| `$Z` | display tare (every process start and shot save). Zeroes the `$F` volume counter only; shot logs on the meter start from the BLE scale tare (see *Shot logs on the meter*) |
 | `$B,<0|1>` | brew valve open/closed |
 | `$L,<ch>,<brightness>` | LED command from the display (J4 build only; the meter counts them and ignores them) |
 | `$H,<uptime_s>` | 1 Hz heartbeat, so the meter page can show "Pro connected" |
-| `$D,<pump_%>,<bar>,<mode>,<target_bar>,<target_ml_s>,<ctrl_bar>,<ctrl_ml_s>,<model_ml_s>,<i_%>,<flags>` | 10 Hz, pump diagnostics (meterlink.4+), see below |
+| `$D,<pump_%>,<bar>,<mode>,<target_bar>,<target_ml_s>,<ctrl_bar>,<ctrl_ml_s>,<model_ml_s>,<i_%>,<flags>,<heater_%>,<boiler_c>` | 10 Hz, pump diagnostics (meterlink.4+; the last two since meterlink.6, meter v1.7.3 reads the first ten), see below |
 
-## Diagnostics log (meterlink.4 + meter v1.7.3)
+## Shot logs on the meter (v1.7.4)
 
-Every shot log on the meter board gets ten more columns after `cup_g`, from the Pro's latest `$D` (empty when none came in the last 0.5 s, e.g. with an older Pro build):
+A log opens when GaggiMate starts a shot: the display zeroes its BLE scale (the meter's *Decent Scale FM*) at brew start, the same moment the BOOKOO is tared. Water through the meter outside a shot — steam, hot water, a manual flush — no longer opens a log (up to v1.7.3 any flow did). The meter's screen still counts ml and seconds for any flow. Shot logs card on the meter page → *Also log flow outside GaggiMate shots* brings back the old flow-started logs (saved, default off).
+
+## Diagnostics log (meterlink.4+ and meter v1.7.3+)
+
+Every shot log on the meter board gets twelve more columns after `cup_g` (ten up to v1.7.3), from the Pro's latest `$D` (empty when none came in the last 0.5 s, e.g. with an older Pro build; `heater_pct` and `boiler_c` empty with a Pro before meterlink.6):
 
 | Column | Meaning |
 |---|---|
@@ -117,8 +121,10 @@ Every shot log on the meter board gets ten more columns after `cup_g`, from the 
 | `model_ml_s` | the pump model's flow at this power and pressure (`pumpModelCoeffs` / `pumpSlipCoeffs`): compare it with `flow_ml_s` to see how far the model is off |
 | `i_pct` | integral part of the active loop, %: pressure phase = the stock I term (duty it adds); flow phase = the flow PI's integral (share of the range above the dead zone) |
 | `pro_flags` | 1 valve open, 2 pressure ceiling holds the pump, 4 flow fault (meter data stale), 8 flow loop running |
+| `heater_pct` | brew heater output, % (meterlink.6+) |
+| `boiler_c` | boiler temperature as the sensor reads it, °C (meterlink.6+). GaggiMate shows it minus its *temperature offset*, so this column is higher than the GaggiMate chart by that offset |
 
-The meter page shows the same live on the Pro link card (*Pro now: pump … % · … bar*), and its shot chart draws pump power and pressure under the flow, with the flow target dashed. The timing is the meter's 10 Hz rows; the `$D` values are at most ~0.1 s older than the row.
+The meter page shows the same live on the Pro link card (*Pro now: pump … % · … bar · heater … %*), and its shot chart draws pump power and pressure under the flow, with the flow target dashed. The timing is the meter's 10 Hz rows; the `$D` values are at most ~0.1 s older than the row.
 
 ## Calibration runs
 
@@ -151,6 +157,7 @@ The pump model is Q = d·(full(P) + slip(P)) − slip(P): straight in pump power
 
 ## Changes
 
+- **meterlink.6** (Oct 27 2026): Shot Analyzer draws pump power (chart line, legend toggle, compare mode, *Avg. Pump Power* in the analysis table; display). `$D` carries the brew heater output and the boiler temperature (controller), `LineProtocol` takes up to 14 fields per line. Meter board v1.7.4 logs them, and opens shot logs only for GaggiMate shots.
 - **meterlink.5** (Oct 27 2026): display fork — pump power % in every GaggiMate shot (shot file field `pp`, Shot History chart line, JSON export). Controller unchanged from meterlink.4 apart from the version string.
 - **meterlink.4** (Oct 27 2026): `$D` pump diagnostics to the meter board (logged by meter v1.7.3); with a dead zone set, a flow phase keeps the pump at its slowest speed instead of switching it off below the slowest flow. Dead zone 0 behaves as before. `LineProtocol` takes up to 11 fields per line.
 - **meterlink.3** (Oct 27 2026): pump dead-zone setting for flow phases (8th `$G` field, console `G … [deadzone%]`). Default 0 = same behaviour as meterlink.2. Meter board v1.7.2 adds the field to its page.
@@ -160,6 +167,6 @@ The pump model is Q = d·(full(P) + slip(P)) − slip(P): straight in pump power
 ## Source
 
 - `source/gaggimate-meterlink.patch`: the fork's commits against upstream `b78beee`. To get a working tree:
-  `git clone https://github.com/jniebuhr/gaggimate.git && cd gaggimate && git checkout -b meterlink-flow-control b78beee && git am --keep-cr ../gaggimate-meterlink.patch && git tag v1.99.0-meterlink.5`
+  `git clone https://github.com/jniebuhr/gaggimate.git && cd gaggimate && git checkout -b meterlink-flow-control b78beee && git am --keep-cr ../gaggimate-meterlink.patch && git tag v1.99.0-meterlink.6`
   then `pio run -e controller-meterlink-j5`, and for the display `scripts/build_webui.sh && pio run -e display` (the tag gives the build its version string; `--keep-cr` because upstream's PressureController.cpp has CRLF line ends); tests: `pio test -e native -f test_meter_flow_loop -f test_line_protocol`. Rebasing onto a newer nightly is `git rebase <nightly-commit>`; the change touches `PressureController`, `DimmedPump`, `GaggiMateController`, adds `MeterLink`/`LineProtocol` and two test suites.
-- `meter/digmesa-flow-display.ino`: v1.7.3. `source/patch_v17.py` turned your v1.6.4 into v1.7.1, `source/patch_v172.py` v1.7.1 into v1.7.2, `source/patch_v173.py` v1.7.2 into v1.7.3 (every anchor asserted). Build settings unchanged: ESP32S3 Dev Module, 16 MB, `app3M_fat9M_16MB`, OPI PSRAM, CDC on boot, esp32 core 3.3.10, GFX Library for Arduino 1.6.4 (upstream 1.6.4 needs the three `spiFrequencyToClockDiv` calls patched for core 3.3.x — Waveshare's copy already has that), U8g2.
+- `meter/digmesa-flow-display.ino`: v1.7.4. `source/patch_v17.py` turned your v1.6.4 into v1.7.1, `source/patch_v172.py` v1.7.1 into v1.7.2, `source/patch_v173.py` v1.7.2 into v1.7.3, `source/patch_v174.py` v1.7.3 into v1.7.4 (every anchor asserted). Build settings unchanged: ESP32S3 Dev Module, 16 MB, `app3M_fat9M_16MB`, OPI PSRAM, CDC on boot, esp32 core 3.3.10, GFX Library for Arduino 1.6.4 (upstream 1.6.4 needs the three `spiFrequencyToClockDiv` calls patched for core 3.3.x — Waveshare's copy already has that), U8g2.
