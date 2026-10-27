@@ -42,7 +42,7 @@ class PressureController {
 
     // === Measured-flow control (fork) ===
     // When enabled, FLOW mode runs closed loop on the flow reported by setMeasuredFlow() and the
-    // pressure setpoint of the phase acts as a ceiling through an outer limiter. With no fresh
+    // pressure setpoint of the phase acts as a ceiling through an override PI. With no fresh
     // measurement the pump is stopped instead of falling back to the pump model.
     void enableMeasuredFlowControl(bool enabled) { _flowLoopEnabled = enabled; }
     bool isMeasuredFlowControlEnabled() const { return _flowLoopEnabled; }
@@ -55,22 +55,22 @@ class PressureController {
     void setFlowLoopGains(const FlowLoopGains &gains) { _flowGains = gains; }
     const FlowLoopGains &getFlowLoopGains() const { return _flowGains; }
     void resetFlowLoop();                                          // call when leaving FLOW mode
-    float getEffectiveFlowTarget() const { return _flowTargetEff; } // target after the ceiling limiter (ml/s)
-    bool isPressureLimiting() const { return _limBinding; }        // ceiling limiter is trimming the target
-    float getFlowLoopDuty() const { return _flowDuty; }            // last inner-loop output (0..1)
-    float getFlowLoopIntegral() const { return _flowIntegral; }
+    float getEffectiveFlowTarget() const { return _flowTargetEff; } // slewed flow target (ml/s)
+    bool isPressureLimiting() const { return _limBinding; }        // the pressure ceiling holds the pump
+    float getFlowLoopDuty() const { return _flowDuty; }            // last applied duty (0..1)
+    float getFlowLoopIntegral() const { return _flowReset; }        // flow PI reset state (duty)
+    float getPressureLoopIntegral() const { return _pressReset; }   // ceiling PI reset state (duty)
     float getRampedFlowSetpoint() const { return _flowSetpointRamped; }
 
   private:
     float getPumpDutyCycleForPressure();
     float getPumpDutyCycleMeasuredFlow(float target);
-    float applyPressureLimiter(float target);
     float rampFlowSetpoint(float target);
-    static constexpr float OVER_CEILING_DEADBAND = 0.2f; // bar above the ceiling before the backstop acts
-    static constexpr float OVER_CEILING_BLEED = 0.5f;    // duty fraction per bar of excess per second
-    static constexpr float OVER_CEILING_CUT = 1.0f;      // bar above the ceiling at which the duty is cut to zero
-    static constexpr float BACKSTOP_LOOKAHEAD_S = 0.25f; // the backstop acts on P + dP/dt * this
     static constexpr float HARD_PRESSURE_CUTOFF = 12.5f; // bar: flow loop refuses to push past this
+    static constexpr float PRESSURE_LOOKAHEAD_S = 0.25f; // ceiling PI acts on P + dP/dt * this
+    static constexpr float PRESSURE_TRACK_S = 0.2f;      // ceiling PI reset tracking time while flow is in charge
+    static constexpr float PUMP_IDLE_FLOW = 0.05f;       // ml/s: below this the pump is taken as delivering nothing
+    static constexpr float PRESSURE_DRAIN_RATE = 0.1f;   // bar/s: pressure falling faster than this = puck draining
     float modelDutyFraction(float flow) const; // pump-model feedforward duty (0..1) for a flow
     void virtualScale();
     void filterSensor(float sampleTime);
@@ -148,11 +148,11 @@ class PressureController {
     FlowLoopGains _flowGains{};
     bool _flowLoopArmed = false; // integrator pre-loaded for the current flow phase
     float _flowSetpointRamped = 0.0f; // slewed flow target (ml/s)
-    float _flowIntegral = 0.0f;  // inner-loop integral term (duty fraction)
-    float _flowDuty = 0.0f;      // last inner-loop output (duty fraction)
-    float _limIntegral = 0.0f;   // ceiling limiter integral (ml/s)
-    bool _limBinding = false;    // ceiling limiter currently trimming the target
-    float _flowTargetEff = 0.0f; // flow target after the limiter (ml/s)
+    float _flowReset = 0.0f;     // flow PI reset-feedback state (duty fraction, excludes feedforward)
+    float _pressReset = 0.0f;    // ceiling PI reset-feedback state (duty fraction)
+    float _flowDuty = 0.0f;      // last applied duty (fraction)
+    bool _limBinding = false;    // the ceiling PI is the one in charge
+    float _flowTargetEff = 0.0f; // slewed flow target (ml/s)
 };
 
 #endif // PRESSURE_CONTROLLER_H

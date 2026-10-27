@@ -68,16 +68,16 @@ void PressureController::update(ControlMode mode, bool freshPressure, float samp
 
     if (mode == ControlMode::FLOW && _flowLoopEnabled) {
         // Fork: flow phases run closed loop on the flow meter. The phase's pressure setpoint is a
-        // ceiling, enforced by trimming the flow target (cascade) rather than by racing two duty
-        // outputs through min(), which is what stalled stock flow phases below their limit.
+        // ceiling, held by a pressure PI that overrides the flow PI (lowest duty wins); both use
+        // reset feedback, so neither winds up. Stock zeroed the pressure integral whenever flow
+        // won the min(), which is what stalled its flow phases below their limit.
         _errorIntegral = 0.0f; // leave the pressure loop clean for a following pressure phase
         if (!_measuredFlowValid) {
             // Fail-safe: no fresh measurement -> no pump. No silent fallback to the model.
             resetFlowLoop();
             *_ctrlOutput = 0.0f;
         } else {
-            const float target = applyPressureLimiter(rampFlowSetpoint(*_rawFlowSetpoint));
-            *_ctrlOutput = getPumpDutyCycleMeasuredFlow(target);
+            *_ctrlOutput = getPumpDutyCycleMeasuredFlow(rampFlowSetpoint(*_rawFlowSetpoint));
         }
     } else if ((mode == ControlMode::FLOW || mode == ControlMode::PRESSURE) && *_rawPressureSetpoint > 0.0f &&
                *_rawFlowSetpoint > 0.0f) {
@@ -152,9 +152,9 @@ float PressureController::modelDutyFraction(float flow) const {
 void PressureController::resetFlowLoop() {
     _flowLoopArmed = false;
     _flowSetpointRamped = 0.0f;
-    _flowIntegral = 0.0f;
+    _flowReset = 0.0f;
+    _pressReset = 0.0f;
     _flowDuty = 0.0f;
-    _limIntegral = 0.0f;
     _limBinding = false;
     _flowTargetEff = 0.0f;
 }
@@ -179,41 +179,15 @@ float PressureController::rampFlowSetpoint(float target) {
     return _flowSetpointRamped;
 }
 
-// Outer loop: the phase's pressure setpoint is a ceiling. The flow target passes through untouched
-// until pressure is within target/limKp bar of the ceiling; inside that band the target is trimmed
-// in proportion (P) and the integral (I, >= 0) settles on whatever flow the puck passes at the
-// ceiling. Out of the band the integral decays back to zero, so the band is the same every time.
-float PressureController::applyPressureLimiter(float target) {
-    const float ceiling = *_rawPressureSetpoint;
-    if (ceiling <= 0.2f || target <= 0.0f) {
-        _limIntegral = 0.0f;
-        _limBinding = false;
-        _flowTargetEff = target;
-        return target;
-    }
-    const float ep = ceiling - _filteredPressureSensor; // > 0 while below the ceiling
-    const float capUnclamped = _flowGains.limKp * ep + _limIntegral;
-    if (capUnclamped >= target && ep > 0.0f) {
-        _limIntegral -= _limIntegral * std::min(1.0f, _dt / 2.0f); // not binding: forget the last episode (tau 2 s)
-        _limBinding = false;
-        _flowTargetEff = target;
-        return target;
-    }
-    _limBinding = true;
-    const float cap = std::clamp(capUnclamped, 0.0f, target);
-    const bool windingDownAtZero = cap <= 0.0f && ep < 0.0f;
-    if (!windingDownAtZero)
-        _limIntegral += _flowGains.limKi * ep * _dt;
-    _limIntegral = std::clamp(_limIntegral, 0.0f, target); // the puck's flow at the ceiling is never negative
-    _flowTargetEff = cap;
-    return cap;
-}
-
-// Inner loop: PI on the measured flow, output is the pump duty. Integrator pre-loaded with a
-// fixed start duty at the beginning of a flow phase (model-free head start), optional pump-model
-// feedforward weighted by gains.ff, conditional integration against the 0..100 % limits.
-// Pressure backstop: above the ceiling the integral is bled in proportion to the excess, so a
-// stuck or under-reading meter (or a ceiling lowered mid-shot) cannot leave the pump pushing.
+// Override control. Two PI controllers propose a pump duty and the lower one is applied:
+//   flow PI      on (target - measured flow), the normal case;
+//   pressure PI  on (ceiling - pressure), only when the phase sets a pressure ceiling.
+// Each integral is kept as "reset feedback": it relaxes toward the duty actually applied (minus the
+// feedforward for the flow PI) with time constant kp/ki. For the controller in charge this is exactly a
+// PI; the other one sits at the applied duty plus its own proportional term, so it takes over without a
+// bump and can never wind up, whether the other controller or the 0..100 % limit holds the pump.
+// This matters on a vane pump: at 9 bar about half the duty only covers slip, so a controller whose
+// integral has been pushed far below that has to climb through a dead band before water moves again.
 float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     if (*_rawFlowSetpoint <= 0.0f) { // the phase asks for no flow (blooming etc.)
         resetFlowLoop();
@@ -221,39 +195,64 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     }
     const float ffDuty = _flowGains.ff > 0.0f ? _flowGains.ff * modelDutyFraction(target) : 0.0f;
     if (!_flowLoopArmed) {
-        _flowIntegral = std::max(0.0f, _flowGains.startDuty - ffDuty);
+        // Start from the duty already running (a pressure phase holding 9 bar sits well above startDuty;
+        // dropping to startDuty would let the pressure fall through the slip band), or from startDuty.
+        const float running = std::clamp(*_ctrlOutput * 0.01f, 0.0f, 1.0f);
+        const float start = std::max(_flowGains.startDuty, running);
+        _flowReset = std::max(0.0f, start - ffDuty);
+        _pressReset = start;
         _flowLoopArmed = true;
     }
+    _flowTargetEff = target;
+
     const float e = target - _measuredFlow;
-    const float p = _flowGains.kp * e;
-    float duty = ffDuty + p + _flowIntegral;
+    const float flowOut = ffDuty + _flowGains.kp * e + _flowReset;
+
     const float ceiling = *_rawPressureSetpoint;
-    // Backstop works on a short look-ahead of the pressure: a blind loop (stuck meter) can push the
-    // pressure up at several bar per second, and the pump needs ~0.15 s to answer.
-    const float P = _filteredPressureSensor + BACKSTOP_LOOKAHEAD_S * _filteredPressureDerivative;
-    const bool overCeiling = ceiling > 0.2f && P > ceiling + OVER_CEILING_DEADBAND;
-    const bool saturatedHigh = duty >= 1.0f && e > 0.0f;
-    const bool saturatedLow = duty <= 0.0f && e < 0.0f;
-    // Over the ceiling the integral may only come down: no winding up on a flow error that a stuck or
-    // under-reading meter would otherwise keep feeding, and a bleed proportional to the excess.
-    if (!saturatedHigh && !saturatedLow && !(overCeiling && e > 0.0f))
-        _flowIntegral += _flowGains.ki * e * _dt;
-    if (overCeiling)
-        _flowIntegral -= OVER_CEILING_BLEED * (P - ceiling) * _dt; // 1 bar over -> -50 % duty per second
-    if (ceiling > 0.2f && P > ceiling + OVER_CEILING_CUT) {
-        // A full bar over the ceiling means the flow loop has lost the plot (stuck meter, choked puck at
-        // full wind-up): take the duty to zero right now, the PI may build it back up from there.
-        _flowIntegral = std::min(_flowIntegral, -(ffDuty + p));
+    const bool hasCeiling = ceiling > 0.2f;
+    const float kpP = _flowGains.limKp * 0.01f; // gains are entered in % duty per bar (and per bar-second)
+    const float kiP = _flowGains.limKi * 0.01f;
+    // The pressure PI looks a little ahead (P + dP/dt * t) so it takes the pump before the pressure,
+    // rising at several bar/s through a small dead volume, runs past the ceiling.
+    const float pAhead = _filteredPressureSensor + _filteredPressureDerivative * PRESSURE_LOOKAHEAD_S;
+    const float pressOut = hasCeiling ? kpP * (ceiling - pAhead) + _pressReset : 1e9f;
+
+    float applied = std::min(flowOut, pressOut);
+    _limBinding = hasCeiling && pressOut < flowOut;
+    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) // well past any OPV: something is wrong, stop pushing
+        applied = 0.0f;
+    applied = std::clamp(applied, 0.0f, 1.0f);
+
+    // Reset feedback (see above). ki = 0 turns a controller into a pure P controller.
+    if (_flowGains.ki > 0.0f && _flowGains.kp > 0.0f) {
+        const float a = std::min(1.0f, _dt * _flowGains.ki / _flowGains.kp);
+        _flowReset += ((applied - ffDuty) - _flowReset) * a;
+    } else if (_flowGains.ki > 0.0f) { // pure I controller
+        _flowReset = std::clamp(_flowReset + _flowGains.ki * e * _dt, -1.0f, 1.0f);
     }
-    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) { // well past any OPV: something is wrong, stop pushing
-        _flowIntegral = 0.0f;
-        _flowDuty = 0.0f;
-        return 0.0f;
+    // While the flow PI is in charge the pressure PI's reset follows the applied duty quickly, so it sits
+    // at "applied + kpP * error" and only takes the pump once the (looked-ahead) pressure reaches the
+    // ceiling; in charge, it relaxes with kpP/kiP, which is plain PI action. kiP = 0 holds it (pure P).
+    if (hasCeiling) {
+        const float before = _pressReset;
+        float tau = PRESSURE_TRACK_S;
+        if (_limBinding)
+            tau = (kiP > 0.0f && kpP > 0.0f) ? kpP / kiP : 0.0f;
+        if (tau > 0.0f)
+            _pressReset += (applied - _pressReset) * std::min(1.0f, _dt / tau);
+        // Slip band: once the pump delivers nothing (meter ~0) and the puck is visibly draining the pressure,
+        // a lower duty cannot bring the pressure down any faster. Integrating on would park the duty deep
+        // below the slip hold duty, and the pump would need seconds to climb back once the pressure reaches
+        // the ceiling (an undershoot of bars). So the integral stops going down there. Pressure that is
+        // steady or rising above the ceiling (a choked puck, a meter stuck at 0) keeps the integral moving.
+        if (_limBinding && _measuredFlow < PUMP_IDLE_FLOW && _filteredPressureDerivative < -PRESSURE_DRAIN_RATE)
+            _pressReset = std::max(_pressReset, before);
+    } else {
+        _pressReset = applied;
     }
-    _flowIntegral = std::clamp(_flowIntegral, -1.0f, 1.0f);
-    duty = std::clamp(ffDuty + p + _flowIntegral, 0.0f, 1.0f);
-    _flowDuty = duty;
-    return duty * 100.0f;
+
+    _flowDuty = applied;
+    return applied * 100.0f;
 }
 
 void PressureController::setPumpFlowCoeff(float oneBarFlow, float nineBarFlow) {

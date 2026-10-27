@@ -633,7 +633,7 @@ void GaggiMateController::handleConsoleLine(const char *line) {
             dimmedPump->setFlowLoopGains(g);
             ESP_LOGI("Controller", "Flow loop gains set (until restart or the next $G from the meter board)");
         } else {
-            ESP_LOGI("Controller", "Usage: G <kp> <ki> <start_duty_percent> <ff 0..1> <ramp ml/s/s> <limKp> <limKi>");
+            ESP_LOGI("Controller", "Usage: G <kp> <ki> <start_duty_percent> <ff 0..1> <ramp ml/s/s> <limKp %%/bar> <limKi %%/bar/s>");
         }
         return;
     }
