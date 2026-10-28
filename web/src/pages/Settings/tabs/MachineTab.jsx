@@ -8,7 +8,11 @@ import { Tooltip } from '../../../components/Tooltip.jsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCrosshairs } from '@fortawesome/free-solid-svg-icons/faCrosshairs';
 import { faWeightScale } from '@fortawesome/free-solid-svg-icons/faWeightScale';
-import { InputGroupField, SettingsFormField } from '../../../components/SettingsFormField.jsx';
+import {
+  InputGroupField,
+  SettingsFormField,
+  ToggleField,
+} from '../../../components/SettingsFormField.jsx';
 import { CleaningSection } from './CleaningSection.jsx';
 
 const ledControl = computed(() => machine.value.capabilities.ledControl);
@@ -295,6 +299,79 @@ export function MachineTab({ formData, onChange, setField }) {
                 placeholder='0.0'
                 value={formData.steamPumpCutoff}
                 onChange={onChange('steamPumpCutoff')}
+              />
+            </InputGroupField>
+          )}
+          {pressureAvailable.value && (
+            <div className='md:col-span-2'>
+              <ToggleField
+                label={t`Idle Pressure Release`}
+                htmlFor='pressureRelease'
+                checked={!!formData.pressureRelease}
+                onChange={onChange('pressureRelease')}
+                helpText={t`Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot, in steam mode or above 100 °C.`}
+              />
+            </div>
+          )}
+          {pressureAvailable.value && formData.pressureRelease && (
+            <InputGroupField
+              label={t`Release Above`}
+              htmlFor='pressureReleaseBar'
+              unit='bar'
+              helpText={t`Pulse the brew valve when the idle pressure is above this.`}
+              noMargin
+            >
+              <input
+                id='pressureReleaseBar'
+                name='pressureReleaseBar'
+                type='number'
+                step='any'
+                className='grow'
+                placeholder='3.0'
+                value={formData.pressureReleaseBar}
+                onChange={onChange('pressureReleaseBar')}
+              />
+            </InputGroupField>
+          )}
+          {pressureAvailable.value && formData.pressureRelease && (
+            <InputGroupField
+              label={t`Release Pulse`}
+              htmlFor='pressureReleasePulseMs'
+              unit='ms'
+              unitAriaLabel={t`milliseconds`}
+              helpText={t`How long the brew valve stays open per pulse (50 to 2000).`}
+              noMargin
+            >
+              <input
+                id='pressureReleasePulseMs'
+                name='pressureReleasePulseMs'
+                type='number'
+                step='10'
+                className='grow'
+                placeholder='300'
+                value={formData.pressureReleasePulseMs}
+                onChange={onChange('pressureReleasePulseMs')}
+              />
+            </InputGroupField>
+          )}
+          {pressureAvailable.value && formData.pressureRelease && (
+            <InputGroupField
+              label={t`Release Interval`}
+              htmlFor='pressureReleaseIntervalS'
+              unit='s'
+              unitAriaLabel={t`seconds`}
+              helpText={t`At most one pulse per this many seconds (minimum 5).`}
+              noMargin
+            >
+              <input
+                id='pressureReleaseIntervalS'
+                name='pressureReleaseIntervalS'
+                type='number'
+                step='1'
+                className='grow'
+                placeholder='60'
+                value={formData.pressureReleaseIntervalS}
+                onChange={onChange('pressureReleaseIntervalS')}
               />
             </InputGroupField>
           )}

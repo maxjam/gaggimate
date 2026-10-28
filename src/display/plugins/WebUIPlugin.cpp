@@ -457,6 +457,14 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
                 settings->setSteamPumpPercentage(request->arg("steamPumpPercentage").toFloat());
             if (request->hasArg("steamPumpCutoff"))
                 settings->setSteamPumpCutoff(request->arg("steamPumpCutoff").toFloat());
+            if (request->hasArg("pressureRelease"))
+                settings->setPressureRelease(parseBoolArg(request->arg("pressureRelease")));
+            if (request->hasArg("pressureReleaseBar"))
+                settings->setPressureReleaseBar(request->arg("pressureReleaseBar").toFloat());
+            if (request->hasArg("pressureReleasePulseMs"))
+                settings->setPressureReleasePulseMs(request->arg("pressureReleasePulseMs").toInt());
+            if (request->hasArg("pressureReleaseIntervalS"))
+                settings->setPressureReleaseIntervalS(request->arg("pressureReleaseIntervalS").toInt());
             if (request->hasArg("themeMode"))
                 settings->setThemeMode(request->arg("themeMode").toInt());
             if (request->hasArg("statusDisplayMode"))
@@ -614,6 +622,10 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
     doc["standbyBrightnessTimeout"] = settings.getStandbyBrightnessTimeout() / 1000;
     doc["steamPumpPercentage"] = settings.getSteamPumpPercentage();
     doc["steamPumpCutoff"] = settings.getSteamPumpCutoff();
+    doc["pressureRelease"] = settings.isPressureRelease();
+    doc["pressureReleaseBar"] = settings.getPressureReleaseBar();
+    doc["pressureReleasePulseMs"] = settings.getPressureReleasePulseMs();
+    doc["pressureReleaseIntervalS"] = settings.getPressureReleaseIntervalS();
     doc["themeMode"] = settings.getThemeMode();
     doc["statusDisplayMode"] = settings.getStatusDisplayMode();
     doc["sunriseIdle"] = settings.getSunriseIdle();

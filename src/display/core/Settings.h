@@ -155,6 +155,12 @@ class Settings {
     int getWifiApTimeout() const { return wifiApTimeout.get(); }
     float getSteamPumpPercentage() const { return steamPumpPercentage.get(); }
     float getSteamPumpCutoff() const { return steamPumpCutoff.get(); }
+    // Fork (meterlink.8): vent the pressure trapped between the pump's check valve and the closed brew valve
+    // (heating expands the water against the safety valve) with a short pulse of the brew valve while idle.
+    bool isPressureRelease() const { return pressureRelease.get(); }
+    float getPressureReleaseBar() const { return pressureReleaseBar.get(); }
+    int getPressureReleasePulseMs() const { return pressureReleasePulseMs.get(); }
+    int getPressureReleaseIntervalS() const { return pressureReleaseIntervalS.get(); }
     int getThemeMode() const { return themeMode.get(); }
     int getStatusDisplayMode() const { return statusDisplayMode.get(); } // STATUS_DISPLAY_*
     int getHistoryIndex() const { return historyIndex.get(); }
@@ -271,6 +277,10 @@ class Settings {
     void setWifiApTimeout(int timeout);
     void setSteamPumpPercentage(float steam_pump_percentage);
     void setSteamPumpCutoff(float steam_pump_cutoff);
+    void setPressureRelease(bool on);
+    void setPressureReleaseBar(float bar);
+    void setPressureReleasePulseMs(int ms);
+    void setPressureReleaseIntervalS(int s);
     void setThemeMode(int theme_mode);
     void setStatusDisplayMode(int status_display_mode);
     void setHistoryIndex(int history_index);
@@ -359,6 +369,10 @@ class Settings {
     Property<std::vector<String>> profileOrder{registry, "po", {}}; // persisted profile ordering
     Property<float> steamPumpPercentage{registry, "spp", DEFAULT_STEAM_PUMP_PERCENTAGE};
     Property<float> steamPumpCutoff{registry, "spc", DEFAULT_STEAM_PUMP_CUTOFF};
+    Property<bool> pressureRelease{registry, "prl", true};          // fork: idle pressure release on/off
+    Property<float> pressureReleaseBar{registry, "prb", 3.0f};      // fork: release above this pressure (bar)
+    Property<int> pressureReleasePulseMs{registry, "prp", 300};     // fork: brew valve open for this long (ms)
+    Property<int> pressureReleaseIntervalS{registry, "pri", 60};    // fork: at most one pulse per this many s
     Property<int> historyIndex{registry, "hi", 0};
 
     Property<bool> heaterCoordinationEnabled{registry, "hco", false};

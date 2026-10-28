@@ -290,6 +290,10 @@ void Settings::setWifiApTimeout(int timeout) { wifiApTimeout.set(timeout); }
 void Settings::setSteamPumpPercentage(float steam_pump_percentage) { steamPumpPercentage.set(steam_pump_percentage); }
 
 void Settings::setSteamPumpCutoff(float steam_pump_cutoff) { steamPumpCutoff.set(steam_pump_cutoff); }
+void Settings::setPressureRelease(bool on) { pressureRelease.set(on); }
+void Settings::setPressureReleaseBar(float bar) { pressureReleaseBar.set(bar); }
+void Settings::setPressureReleasePulseMs(int ms) { pressureReleasePulseMs.set(ms); }
+void Settings::setPressureReleaseIntervalS(int s) { pressureReleaseIntervalS.set(s); }
 
 void Settings::setThemeMode(int theme_mode) { themeMode.set(theme_mode); }
 

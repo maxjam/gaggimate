@@ -1121,6 +1121,10 @@ void Controller::updateControl() {
         pump.mode = PumpControlMode::Power;
         pump.power = active ? proc->getPumpValue() : 0;
     }
+    // Fork (meterlink.8): with nothing running, vent the trapped circuit pressure with a short pulse of the brew valve.
+    if (!handled && !active && pressureReleaseOpen(active)) {
+        relay.open = true;
+    }
 
     if (full || pump != lastPump)
         batch[count++] = comms.buildPumpControl(pump.index, pump.mode, pump.power, pump.pressure, pump.flow);
@@ -1789,4 +1793,38 @@ void Controller::loopLogicTask(void *arg) {
         controller->loopLogic();
         xTaskDelayUntil(&lastWake, pdMS_TO_TICKS(controller->getMode() == MODE_STANDBY ? 1000 : PROGRESS_INTERVAL));
     }
+}
+
+// Fork (meterlink.8): the water between the pump's check valve and the closed brew valve is sealed; as the boiler
+// heats it expands and the circuit sits at the safety valve's pressure (12.5 bar on Max's machine) until something
+// opens. This pulses the brew valve open for pressureReleasePulseMs when the pressure is above pressureReleaseBar,
+// at most once per pressureReleaseIntervalS, only while no process runs, in a brew-temperature mode (never in steam
+// mode or standby) and with the boiler under 100 C (so nothing boiling is pushed through the group after steaming).
+// The group drains to the drip tray through the valve's outlet when it closes again.
+bool Controller::pressureReleaseOpen(bool processActive) {
+    const unsigned long now = millis();
+    if (pressureReleasePulseStart != 0) { // a pulse is running
+        const unsigned long pulseMs = static_cast<unsigned long>(std::max(50, std::min(2000, settings.getPressureReleasePulseMs())));
+        if (!processActive && now - pressureReleasePulseStart < pulseMs)
+            return true;
+        pressureReleasePulseStart = 0;
+        pressureReleaseLast = now;
+        return false;
+    }
+    if (!settings.isPressureRelease() || processActive)
+        return false;
+    if (mode == MODE_STEAM || mode == MODE_STANDBY)
+        return false;
+    if (currentTemp >= 100.0f)
+        return false;
+    if (systemInfo.protocolMismatch || !systemInfo.capabilities.pressure)
+        return false;
+    const unsigned long intervalMs = static_cast<unsigned long>(std::max(5, settings.getPressureReleaseIntervalS())) * 1000UL;
+    if (pressureReleaseLast != 0 && now - pressureReleaseLast < intervalMs)
+        return false;
+    if (pressure <= settings.getPressureReleaseBar())
+        return false;
+    pressureReleasePulseStart = now;
+    ESP_LOGI("Controller", "Pressure release: %.1f bar idle, brew valve open for %d ms", pressure, settings.getPressureReleasePulseMs());
+    return true;
 }

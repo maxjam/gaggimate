@@ -224,6 +224,10 @@ class Controller {
     WarningManager warnings;
 
     int mode = MODE_BREW;
+    // Fork (meterlink.8): idle pressure release through the brew valve (see pressureReleaseOpen())
+    unsigned long pressureReleasePulseStart = 0; // 0 = no pulse running
+    unsigned long pressureReleaseLast = 0;       // when the last pulse ended (0 = never)
+    bool pressureReleaseOpen(bool processActive);
     float currentTemp = 0.0f;
     float currentSteamTemp = 0.0f;
     float pressure = 0.0f;
