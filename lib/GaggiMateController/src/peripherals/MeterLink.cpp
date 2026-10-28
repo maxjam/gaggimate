@@ -73,7 +73,7 @@ void MeterLink::loop() {
 void MeterLink::handle(const lineproto::Message &msg) {
     switch (msg.type[0]) {
     case 'F': {
-        if (msg.count < 2)
+        if (msg.count < 3) // flow, volume, sequence: without the sequence every line after the first would be a "duplicate"
             return;
         float flow = msg.f(0, -1.0f);
         if (std::isnan(flow) || flow < -0.5f || flow > 50.0f) // 50 ml/s: far above any espresso pump
@@ -109,7 +109,8 @@ void MeterLink::handle(const lineproto::Message &msg) {
     case 'G': {
         if (msg.count < 7)
             return;
-        FlowLoopGains g;
+        // A missing or empty field keeps the value in use (meterlink.7; before, it fell back to the compile-time default).
+        FlowLoopGains g = _currentGains ? _currentGains() : FlowLoopGains{};
         g.kp = msg.f(0, g.kp);
         g.ki = msg.f(1, g.ki);
         g.startDuty = msg.f(2, g.startDuty * 100.0f) / 100.0f; // on the wire in percent

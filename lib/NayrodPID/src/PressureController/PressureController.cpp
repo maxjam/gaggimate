@@ -66,11 +66,16 @@ void PressureController::update(ControlMode mode, bool freshPressure, float samp
     if (freshPressure)
         filterSensor(sampleTime);
 
-    if (mode == ControlMode::FLOW && _flowLoopEnabled) {
+    const bool measuredFlowPhase = mode == ControlMode::FLOW && isMeasuredFlowControlActive();
+    if (_flowLoopArmed && !measuredFlowPhase)
+        resetFlowLoop(); // valve closed or mode changed under a running flow phase: start clean next time
+    if (measuredFlowPhase) {
         // Fork: flow phases run closed loop on the flow meter. The phase's pressure setpoint is a
         // ceiling, held by a pressure PI that overrides the flow PI (lowest duty wins); both use
         // reset feedback, so neither winds up. Stock zeroed the pressure integral whenever flow
         // won the min(), which is what stalled its flow phases below their limit.
+        // Only with the brew valve open: a flow command with the valve closed is the display's steam
+        // pump (flow = steam pump %, limit = steam cutoff), which stays on the stock path below.
         _errorIntegral = 0.0f; // leave the pressure loop clean for a following pressure phase
         if (!_measuredFlowValid) {
             // Fail-safe: no fresh measurement -> no pump. No silent fallback to the model.
@@ -156,7 +161,12 @@ void PressureController::resetFlowLoop() {
     _pressReset = 0.0f;
     _flowDuty = 0.0f;
     _limBinding = false;
+    _cutoffLatched = false;
     _flowTargetEff = 0.0f;
+    if (_gainsPending) { // gains that arrived during the phase (meterlink.7)
+        _flowGains = _pendingGains;
+        _gainsPending = false;
+    }
 }
 
 // Slews the phase's flow target so a step (phase change, profile ramp, loop start) does not kick
@@ -181,7 +191,7 @@ float PressureController::rampFlowSetpoint(float target) {
 
 // Override control. Two PI controllers propose a pump duty and the lower one is applied:
 //   flow PI      on (target - measured flow), the normal case;
-//   pressure PI  on (ceiling - pressure), only when the phase sets a pressure ceiling.
+//   pressure PI  on (ceiling - pressure); the phase's pressure value, or DEFAULT_CEILING_BAR without one.
 // Each integral is kept as "reset feedback": it relaxes toward the duty actually applied (minus the
 // feedforward for the flow PI) with time constant kp/ki. For the controller in charge this is exactly a
 // PI; the other one sits at the applied duty plus its own proportional term, so it takes over without a
@@ -215,34 +225,44 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
         return 0.0f;
     }
     const float ffDuty = _flowGains.ff > 0.0f ? _flowGains.ff * loopFromPump(modelDutyFraction(target)) : 0.0f;
+    const float e = target - _measuredFlow;
+    // A flow phase without a pressure ceiling in its profile gets DEFAULT_CEILING_BAR (meterlink.7), so a meter
+    // reading nothing (signal wire off, stalled turbine) ends in a held pressure, not in the pump at 100 %
+    // bouncing off the hard cutoff. The phase's own ceiling, when it has one, is used as before.
+    const float ceiling = *_rawPressureSetpoint > 0.2f ? *_rawPressureSetpoint : DEFAULT_CEILING_BAR;
+    const float kpP = _flowGains.limKp * 0.01f; // gains are entered in % duty per bar (and per bar-second)
+    const float kiP = _flowGains.limKi * 0.01f;
+    // The pressure PI looks a little ahead (P + dP/dt * t) so it takes the pump before the pressure,
+    // rising at several bar/s through a small dead volume, runs past the ceiling.
+    const float pAhead = _filteredPressureSensor + _filteredPressureDerivative * PRESSURE_LOOKAHEAD_S;
     if (!_flowLoopArmed) {
         // Start from the duty already running (a pressure phase holding 9 bar sits well above startDuty;
         // dropping to startDuty would let the pressure fall through the slip band), or from startDuty.
         const float running = loopFromPump(std::clamp(*_ctrlOutput * 0.01f, 0.0f, 1.0f));
         const float start = std::max(loopFromPump(_flowGains.startDuty), running);
         _flowReset = std::max(0.0f, start - ffDuty);
-        _pressReset = start;
+        // The ceiling PI starts at the flow PI's first proposal (start + kp * e), not at `start`: with a flow
+        // error of 2 ml/s the difference is 10 % duty, enough for the ceiling PI to "win" the min() with the
+        // pressure 3 bar under the ceiling and then climb at its slow pace while the puck drains the pressure
+        // (meterlink.6: a 1 s meter dropout at 9 bar re-armed into a 3 bar sag). It now takes over only when
+        // the looked-ahead pressure is at the ceiling. A cold start (pump off) with the pressure already past
+        // the ceiling begins at 0: no pumping until the pressure is back under it.
+        const bool coldAboveCeiling = running <= 0.0f && pAhead > ceiling + 0.3f;
+        _pressReset = coldAboveCeiling ? 0.0f : std::max(0.0f, start + _flowGains.kp * e);
         _flowLoopArmed = true;
     }
     _flowTargetEff = target;
 
-    const float e = target - _measuredFlow;
     const float flowOut = ffDuty + _flowGains.kp * e + _flowReset;
-
-    const float ceiling = *_rawPressureSetpoint;
-    const bool hasCeiling = ceiling > 0.2f;
-    const float kpP = _flowGains.limKp * 0.01f; // gains are entered in % duty per bar (and per bar-second)
-    const float kiP = _flowGains.limKi * 0.01f;
-    // The pressure PI looks a little ahead (P + dP/dt * t) so it takes the pump before the pressure,
-    // rising at several bar/s through a small dead volume, runs past the ceiling.
-    const float pAhead = _filteredPressureSensor + _filteredPressureDerivative * PRESSURE_LOOKAHEAD_S;
-    const float pressOut = hasCeiling ? kpP * (ceiling - pAhead) + _pressReset : 1e9f;
+    const float pressOut = kpP * (ceiling - pAhead) + _pressReset;
 
     float applied = std::min(flowOut, pressOut);
-    _limBinding = hasCeiling && pressOut < flowOut;
+    _limBinding = pressOut < flowOut;
     // The pump stops only when the ceiling PI asks for nothing; the flow PI at u = 0 leaves it at its slowest speed.
-    bool stop = hasCeiling && pressOut <= 0.0f;
-    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) { // well past any OPV: something is wrong, stop pushing
+    bool stop = pressOut <= 0.0f;
+    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) // well past any OPV: something is wrong, stop pushing
+        _cutoffLatched = true;                         // ...and stay stopped for the rest of the phase (meterlink.7)
+    if (_cutoffLatched) {
         applied = 0.0f;
         stop = true;
     }
@@ -255,10 +275,12 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     } else if (_flowGains.ki > 0.0f) { // pure I controller
         _flowReset = std::clamp(_flowReset + _flowGains.ki * e * _dt, -1.0f, 1.0f);
     }
-    // While the flow PI is in charge the pressure PI's reset follows the applied duty quickly, so it sits
-    // at "applied + kpP * error" and only takes the pump once the (looked-ahead) pressure reaches the
-    // ceiling; in charge, it relaxes with kpP/kiP, which is plain PI action. kiP = 0 holds it (pure P).
-    if (hasCeiling) {
+    // While the flow PI is in charge the pressure PI's reset follows the applied duty closely (PRESSURE_TRACK_S,
+    // a few cycles), so it sits at "applied + kpP * error" and only takes the pump once the (looked-ahead)
+    // pressure reaches the ceiling; in charge, it relaxes with kpP/kiP, which is plain PI action. kiP = 0 holds
+    // it (pure P). meterlink.6 tracked with 0.2 s, which during a fast climb of the flow PI lagged by the
+    // equivalent of ~2 bar of ceiling margin and handed the pump to the ceiling PI early.
+    {
         const float before = _pressReset;
         float tau = PRESSURE_TRACK_S;
         if (_limBinding)
@@ -272,8 +294,6 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
         // steady or rising above the ceiling (a choked puck, a meter stuck at 0) keeps the integral moving.
         if (_limBinding && _measuredFlow < PUMP_IDLE_FLOW && _filteredPressureDerivative < -PRESSURE_DRAIN_RATE)
             _pressReset = std::max(_pressReset, before);
-    } else {
-        _pressReset = applied;
     }
 
     _flowDuty = stop ? 0.0f : pumpFromLoop(applied);

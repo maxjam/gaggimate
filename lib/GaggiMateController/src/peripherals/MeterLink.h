@@ -8,7 +8,9 @@
 //     $T,<distance_mm>*XX                    4 per second, Alba tank sensor (if the Alba hangs on the meter board)
 //     $H,<uptime_s>*XX                       1 per second, heartbeat
 //     $G,<kp>,<ki>,<start_duty_pct>,<ff>,<ramp>,<lim_kp>,<lim_ki>[,<dead_zone_pct>]*XX
-//                                            flow-loop gains (meter board web page; dead zone since meter v1.7.2)
+//                                            flow-loop gains (meter board web page; dead zone since meter v1.7.2).
+//                                            An empty or missing field keeps the value in use. New gains take effect
+//                                            at the next flow phase, not in the middle of one (meterlink.7).
 //   controller -> meter board
 //     $Z*XX                                  zero the volume counter (display tare / shot start)
 //     $L,<channel>,<brightness>*XX           LED command from the display, for the Alba's PCA9634
@@ -36,6 +38,7 @@ class MeterLink {
     using Diagnostics = MeterDiagnostics; // one $D line, see MeterDiagnostics.h
     using tank_callback_t = std::function<void(int distanceMm)>;
     using gains_callback_t = std::function<void(const FlowLoopGains &gains)>;
+    using gains_provider_t = std::function<FlowLoopGains()>;                  // the gains in use ($G fields left empty keep them)
     using diagnostics_callback_t = std::function<bool(Diagnostics &out)>; // false = nothing to send
 
     static constexpr uint32_t FLOW_TIMEOUT_MS = 500;  // per the plan: half a second without $F -> pump off
@@ -69,6 +72,7 @@ class MeterLink {
 
     void onTank(tank_callback_t cb) { _tankCb = std::move(cb); }
     void onGains(gains_callback_t cb) { _gainsCb = std::move(cb); }
+    void currentGains(gains_provider_t cb) { _currentGains = std::move(cb); }
     // Called from the link task every DIAGNOSTICS_MS; set it before setup().
     void onDiagnostics(diagnostics_callback_t cb) { _diagCb = std::move(cb); }
     uint32_t diagnosticsSent() const { return _diagSent.load(); }
@@ -107,6 +111,7 @@ class MeterLink {
 
     tank_callback_t _tankCb;
     gains_callback_t _gainsCb;
+    gains_provider_t _currentGains;
     diagnostics_callback_t _diagCb;
 
     const char *LOG_TAG = "MeterLink";

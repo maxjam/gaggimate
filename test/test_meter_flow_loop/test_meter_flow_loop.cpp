@@ -171,14 +171,28 @@ void test_releases_ceiling_when_puck_opens() {
 }
 
 // No ceiling (pressure setpoint 0) means no limiter at all.
-void test_no_ceiling_without_pressure_setpoint() {
+// A flow phase whose profile gives no pressure gets the default ceiling (10 bar, meterlink.7): a target the puck
+// cannot pass ends in a held 10 bar, not in the pump at 100 %.
+void test_default_ceiling_without_pressure_setpoint() {
     Rig rig;
     rig.puckConductance = 0.12f;
     rig.rawFlowSetpoint = 2.0f;
     rig.rawPressureSetpoint = 0.0f;
-    rig.run(16.0f);
+    rig.run(20.0f);
+    TEST_ASSERT_TRUE(rig.controller.isPressureLimiting());
+    TEST_ASSERT_FLOAT_WITHIN(0.3f, 10.0f, rig.pressure);
+    TEST_ASSERT_TRUE_MESSAGE(rig.maxPressure < 11.0f, "default ceiling overshoot");
+}
+
+// The default ceiling must not touch a flush on an open group (15 ml/s at a few bar).
+void test_default_ceiling_idle_on_flush() {
+    Rig rig;
+    rig.puckConductance = 4.0f; // ~3.75 bar at 15 ml/s
+    rig.rawFlowSetpoint = 15.0f;
+    rig.rawPressureSetpoint = 0.0f;
+    rig.run(10.0f);
     TEST_ASSERT_FALSE(rig.controller.isPressureLimiting());
-    TEST_ASSERT_TRUE_MESSAGE(rig.pressure > 9.5f, "without a ceiling the loop keeps pushing past 9 bar (real OPV territory)");
+    TEST_ASSERT_FLOAT_WITHIN(0.3f, 15.0f, rig.trueFlow);
 }
 
 // Fail-safe: stale meter data stops the pump at once; fresh data resumes the phase.
@@ -309,7 +323,8 @@ void test_ceiling_lowered_mid_shot() {
 
 // Meter stuck at 0 while lines keep coming: the flow PI drives the pump up, the ceiling PI still holds
 // pressure. On the soft system (C = 1.4 ml/bar) with the default gains this costs one overshoot of about
-// 1.5 bar, still well under the 12.5 bar hard cutoff; on a stiff system there is none.
+// 1.5-2 bar, still well under the 12.5 bar hard cutoff, bled off by the ceiling PI's integral (lim ki) over
+// ~20 s; on a stiff system there is none.
 void test_stuck_meter_backstop() {
     for (float c : {1.4f, 0.25f}) {
         Rig rig;
@@ -318,11 +333,11 @@ void test_stuck_meter_backstop() {
         rig.meterStuckAtZero = true;
         rig.rawFlowSetpoint = 2.0f;
         rig.rawPressureSetpoint = 9.0f;
-        rig.run(20.0f);
+        rig.run(25.0f);
         char msg[64];
         snprintf(msg, sizeof(msg), "C %.2f: peak %.2f bar with a stuck meter", c, rig.maxPressure);
         TEST_ASSERT_TRUE_MESSAGE(rig.maxPressure < (c > 1.0f ? 11.0f : 9.3f), msg);
-        TEST_ASSERT_FLOAT_WITHIN(0.2f, 9.0f, rig.pressure);
+        TEST_ASSERT_FLOAT_WITHIN(0.3f, 9.0f, rig.pressure);
     }
 }
 
@@ -547,7 +562,8 @@ void test_dead_zone_ceiling_still_stops_the_pump() {
     TEST_ASSERT_TRUE_MESSAGE(pmax < 0.75f, msg);
 }
 
-// The hard cutoff stops the pump with a dead zone too (no ceiling, closed outlet).
+// The hard cutoff stops the pump with a dead zone too, and stays off for the rest of the phase (meterlink.7).
+// A ceiling above the cutoff (14 bar) and a closed outlet get the pressure there.
 void test_dead_zone_hard_cutoff() {
     Rig rig;
     FlowLoopGains g;
@@ -555,17 +571,137 @@ void test_dead_zone_hard_cutoff() {
     rig.controller.setFlowLoopGains(g);
     rig.puckConductance = 0.0f;
     rig.rawFlowSetpoint = 2.0f;
-    rig.rawPressureSetpoint = 0.0f;
+    rig.rawPressureSetpoint = 14.0f;
     bool sawOff = false;
+    int transitions = 0;
+    bool lastOff = false;
     for (int i = 0; i < 60 * 30; i++) {
         rig.step();
-        if (rig.controller.getFilteredPressure() > 12.5f && rig.controllerOutput == 0.0f)
+        const bool off = rig.controllerOutput == 0.0f;
+        if (rig.controller.getFilteredPressure() > 12.5f && off)
             sawOff = true;
+        if (off != lastOff)
+            transitions++;
+        lastOff = off;
     }
     TEST_ASSERT_TRUE_MESSAGE(sawOff, "pump not stopped past the hard cutoff");
     char msg[64];
     snprintf(msg, sizeof(msg), "max pressure %.2f bar", rig.maxPressure);
     TEST_ASSERT_TRUE_MESSAGE(rig.maxPressure < 13.5f, msg);
+    TEST_ASSERT_TRUE(rig.controller.isCutoffLatched());
+    TEST_ASSERT_EQUAL_MESSAGE(1, transitions, "the cutoff must latch, not cycle");
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controllerOutput);
+    // the next phase (zero flow resets the loop) runs again
+    rig.rawFlowSetpoint = 0.0f;
+    rig.step();
+    TEST_ASSERT_FALSE(rig.controller.isCutoffLatched());
+    rig.pressure = rig.rawPressure = 5.0f;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(1.0f);
+    TEST_ASSERT_TRUE(rig.controllerOutput > 0.0f);
+}
+
+// Re-arming under pressure (meter data back after a dropout, or a flow phase after a zero-flow phase at 9 bar)
+// must not hand the pump to the ceiling PI while the pressure is well under the ceiling: meterlink.6 sagged to
+// 5.5 bar and never recovered within 12 s in this scenario.
+void test_rearm_under_pressure_recovers() {
+    for (int scenario = 0; scenario < 2; scenario++) {
+        Rig rig;
+        rig.puckConductance = 0.12f;
+        rig.rawFlowSetpoint = 2.0f;
+        rig.rawPressureSetpoint = 9.0f;
+        rig.run(16.0f);
+        if (scenario == 0) { // 1 s without meter data
+            rig.meterValid = false;
+            rig.run(1.0f);
+            rig.meterValid = true;
+        } else { // 2 s zero-flow phase
+            rig.rawFlowSetpoint = 0.0f;
+            rig.run(2.0f);
+            rig.rawFlowSetpoint = 2.0f;
+        }
+        const float pStart = rig.pressure;
+        float pMin = 99.0f, backAt = -1.0f;
+        for (int i = 0; i < 60 * 8; i++) {
+            rig.step();
+            pMin = std::min(pMin, rig.pressure);
+            if (backAt < 0.0f && rig.pressure > 8.7f)
+                backAt = i / 60.0f;
+        }
+        char msg[96];
+        snprintf(msg, sizeof(msg), "scenario %d: restart at %.2f bar, min %.2f bar, back over 8.7 bar after %.1f s", scenario, pStart,
+                 pMin, backAt);
+        TEST_ASSERT_TRUE_MESSAGE(pMin > pStart - 1.0f, msg);
+        TEST_ASSERT_TRUE_MESSAGE(backAt >= 0.0f && backAt < 5.0f, msg);
+        TEST_ASSERT_TRUE_MESSAGE(rig.maxPressure < 9.5f, msg);
+    }
+}
+
+// Gains that arrive during a flow phase are applied at the next reset, not mid-phase (meterlink.7): a dead-zone
+// change re-maps the loop output and would otherwise jump the pump.
+void test_gains_deferred_during_phase() {
+    Rig rig;
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 9.0f;
+    rig.run(4.0f);
+    const float before = rig.controllerOutput;
+    FlowLoopGains g;
+    g.deadZone = 0.25f;
+    rig.controller.setFlowLoopGains(g);
+    rig.step();
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, before, rig.controllerOutput);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.25f, rig.controller.getFlowLoopGains().deadZone); // reported as requested
+    rig.rawFlowSetpoint = 0.0f; // next phase resets the loop and takes the gains
+    rig.step();
+    rig.rawFlowSetpoint = 2.0f;
+    rig.step();
+    TEST_ASSERT_TRUE(rig.controllerOutput >= 25.0f); // dead zone 25 % in force
+    // outside a phase they apply at once
+    FlowLoopGains g2;
+    g2.deadZone = 0.10f;
+    rig.rawFlowSetpoint = 0.0f;
+    rig.step();
+    rig.controller.setFlowLoopGains(g2);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.10f, rig.controller.getFlowLoopGains().deadZone);
+}
+
+// A flow command with the brew valve closed is the display's steam pump: stock path, with or without meter data.
+void test_valve_closed_flow_is_stock_path() {
+    Rig stock;
+    stock.controller.enableMeasuredFlowControl(false);
+    Rig fork;
+    for (Rig *r : {&stock, &fork}) {
+        r->valveStatus = 0;
+        r->puckConductance = 0.02f;
+        r->rawFlowSetpoint = 0.4f;
+        r->rawPressureSetpoint = 2.0f;
+        r->meterValid = false;
+        r->run(3.0f);
+    }
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, stock.controllerOutput, fork.controllerOutput);
+    TEST_ASSERT_TRUE(fork.controllerOutput > 0.0f);
+    TEST_ASSERT_FALSE(fork.controller.isMeasuredFlowControlActive());
+    // valve open again: back to the measured loop, which stops without data
+    fork.valveStatus = 1;
+    fork.step();
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, fork.controllerOutput);
+}
+
+// A cold start with the pressure already past the ceiling does not pump until it is back under it.
+void test_cold_start_above_ceiling_waits() {
+    Rig rig;
+    rig.puckConductance = 0.02f;
+    rig.pressure = rig.rawPressure = 3.0f;
+    rig.rawFlowSetpoint = 0.4f;
+    rig.rawPressureSetpoint = 2.0f;
+    float maxDuty = 0.0f;
+    for (int i = 0; i < 60 * 10; i++) {
+        rig.step();
+        if (rig.pressure > 2.3f)
+            maxDuty = std::max(maxDuty, rig.controllerOutput);
+    }
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, maxDuty);
 }
 
 // Diagnostics getters used by the $D line.
@@ -599,7 +735,8 @@ int main(int, char **) {
     RUN_TEST(test_pressure_ceiling_is_held);
     RUN_TEST(test_pressure_ceiling_soft_system);
     RUN_TEST(test_releases_ceiling_when_puck_opens);
-    RUN_TEST(test_no_ceiling_without_pressure_setpoint);
+    RUN_TEST(test_default_ceiling_without_pressure_setpoint);
+    RUN_TEST(test_default_ceiling_idle_on_flush);
     RUN_TEST(test_fail_safe_without_measurement);
     RUN_TEST(test_zero_target_is_zero_duty);
     RUN_TEST(test_start_duty_preload);
@@ -620,6 +757,10 @@ int main(int, char **) {
     RUN_TEST(test_dead_zone_no_stall_below_min_flow);
     RUN_TEST(test_dead_zone_ceiling_still_stops_the_pump);
     RUN_TEST(test_dead_zone_hard_cutoff);
+    RUN_TEST(test_rearm_under_pressure_recovers);
+    RUN_TEST(test_gains_deferred_during_phase);
+    RUN_TEST(test_valve_closed_flow_is_stock_path);
+    RUN_TEST(test_cold_start_above_ceiling_waits);
     RUN_TEST(test_diagnostics_getters);
     return UNITY_END();
 }

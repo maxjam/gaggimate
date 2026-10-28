@@ -41,22 +41,37 @@ class PressureController {
     void setDeadVolume(float deadVol) { _puckSaturatedVolume = deadVol; };
 
     // === Measured-flow control (fork) ===
-    // When enabled, FLOW mode runs closed loop on the flow reported by setMeasuredFlow() and the
-    // pressure setpoint of the phase acts as a ceiling through an override PI. With no fresh
-    // measurement the pump is stopped instead of falling back to the pump model.
+    // When enabled, FLOW mode with the brew valve open runs closed loop on the flow reported by
+    // setMeasuredFlow() and the pressure setpoint of the phase acts as a ceiling through an override PI
+    // (DEFAULT_CEILING_BAR when the phase gives none). With no fresh measurement the pump is stopped
+    // instead of falling back to the pump model. FLOW mode with the valve closed (steam: the display sends
+    // the steam pump as a flow target with the steam cutoff as the limit) is the stock model path, so
+    // steaming works with or without the meter (meterlink.7).
     void enableMeasuredFlowControl(bool enabled) { _flowLoopEnabled = enabled; }
     bool isMeasuredFlowControlEnabled() const { return _flowLoopEnabled; }
+    bool isMeasuredFlowControlActive() const { return _flowLoopEnabled && _valveStatus != nullptr && *_valveStatus == 1; }
     void setMeasuredFlow(float flow, bool valid) {
         _measuredFlow = flow;
         _measuredFlowValid = valid;
     }
     float getMeasuredFlow() const { return _measuredFlow; }
     bool isMeasuredFlowValid() const { return _measuredFlowValid; }
-    void setFlowLoopGains(const FlowLoopGains &gains) { _flowGains = gains; }
-    const FlowLoopGains &getFlowLoopGains() const { return _flowGains; }
+    // New gains take effect when the loop is not running a flow phase (meterlink.7): a dead-zone change
+    // re-maps the loop output to a different pump power, so applying it mid-phase would jump the pump.
+    void setFlowLoopGains(const FlowLoopGains &gains) {
+        if (_flowLoopArmed) {
+            _pendingGains = gains;
+            _gainsPending = true;
+        } else {
+            _flowGains = gains;
+            _gainsPending = false;
+        }
+    }
+    const FlowLoopGains &getFlowLoopGains() const { return _gainsPending ? _pendingGains : _flowGains; }
     void resetFlowLoop();                                          // call when leaving FLOW mode
     float getEffectiveFlowTarget() const { return _flowTargetEff; } // slewed flow target (ml/s)
     bool isPressureLimiting() const { return _limBinding; }        // the pressure ceiling holds the pump
+    bool isCutoffLatched() const { return _cutoffLatched; }        // hard cutoff tripped; pump off until the loop resets
     float getFlowLoopDuty() const { return _flowDuty; }            // last pump power sent (0..1)
     float getFlowLoopIntegral() const { return _flowReset; }        // flow PI reset state (duty)
     float getPressureLoopIntegral() const { return _pressReset; }   // ceiling PI reset state (duty)
@@ -74,9 +89,10 @@ class PressureController {
     float rampFlowSetpoint(float target);
     float loopFromPump(float duty) const; // pump power -> loop output u (dead zone removed)
     float pumpFromLoop(float u) const;    // loop output u -> pump power
-    static constexpr float HARD_PRESSURE_CUTOFF = 12.5f; // bar: flow loop refuses to push past this
-    static constexpr float PRESSURE_LOOKAHEAD_S = 0.25f; // ceiling PI acts on P + dP/dt * this
-    static constexpr float PRESSURE_TRACK_S = 0.2f;      // ceiling PI reset tracking time while flow is in charge
+    static constexpr float HARD_PRESSURE_CUTOFF = 12.5f; // bar: flow loop refuses to push past this (latched, meterlink.7)
+    static constexpr float DEFAULT_CEILING_BAR = 10.0f;  // ceiling for a flow phase whose profile gives none (meterlink.7)
+    static constexpr float PRESSURE_LOOKAHEAD_S = 0.5f;  // ceiling PI acts on P + dP/dt * this (0.25 s up to meterlink.6, see PRESSURE_TRACK_S)
+    static constexpr float PRESSURE_TRACK_S = 0.05f;     // ceiling PI reset tracking time while flow is in charge
     static constexpr float PUMP_IDLE_FLOW = 0.05f;       // ml/s: below this the pump is taken as delivering nothing
     static constexpr float PRESSURE_DRAIN_RATE = 0.1f;   // bar/s: pressure falling faster than this = puck draining
     float modelDutyFraction(float flow) const; // pump-model feedforward duty (0..1) for a flow
@@ -155,6 +171,9 @@ class PressureController {
     float _measuredFlow = 0.0f;      // ml/s from the flow meter
     bool _measuredFlowValid = false; // false = stale or no meter -> pump off in FLOW mode
     FlowLoopGains _flowGains{};
+    FlowLoopGains _pendingGains{};  // gains received during a flow phase, applied at the next reset
+    bool _gainsPending = false;
+    bool _cutoffLatched = false;    // hard cutoff tripped in this flow phase: pump off until resetFlowLoop()
     bool _flowLoopArmed = false; // integrator pre-loaded for the current flow phase
     float _flowSetpointRamped = 0.0f; // slewed flow target (ml/s)
     float _flowReset = 0.0f;     // flow PI reset-feedback state (duty fraction, excludes feedforward)

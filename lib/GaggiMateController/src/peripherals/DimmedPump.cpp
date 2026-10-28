@@ -61,7 +61,7 @@ void DimmedPump::setMeterLink(MeterLink *link) {
 void DimmedPump::fillDiagnostics(MeterDiagnostics &d) const {
     const ControlMode mode = _mode;
     const float power = _power;
-    const bool measuredLoop = mode == ControlMode::FLOW && _meter != nullptr;
+    const bool measuredLoop = mode == ControlMode::FLOW && _meter != nullptr && _valveStatus;
     d.pumpPct = power;
     d.pressure = _currentPressure;
     d.mode = static_cast<uint8_t>(mode);
@@ -85,6 +85,8 @@ void DimmedPump::fillDiagnostics(MeterDiagnostics &d) const {
             flags |= MeterDiagnostics::CEILING;
         if (isFlowLoopFaulted())
             flags |= MeterDiagnostics::FLOW_FAULT;
+        if (_pressureController.isCutoffLatched())
+            flags |= MeterDiagnostics::CUTOFF;
     }
     d.flags = flags;
 }
@@ -133,6 +135,11 @@ void DimmedPump::updatePower(bool freshPressure, float sampleTime, float elapsed
     _pressureController.update(static_cast<PressureController::ControlMode>(_mode), freshPressure, sampleTime, elapsed);
     if (_mode != ControlMode::POWER) {
         _power = _controllerPower;
+    } else {
+        // Re-assert the manual power here in the control task: setPower() runs in the BLE task and a control
+        // cycle that was mid-flight when the shot ended could leave the last flow duty in _controllerPower,
+        // which the next flow phase would then start from (meterlink.7).
+        _controllerPower = _power;
     }
     if (_binaryMode) {
         int binaryPower = (_controllerPower > 0 || _ctrlPressure > 0 || _ctrlFlow > 0) ? 100 : 0;

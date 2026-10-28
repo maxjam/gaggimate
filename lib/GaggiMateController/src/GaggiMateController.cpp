@@ -440,6 +440,7 @@ void GaggiMateController::setupMeterLink() {
     auto dimmedPump = static_cast<DimmedPump *>(pump);
     dimmedPump->setMeterLink(meterLink);
     meterLink->onGains([this](const FlowLoopGains &gains) { static_cast<DimmedPump *>(pump)->setFlowLoopGains(gains); });
+    meterLink->currentGains([this]() { return static_cast<DimmedPump *>(pump)->getFlowLoopGains(); });
     // $D: the pump's diagnostics plus the brew heater and boiler temperature, so the meter board's shot log shows
     // heat input next to pressure and flow (cached values, safe to read from the link task).
     meterLink->onDiagnostics([this](MeterDiagnostics &d) {
@@ -642,7 +643,7 @@ void GaggiMateController::handleConsoleLine(const char *line) {
                 return;
             }
             dimmedPump->setFlowLoopGains(g);
-            ESP_LOGI("Controller", "Flow loop gains set (until restart or the next $G from the meter board)");
+            ESP_LOGI("Controller", "Flow loop gains set, in effect from the next flow phase (until restart or the next $G from the meter board)");
         } else {
             ESP_LOGI("Controller",
                      "Usage: G <kp> <ki> <start_duty_percent> <ff 0..1> <ramp ml/s/s> <limKp %%/bar> <limKi %%/bar/s> [deadzone %%]");
