@@ -688,6 +688,29 @@ void test_valve_closed_flow_is_stock_path() {
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, fork.controllerOutput);
 }
 
+// Max's machine idles at 12.5 bar (trapped water expanding against the relief valve). A flush or a shot started
+// from that state reads the cutoff pressure for the first few hundred ms, until the open valve has vented it. The
+// cutoff must hold the pump off meanwhile but not latch: once the pressure is down the flush has to run.
+void test_trapped_idle_pressure_does_not_latch_cutoff() {
+    Rig rig;
+    rig.puckConductance = 4.0f; // open group: ~3.75 bar at 15 ml/s
+    rig.pressure = rig.rawPressure = 12.6f;
+    rig.rawFlowSetpoint = 15.0f;
+    rig.rawPressureSetpoint = 0.0f; // a flush profile: no ceiling of its own
+    // the simulated rig vents the trapped pressure through the "puck" within a few cycles
+    rig.step();
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controllerOutput); // held off while over the cutoff
+    rig.run(6.0f);
+    TEST_ASSERT_FALSE(rig.controller.isCutoffLatched());
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, 15.0f, rig.trueFlow); // the flush runs
+    // and once the phase has been below 12 bar, a pump-driven rise past 12.5 does latch
+    rig.puckConductance = 0.0f; // outlet sealed
+    rig.rawPressureSetpoint = 14.0f;
+    rig.run(20.0f);
+    TEST_ASSERT_TRUE(rig.controller.isCutoffLatched());
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, rig.controllerOutput);
+}
+
 // A cold start with the pressure already past the ceiling does not pump until it is back under it.
 void test_cold_start_above_ceiling_waits() {
     Rig rig;
@@ -761,6 +784,7 @@ int main(int, char **) {
     RUN_TEST(test_gains_deferred_during_phase);
     RUN_TEST(test_valve_closed_flow_is_stock_path);
     RUN_TEST(test_cold_start_above_ceiling_waits);
+    RUN_TEST(test_trapped_idle_pressure_does_not_latch_cutoff);
     RUN_TEST(test_diagnostics_getters);
     return UNITY_END();
 }

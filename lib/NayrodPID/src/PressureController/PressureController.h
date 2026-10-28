@@ -90,6 +90,7 @@ class PressureController {
     float loopFromPump(float duty) const; // pump power -> loop output u (dead zone removed)
     float pumpFromLoop(float u) const;    // loop output u -> pump power
     static constexpr float HARD_PRESSURE_CUTOFF = 12.5f; // bar: flow loop refuses to push past this (latched, meterlink.7)
+    static constexpr float CUTOFF_ARM_BAR = 12.0f;       // the latch arms once the phase has seen the pressure below this
     static constexpr float DEFAULT_CEILING_BAR = 10.0f;  // ceiling for a flow phase whose profile gives none (meterlink.7)
     static constexpr float PRESSURE_LOOKAHEAD_S = 0.5f;  // ceiling PI acts on P + dP/dt * this (0.25 s up to meterlink.6, see PRESSURE_TRACK_S)
     static constexpr float PRESSURE_TRACK_S = 0.05f;     // ceiling PI reset tracking time while flow is in charge
@@ -174,6 +175,7 @@ class PressureController {
     FlowLoopGains _pendingGains{};  // gains received during a flow phase, applied at the next reset
     bool _gainsPending = false;
     bool _cutoffLatched = false;    // hard cutoff tripped in this flow phase: pump off until resetFlowLoop()
+    bool _cutoffArmed = false;      // the phase has seen the pressure below CUTOFF_ARM_BAR (trapped idle pressure vented)
     bool _flowLoopArmed = false; // integrator pre-loaded for the current flow phase
     float _flowSetpointRamped = 0.0f; // slewed flow target (ml/s)
     float _flowReset = 0.0f;     // flow PI reset-feedback state (duty fraction, excludes feedforward)

@@ -162,6 +162,7 @@ void PressureController::resetFlowLoop() {
     _flowDuty = 0.0f;
     _limBinding = false;
     _cutoffLatched = false;
+    _cutoffArmed = false;
     _flowTargetEff = 0.0f;
     if (_gainsPending) { // gains that arrived during the phase (meterlink.7)
         _flowGains = _pendingGains;
@@ -260,9 +261,19 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     _limBinding = pressOut < flowOut;
     // The pump stops only when the ceiling PI asks for nothing; the flow PI at u = 0 leaves it at its slowest speed.
     bool stop = pressOut <= 0.0f;
-    if (_filteredPressureSensor > HARD_PRESSURE_CUTOFF) // well past any OPV: something is wrong, stop pushing
-        _cutoffLatched = true;                         // ...and stay stopped for the rest of the phase (meterlink.7)
-    if (_cutoffLatched) {
+    // Hard cutoff. Max's machine sits at 12.5 bar whenever it is hot and idle: the water trapped between the check
+    // valve and the closed brew valve expands against the relief valve, and that is the pressure the sensor reads
+    // when a flush or a shot starts, before the open valve has vented it (a few hundred ms). So the cutoff only
+    // *latches* (stays off for the rest of the phase, meterlink.7) once the phase has seen the pressure below
+    // CUTOFF_ARM_BAR, i.e. once a rise past 12.5 bar can only be the pump's doing. Above the cutoff before that it
+    // just holds the pump off, as meterlink.6 did, and the ceiling PI's cold-start rule keeps it off until the
+    // pressure is back under the ceiling.
+    if (_filteredPressureSensor < CUTOFF_ARM_BAR)
+        _cutoffArmed = true;
+    const bool overCutoff = _filteredPressureSensor > HARD_PRESSURE_CUTOFF;
+    if (overCutoff && _cutoffArmed)
+        _cutoffLatched = true;
+    if (overCutoff || _cutoffLatched) {
         applied = 0.0f;
         stop = true;
     }
