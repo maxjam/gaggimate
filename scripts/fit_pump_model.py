@@ -278,7 +278,7 @@ def main():
             if why:
                 rejected.append((label, pt, why))
             elif pt["Q"] < a.q_min:
-                rejected.append((label, pt, f"flow {pt['Q']:.2f} < {a.q_min} (kept for the stall check)"))
+                rejected.append((label, pt, f"below q-min: flow {pt['Q']:.2f} < {a.q_min} (kept for the stall check)"))
             else:
                 pts.append(pt)
                 groups.append(name)
@@ -347,7 +347,7 @@ def main():
               f"{p['Q']+ec:8.2f} {ec:+6.2f} {p['cup']:8.2f}")
     print(f"\n  new:     RMS {np.sqrt(np.mean(e_new**2)):.3f}  max {np.max(np.abs(e_new)):.2f} ml/s")
     print(f"  current: RMS {np.sqrt(np.mean(e_cur**2)):.3f}  max {np.max(np.abs(e_cur)):.2f} ml/s")
-    stalls = [(l, p) for l, p, w in rejected if w.startswith("flow ")]
+    stalls = [(l, p) for l, p, w in rejected if w.startswith("below q-min")]
     if stalls:
         d = np.array([p["d"] for _, p in stalls])
         P = np.array([p["P"] for _, p in stalls])
