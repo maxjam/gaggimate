@@ -66,16 +66,11 @@ void PressureController::update(ControlMode mode, bool freshPressure, float samp
     if (freshPressure)
         filterSensor(sampleTime);
 
-    const bool measuredFlowPhase = mode == ControlMode::FLOW && isMeasuredFlowControlActive();
-    if (_flowLoopArmed && !measuredFlowPhase)
-        resetFlowLoop(); // valve closed or mode changed under a running flow phase: start clean next time
-    if (measuredFlowPhase) {
+    if (mode == ControlMode::FLOW && _flowLoopEnabled) {
         // Fork: flow phases run closed loop on the flow meter. The phase's pressure setpoint is a
         // ceiling, held by a pressure PI that overrides the flow PI (lowest duty wins); both use
         // reset feedback, so neither winds up. Stock zeroed the pressure integral whenever flow
         // won the min(), which is what stalled its flow phases below their limit.
-        // Only with the brew valve open: a flow command with the valve closed is the display's steam
-        // pump (flow = steam pump %, limit = steam cutoff), which stays on the stock path below.
         _errorIntegral = 0.0f; // leave the pressure loop clean for a following pressure phase
         if (!_measuredFlowValid) {
             // Fail-safe: no fresh measurement -> no pump. No silent fallback to the model.

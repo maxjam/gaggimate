@@ -51,11 +51,8 @@ class DimmedPump : public Pump {
     bool isMeasuredFlowValid() const { return _pressureController.isMeasuredFlowValid(); }
     float getEffectiveFlowTarget() const { return _pressureController.getEffectiveFlowTarget(); }
     bool isPressureLimiting() const { return _pressureController.isPressureLimiting(); }
-    // True while a flow phase is being held at zero because the meter data is missing. Valve open only: a flow
-    // command with the valve closed is the steam pump, which runs on the stock path (meterlink.7).
-    bool isFlowLoopFaulted() const {
-        return _mode == ControlMode::FLOW && _valveStatus && _ctrlFlow > 0.0f && _meter != nullptr && !isMeasuredFlowValid();
-    }
+    // True while a flow phase is being held at zero because the meter data is missing.
+    bool isFlowLoopFaulted() const { return _mode == ControlMode::FLOW && _ctrlFlow > 0.0f && _meter != nullptr && !isMeasuredFlowValid(); }
     ControlMode getMode() const { return _mode; }
     // Pump diagnostics for the meter board's shot log ($D, sent by the meter link 10 times a second).
     void fillDiagnostics(MeterDiagnostics &d) const;

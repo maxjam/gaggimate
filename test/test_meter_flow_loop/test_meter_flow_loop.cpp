@@ -666,28 +666,6 @@ void test_gains_deferred_during_phase() {
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.10f, rig.controller.getFlowLoopGains().deadZone);
 }
 
-// A flow command with the brew valve closed is the display's steam pump: stock path, with or without meter data.
-void test_valve_closed_flow_is_stock_path() {
-    Rig stock;
-    stock.controller.enableMeasuredFlowControl(false);
-    Rig fork;
-    for (Rig *r : {&stock, &fork}) {
-        r->valveStatus = 0;
-        r->puckConductance = 0.02f;
-        r->rawFlowSetpoint = 0.4f;
-        r->rawPressureSetpoint = 2.0f;
-        r->meterValid = false;
-        r->run(3.0f);
-    }
-    TEST_ASSERT_FLOAT_WITHIN(1e-4f, stock.controllerOutput, fork.controllerOutput);
-    TEST_ASSERT_TRUE(fork.controllerOutput > 0.0f);
-    TEST_ASSERT_FALSE(fork.controller.isMeasuredFlowControlActive());
-    // valve open again: back to the measured loop, which stops without data
-    fork.valveStatus = 1;
-    fork.step();
-    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.0f, fork.controllerOutput);
-}
-
 // Max's machine idles at 12.5 bar (trapped water expanding against the relief valve). A flush or a shot started
 // from that state reads the cutoff pressure for the first few hundred ms, until the open valve has vented it. The
 // cutoff must hold the pump off meanwhile but not latch: once the pressure is down the flush has to run.
@@ -782,7 +760,6 @@ int main(int, char **) {
     RUN_TEST(test_dead_zone_hard_cutoff);
     RUN_TEST(test_rearm_under_pressure_recovers);
     RUN_TEST(test_gains_deferred_during_phase);
-    RUN_TEST(test_valve_closed_flow_is_stock_path);
     RUN_TEST(test_cold_start_above_ceiling_waits);
     RUN_TEST(test_trapped_idle_pressure_does_not_latch_cutoff);
     RUN_TEST(test_diagnostics_getters);

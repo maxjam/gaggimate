@@ -61,7 +61,7 @@ void DimmedPump::setMeterLink(MeterLink *link) {
 void DimmedPump::fillDiagnostics(MeterDiagnostics &d) const {
     const ControlMode mode = _mode;
     const float power = _power;
-    const bool measuredLoop = mode == ControlMode::FLOW && _meter != nullptr && _valveStatus;
+    const bool measuredLoop = mode == ControlMode::FLOW && _meter != nullptr;
     d.pumpPct = power;
     d.pressure = _currentPressure;
     d.mode = static_cast<uint8_t>(mode);

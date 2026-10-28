@@ -41,15 +41,12 @@ class PressureController {
     void setDeadVolume(float deadVol) { _puckSaturatedVolume = deadVol; };
 
     // === Measured-flow control (fork) ===
-    // When enabled, FLOW mode with the brew valve open runs closed loop on the flow reported by
-    // setMeasuredFlow() and the pressure setpoint of the phase acts as a ceiling through an override PI
-    // (DEFAULT_CEILING_BAR when the phase gives none). With no fresh measurement the pump is stopped
-    // instead of falling back to the pump model. FLOW mode with the valve closed (steam: the display sends
-    // the steam pump as a flow target with the steam cutoff as the limit) is the stock model path, so
-    // steaming works with or without the meter (meterlink.7).
+    // When enabled, FLOW mode runs closed loop on the flow reported by setMeasuredFlow() and the
+    // pressure setpoint of the phase acts as a ceiling through an override PI (DEFAULT_CEILING_BAR when
+    // the phase gives none). With no fresh measurement the pump is stopped instead of falling back to
+    // the pump model.
     void enableMeasuredFlowControl(bool enabled) { _flowLoopEnabled = enabled; }
     bool isMeasuredFlowControlEnabled() const { return _flowLoopEnabled; }
-    bool isMeasuredFlowControlActive() const { return _flowLoopEnabled && _valveStatus != nullptr && *_valveStatus == 1; }
     void setMeasuredFlow(float flow, bool valid) {
         _measuredFlow = flow;
         _measuredFlowValid = valid;
