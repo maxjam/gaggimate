@@ -256,9 +256,10 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
     _limBinding = pressOut < flowOut;
     // The pump stops only when the ceiling PI asks for nothing; the flow PI at u = 0 leaves it at its slowest speed.
     bool stop = pressOut <= 0.0f;
-    // Hard cutoff. Max's machine sits at 12.5 bar whenever it is hot and idle: the water trapped between the check
-    // valve and the closed brew valve expands against the relief valve, and that is the pressure the sensor reads
-    // when a flush or a shot starts, before the open valve has vented it (a few hundred ms). So the cutoff only
+    // Hard cutoff. On Max's machine the pressure builds to 12.5 bar at switch-on while the boiler heats: the water
+    // trapped between the check valve and the closed brew valve expands against the relief valve (and it can build
+    // again later, depending on the temperature). That is the pressure the sensor reads when a flush or a shot starts
+    // from that state, before the open valve has vented it (a few hundred ms). So the cutoff only
     // *latches* (stays off for the rest of the phase, meterlink.7) once the phase has seen the pressure below
     // CUTOFF_ARM_BAR, i.e. once a rise past 12.5 bar can only be the pump's doing. Above the cutoff before that it
     // just holds the pump off, as meterlink.6 did, and the ceiling PI's cold-start rule keeps it off until the

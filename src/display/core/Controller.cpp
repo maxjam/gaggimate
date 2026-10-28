@@ -1796,8 +1796,9 @@ void Controller::loopLogicTask(void *arg) {
 }
 
 // Fork (meterlink.8): the water between the pump's check valve and the closed brew valve is sealed; as the boiler
-// heats it expands and the circuit sits at the safety valve's pressure (12.5 bar on Max's machine) until something
-// opens. This pulses the brew valve open for pressureReleasePulseMs when the pressure is above pressureReleaseBar,
+// heats it expands; at switch-on the circuit builds to the safety valve's pressure (12.5 bar on Max's machine)
+// until something opens, and depending on the temperature it can build again later. This pulses the brew valve
+// open for pressureReleasePulseMs when the pressure is above pressureReleaseBar,
 // at most once per pressureReleaseIntervalS, only while no process runs, in a brew-temperature mode (never in steam
 // mode or standby) and with the boiler under 100 C (so nothing boiling is pushed through the group after steaming).
 // The group drains to the drip tray through the valve's outlet when it closes again.
