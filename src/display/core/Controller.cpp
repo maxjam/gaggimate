@@ -1816,8 +1816,10 @@ bool Controller::pressureReleaseOpen(bool processActive) {
         return false;
     if (mode == MODE_STEAM || mode == MODE_STANDBY)
         return false;
-    if (currentTemp >= 100.0f)
-        return false;
+    // meterlink.11: no temperature wait. After a shot the display reads 105 C or so for ~20 s while the heater
+    // catches up, and the trapped water reached the safety valve (12.9 bar) in that time on shots 317 and 324.
+    // The pulse goes through the group (the 3-way valve has no boiler-to-drain position), so with the
+    // portafilter still in it drips through the puck; Max chose that over the valve lifting after every shot.
     if (systemInfo.protocolMismatch || !systemInfo.capabilities.pressure)
         return false;
     const unsigned long intervalMs = static_cast<unsigned long>(std::max(5, settings.getPressureReleaseIntervalS())) * 1000UL;

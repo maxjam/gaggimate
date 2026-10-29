@@ -309,7 +309,7 @@ export function MachineTab({ formData, onChange, setField }) {
                 htmlFor='pressureRelease'
                 checked={!!formData.pressureRelease}
                 onChange={onChange('pressureRelease')}
-                helpText={t`Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot, in steam mode or above 100 °C.`}
+                helpText={t`Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode.`}
               />
             </div>
           )}

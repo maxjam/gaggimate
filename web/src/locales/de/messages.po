@@ -335,6 +335,10 @@ msgstr "Möchtest du „{itemName}“ wirklich löschen?"
 msgid "At how many bars should the pump assist stop. This makes it so the pump will only run when steam is flowing."
 msgstr "Bei wie viel bar die Pumpenunterstützung stoppen soll. Dadurch läuft die Pumpe nur, wenn Dampf strömt."
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "At most one pulse per this many seconds (minimum 5)."
+msgstr ""
+
 #: src/services/VisualizerService.js
 msgid "Authentication failed - please check your username and password"
 msgstr "Authentifizierung fehlgeschlagen – bitte prüfe Benutzername und Passwort"
@@ -2101,6 +2105,10 @@ msgid "Hostname"
 msgstr "Hostname"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
+msgid "How long the brew valve stays open per pulse (50 to 2000)."
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "How many ml/s to pump into the boiler during steaming"
 msgstr "Wie viele ml/s beim Dampfen in den Boiler gepumpt werden"
 
@@ -2119,6 +2127,10 @@ msgstr "Leerlauffarbe"
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Idle Filter Alpha"
 msgstr "Filter-Alpha im Leerlauf"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Idle Pressure Release"
+msgstr ""
 
 #: src/utils/warnings.js
 msgctxt "warning level"
@@ -2583,6 +2595,7 @@ msgid "millimeter"
 msgstr "Millimeter"
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "milliseconds"
 msgstr "Millisekunden"
 
@@ -3495,6 +3508,10 @@ msgid "Puck Resistance (s·√bar/mL)"
 msgstr "Puck-Widerstand (s·√bar/mL)"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pulse the brew valve when the idle pressure is above this."
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Assist Cutoff"
 msgstr "Abschaltung der Pumpenunterstützung"
 
@@ -3730,6 +3747,18 @@ msgstr "Referenz-Shot"
 #: src/pages/Statistics/components/StatisticsSearchHelp.jsx
 msgid "Relative time: <0>h</0> (now), <1>h-7d</1> (7 days ago)"
 msgstr "Relative Zeit: <0>h</0> (jetzt), <1>h-7d</1> (vor 7 Tagen)"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Above"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Interval"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Pulse"
+msgstr ""
 
 #: src/components/VisualizerUploadModal.jsx
 msgid "Remember credentials"
@@ -4102,6 +4131,7 @@ msgstr "Suche"
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 #: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "seconds"
 msgstr "Sekunden"
 
@@ -5611,6 +5641,10 @@ msgstr "Wasser gepumpt"
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgid "Water pumped in phase"
 msgstr "In der Phase gepumptes Wasser"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode."
+msgstr ""
 
 #: src/pages/Home/cards/WaterLevelCard.jsx
 #: src/utils/panelDefinitions.js
