@@ -37,6 +37,7 @@ class BrewProcess : public Process {
         currentPhaseStarted = millis();
         phaseStartPressure = currentPhase.transition.adaptive ? currentPressure : 0;
         phaseStartFlow = currentPhase.transition.adaptive ? currentFlow : 0;
+        phaseStartPower = 0.0f;
         computeEffectiveTargetsForCurrentPhase();
     }
 
@@ -110,7 +111,13 @@ class BrewProcess : public Process {
         if (processPhase == ProcessPhase::FINISHED) {
             return 0.0f;
         }
-        return currentPhase.pumpIsSimple ? currentPhase.pumpSimple : 100.0f;
+        if (!currentPhase.pumpIsSimple)
+            return 100.0f;
+        // Fork (meterlink.9): the phase's ramp (style, target, length) applies to pump power too, from the power the
+        // previous phase ended at (0 for the first phase or after a pressure/flow phase), the same way pressure and
+        // flow ramp. "Instant" (and phases without a ramp) keep the old jump straight to the set power.
+        const float a = transitionAlpha();
+        return phaseStartPower + (currentPhase.pumpSimple - phaseStartPower) * a;
     }
 
     bool isAdvancedPump() const { return processPhase != ProcessPhase::FINISHED && !currentPhase.pumpIsSimple; }
@@ -156,6 +163,7 @@ class BrewProcess : public Process {
                 phaseStartVolume = currentVolume;
                 phaseStartPressure = nextPhase.transition.adaptive ? currentPressure : getPumpPressure();
                 phaseStartFlow = nextPhase.transition.adaptive ? currentFlow : getPumpFlow();
+                phaseStartPower = currentPhase.pumpIsSimple ? getPumpValue() : 0.0f;
                 currentPhase = nextPhase;
                 currentPhaseStarted = millis();
                 computeEffectiveTargetsForCurrentPhase();
@@ -180,6 +188,7 @@ class BrewProcess : public Process {
   private:
     float phaseStartPressure = 0.0f;
     float phaseStartFlow = 0.0f;
+    float phaseStartPower = 0.0f; // fork (meterlink.9): start of the power ramp
 
     float effectivePressure = 0.0f;
     float effectiveFlow = 0.0f;
