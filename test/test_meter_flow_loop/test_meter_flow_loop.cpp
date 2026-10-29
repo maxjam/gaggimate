@@ -482,6 +482,28 @@ void test_dead_zone_never_parks_the_pump_in_it() {
     }
 }
 
+// Low-power band (meterlink.10): half gain below the knee still tracks a low target, never enters the dead zone,
+// and can still drive the pump to 100 % (u runs past 1 with the knee).
+void test_knee_tracks_and_reaches_full_power() {
+    Rig rig;
+    FlowLoopGains g;
+    g.deadZone = 0.10f;
+    g.knee = 0.25f;
+    g.kneeGain = 0.5f;
+    rig.controller.setFlowLoopGains(g);
+    rig.puckConductance = 1e6f; // open group
+    rig.rawFlowSetpoint = 2.0f;
+    rig.rawPressureSetpoint = 0.0f;
+    for (int i = 0; i < 60 * 8; i++) {
+        rig.step();
+        TEST_ASSERT_TRUE(rig.controllerOutput == 0.0f || rig.controllerOutput >= 10.0f - 1e-3f);
+    }
+    TEST_ASSERT_FLOAT_WITHIN(0.10f, 2.0f, rig.trueFlow);
+    rig.rawFlowSetpoint = 60.0f; // more than the pump can give: the loop must end at full power
+    rig.run(8.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 100.0f, rig.controllerOutput);
+}
+
 // A start duty below the dead zone starts at its edge, and the flow loop off (no target) is still 0 %.
 // (The rig pump delivers nothing below 21 % at 0 bar, so a 20 % dead zone is a correct setting for it.)
 void test_dead_zone_start_and_off() {
@@ -763,5 +785,6 @@ int main(int, char **) {
     RUN_TEST(test_cold_start_above_ceiling_waits);
     RUN_TEST(test_trapped_idle_pressure_does_not_latch_cutoff);
     RUN_TEST(test_diagnostics_getters);
+    RUN_TEST(test_knee_tracks_and_reaches_full_power);
     return UNITY_END();
 }

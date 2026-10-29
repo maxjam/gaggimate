@@ -201,8 +201,30 @@ float PressureController::rampFlowSetpoint(float target) {
 // pump on and off (the pulses at low flow and low pressure). Only the pressure ceiling (its PI asking for
 // nothing) or the hard cutoff stops the pump in a flow phase. With deadZone = 0, u is the pump power itself
 // and u = 0 is off, as before.
+// Low-power band (gains.knee, meterlink.10): between the dead zone and the knee, power = dz + u * (1 - dz) * kneeGain,
+// so the PIs move the pump kneeGain times as much there; above the knee the slope is (1 - dz) again. u then runs
+// from 0 to loopMax() (> 1 with the knee) and loopMax() is still 100 % power.
+bool PressureController::kneeActive() const {
+    return _flowGains.knee > _flowGains.deadZone && _flowGains.kneeGain > 0.0f && _flowGains.kneeGain < 1.0f;
+}
+
+float PressureController::kneeU() const {
+    return (_flowGains.knee - _flowGains.deadZone) / ((1.0f - _flowGains.deadZone) * _flowGains.kneeGain);
+}
+
+float PressureController::loopMax() const {
+    if (!kneeActive())
+        return 1.0f;
+    return kneeU() + (1.0f - _flowGains.knee) / (1.0f - _flowGains.deadZone);
+}
+
 float PressureController::loopFromPump(float duty) const {
     const float dz = _flowGains.deadZone;
+    if (kneeActive()) {
+        if (duty <= _flowGains.knee)
+            return std::max(0.0f, (duty - dz) / ((1.0f - dz) * _flowGains.kneeGain));
+        return std::min(loopMax(), kneeU() + (duty - _flowGains.knee) / (1.0f - dz));
+    }
     if (dz <= 0.0f)
         return duty;
     return std::clamp((duty - dz) / (1.0f - dz), 0.0f, 1.0f);
@@ -210,6 +232,12 @@ float PressureController::loopFromPump(float duty) const {
 
 float PressureController::pumpFromLoop(float u) const {
     const float dz = _flowGains.deadZone;
+    if (kneeActive()) {
+        const float uk = kneeU();
+        if (u <= uk)
+            return dz + u * (1.0f - dz) * _flowGains.kneeGain;
+        return std::min(1.0f, _flowGains.knee + (u - uk) * (1.0f - dz));
+    }
     if (dz <= 0.0f)
         return u;
     return dz + u * (1.0f - dz);
@@ -273,14 +301,14 @@ float PressureController::getPumpDutyCycleMeasuredFlow(float target) {
         applied = 0.0f;
         stop = true;
     }
-    applied = std::clamp(applied, 0.0f, 1.0f);
+    applied = std::clamp(applied, 0.0f, loopMax());
 
     // Reset feedback (see above). ki = 0 turns a controller into a pure P controller.
     if (_flowGains.ki > 0.0f && _flowGains.kp > 0.0f) {
         const float a = std::min(1.0f, _dt * _flowGains.ki / _flowGains.kp);
         _flowReset += ((applied - ffDuty) - _flowReset) * a;
     } else if (_flowGains.ki > 0.0f) { // pure I controller
-        _flowReset = std::clamp(_flowReset + _flowGains.ki * e * _dt, -1.0f, 1.0f);
+        _flowReset = std::clamp(_flowReset + _flowGains.ki * e * _dt, -1.0f, loopMax());
     }
     // While the flow PI is in charge the pressure PI's reset follows the applied duty closely (PRESSURE_TRACK_S,
     // a few cycles), so it sits at "applied + kpP * error" and only takes the pump once the (looked-ahead)

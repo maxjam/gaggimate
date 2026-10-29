@@ -21,12 +21,19 @@ struct FlowLoopGains {
     // for the pressure ceiling, the hard cutoff, a zero target or missing meter data (since meterlink.4; in
     // meterlink.3 u = 0 was off). 0 = no dead zone (plain duty, u = 0 is off).
     float deadZone = 0.0f;
+    // Low-power band (meterlink.10). On Max's Velofuso the flow per 1 % of pump power is 1.3-3x higher between
+    // the dead zone and ~25 % than above it (open-group ramps 314/315, flush 313), so gains that suit shots made
+    // the loop swing at low flow (313). Below `knee` (pump power, 0..1) the loop's output moves the pump by
+    // kneeGain times as much per unit of u: kp and ki act at kneeGain x their value there, full value above.
+    // The mapping is continuous (no bump at the knee) and still reaches 100 %. knee <= deadZone turns it off.
+    float knee = 0.0f;
+    float kneeGain = 0.5f;
 
     // Range check shared by every input path ($G line, USB console). NaN fails every comparison.
     bool valid() const {
         return kp >= 0.0f && kp <= 1.0f && ki >= 0.0f && ki <= 5.0f && startDuty >= 0.0f && startDuty <= 1.0f && ff >= 0.0f &&
                ff <= 1.0f && ramp >= 0.0f && ramp <= 100.0f && limKp >= 0.0f && limKp <= 20.0f && limKi >= 0.0f && limKi <= 20.0f &&
-               deadZone >= 0.0f && deadZone <= 0.6f;
+               deadZone >= 0.0f && deadZone <= 0.6f && knee >= 0.0f && knee <= 0.9f && kneeGain > 0.0f && kneeGain <= 1.0f;
     }
 };
 

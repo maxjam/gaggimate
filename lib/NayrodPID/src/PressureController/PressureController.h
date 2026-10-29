@@ -86,6 +86,9 @@ class PressureController {
     float rampFlowSetpoint(float target);
     float loopFromPump(float duty) const; // pump power -> loop output u (dead zone removed)
     float pumpFromLoop(float u) const;    // loop output u -> pump power
+    bool kneeActive() const;              // low-power band in use (gains.knee above the dead zone)
+    float kneeU() const;                  // u at the knee
+    float loopMax() const;                // u at 100 % power (1 without the knee)
     static constexpr float HARD_PRESSURE_CUTOFF = 12.5f; // bar: flow loop refuses to push past this (latched, meterlink.7)
     static constexpr float CUTOFF_ARM_BAR = 12.0f;       // the latch arms once the phase has seen the pressure below this
     static constexpr float DEFAULT_CEILING_BAR = 10.0f;  // ceiling for a flow phase whose profile gives none (meterlink.7)

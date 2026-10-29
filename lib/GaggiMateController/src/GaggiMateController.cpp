@@ -439,6 +439,14 @@ void GaggiMateController::setupMeterLink() {
     meterLink = new MeterLink(rxPin, txPin, 1);
     auto dimmedPump = static_cast<DimmedPump *>(pump);
     dimmedPump->setMeterLink(meterLink);
+    {
+        // Max's Velofuso: the loop acts at half gain below 25 % pump power (meterlink.10, see FlowLoopGains::knee).
+        // $G from the meter board keeps these (it only sets its 8 fields).
+        FlowLoopGains g = dimmedPump->getFlowLoopGains();
+        g.knee = 0.25f;
+        g.kneeGain = 0.5f;
+        dimmedPump->setFlowLoopGains(g);
+    }
     meterLink->onGains([this](const FlowLoopGains &gains) { static_cast<DimmedPump *>(pump)->setFlowLoopGains(gains); });
     meterLink->currentGains([this]() { return static_cast<DimmedPump *>(pump)->getFlowLoopGains(); });
     // $D: the pump's diagnostics plus the brew heater and boiler temperature, so the meter board's shot log shows
@@ -622,8 +630,11 @@ void GaggiMateController::handleConsoleLine(const char *line) {
         auto dimmedPump = static_cast<DimmedPump *>(pump);
         FlowLoopGains g = dimmedPump->getFlowLoopGains();
         if (line[1] == '\0') {
-            ESP_LOGI("Controller", "Flow loop gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%%",
-                     g.kp, g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f);
+            ESP_LOGI("Controller",
+                     "Flow loop gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%% "
+                     "knee=%.0f%% x%.2f",
+                     g.kp, g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f, g.knee * 100.0f,
+                     g.kneeGain);
             return;
         }
         float kp, ki, start, ff, ramp, limKp, limKi, dz = g.deadZone * 100.0f;
