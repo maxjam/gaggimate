@@ -71,7 +71,7 @@ function getChartData(shot) {
   // Check if weight data has any non-zero values
   const hasWeight = v.some(point => point.y > 0);
   const hasWeightFlow = vf.some(point => point.y > 0);
-  // Pump power is only in shots recorded by the meter-link fork (field pp)
+  // Pump power is only in shots recorded by the pump-power fork (field pp)
   const hasPumpPower = pp.length > 0;
 
   // Create phase annotations

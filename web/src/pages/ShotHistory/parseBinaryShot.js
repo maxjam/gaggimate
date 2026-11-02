@@ -31,7 +31,7 @@ const FIELD_BITS = {
   SI: 12, // system info (v2+)
   WP: 13, // cumulative water pumped
   // Phase number moved to header transitions in v5+
-  PP: 20, // pump power % (fork: GaggiMate x Velofuso meter link)
+  PP: 20, // pump power % (fork: pump-power log)
 };
 
 // Field definitions with parsing info

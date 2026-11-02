@@ -189,7 +189,7 @@ export function getHiddenLegendLabels({
   return [
     ...(showPhaseAnnotations ? [] : ['Phases']),
     ...(showStopAnnotations ? [] : ['Stops']),
-    // Pump power is only in shots recorded by the meter-link fork's display firmware
+    // Pump power is only in shots recorded by the pump-power fork's display firmware
     ...(hasPumpPowerData ? [] : ['Pump Power']),
   ];
 }

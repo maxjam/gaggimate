@@ -41,7 +41,7 @@ static constexpr uint32_t SHOT_LOG_FIELD_EV = 0x0400; // estimated weight (bit 1
 static constexpr uint32_t SHOT_LOG_FIELD_PR = 0x0800; // puck resistance (bit 11)
 static constexpr uint32_t SHOT_LOG_FIELD_SI = 0x1000; // system info (bit 12)
 static constexpr uint32_t SHOT_LOG_FIELD_WP = 0x2000; // cumulative water pumped (bit 13)
-// Fork (GaggiMate x Velofuso meter link): pump power. Bit 20, away from the bits upstream will hand out next, so
+// Fork (pump-power log): pump power. Bit 20, away from the bits upstream will hand out next, so
 // a later upstream field cannot be mistaken for it. Records stay in bit order, so it is the last field.
 static constexpr uint32_t SHOT_LOG_FIELD_PP = 0x100000; // pump power (bit 20)
 // Bits 14-19 and 21-30 available for future fields (bit 31 stays unused: the web parser counts bits with >>=)

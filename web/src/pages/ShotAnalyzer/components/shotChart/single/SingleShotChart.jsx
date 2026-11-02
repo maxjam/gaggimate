@@ -84,7 +84,7 @@ import {
 
 Chart.register(annotationPlugin);
 
-// Series legend entries hidden when the shot has no data for them (pump power: meter-link fork shots only).
+// Series legend entries hidden when the shot has no data for them (pump power: pump-power fork shots only).
 const NO_HIDDEN_LEGEND_LABELS = [];
 const PUMP_POWER_LEGEND_LABELS = ['Pump Power'];
 export function SingleShotChart({ shotData, profileData, results, desktopCardHeight = 0 }) {

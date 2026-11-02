@@ -96,7 +96,7 @@ export function buildSeries(samples) {
     const targetPressure = toNumberOrNull(getSampleValue(sample, ['tp', 'target_pressure']));
     const targetFlow = toNumberOrNull(getSampleValue(sample, ['tf', 'target_flow']));
     const targetTemp = toNumberOrNull(getSampleValue(sample, ['tt', 'tr', 'target_temperature']));
-    // Pump power (%), recorded by the meter-link fork's display firmware (field pp)
+    // Pump power (%), recorded by the pump-power fork's display firmware (field pp)
     const pumpPower = toNumberOrNull(getSampleValue(sample, ['pp', 'pump_power']));
 
     if (pressure !== null) series.pressure.push({ x: t, y: pressure });

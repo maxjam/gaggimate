@@ -113,7 +113,7 @@ function sampleHasWeightFlowData(sample) {
   return Number.isFinite(value) && value > 0;
 }
 
-// Pump power is only in shots recorded by the meter-link fork's display firmware (field pp).
+// Pump power is only in shots recorded by the pump-power fork's display firmware (field pp).
 function sampleHasPumpPowerData(sample) {
   const value = sample?.pp ?? sample?.pump_power;
   return value !== null && value !== undefined && Number.isFinite(Number(value));

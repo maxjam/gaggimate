@@ -148,7 +148,7 @@ export const columnConfig = [
     type: COLUMN_TYPES.AVG,
     group: 'target_flow',
   }),
-  // Pump power (%): only in shots recorded by the meter-link fork's display firmware
+  // Pump power (%): only in shots recorded by the pump-power fork's display firmware
   createColumn({
     id: 'pp_se',
     label: msg`Pump Power (%)`,
