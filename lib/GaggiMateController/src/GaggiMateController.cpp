@@ -97,6 +97,7 @@ void GaggiMateController::setup() {
 #endif
 
     setupMeterLink();
+    setupScaleLink();
 
     // 4-Pin peripheral port
     // J4 build: the pins are the meter link. With METER_LINK_ALBA the Alba hangs on the meter board: tank
@@ -111,7 +112,7 @@ void GaggiMateController::setup() {
             if (_comms.isConnected())
                 _comms.sendTofMeasurement(static_cast<uint32_t>(distanceMm));
         });
-    } else if (!j4IsMeterLink && !_config.capabilites.dualBoiler) {
+    } else if (!j4IsMeterLink && scaleLink == nullptr && !_config.capabilites.dualBoiler) {
         albaComms = new SoftWire(_config.sunriseSdaPin, _config.sunriseSclPin);
         albaComms->setTxBuffer(albaSwTxBuffer, sizeof(albaSwTxBuffer));
         albaComms->setRxBuffer(albaSwRxBuffer, sizeof(albaSwRxBuffer));
@@ -155,6 +156,10 @@ void GaggiMateController::setup() {
     }
     if (this->hardwareScale != nullptr && this->hardwareScale->isAvailable()) {
         addAddon(ADDON_HW_SCALE);
+    } else if (this->scaleLink != nullptr) {
+        // The scale board may start after the Pro, so the display always gets the hardware-scale pages in this
+        // build; without readings the display treats the scale as absent (its 1.5 s health timeout).
+        addAddon(ADDON_HW_SCALE);
     }
 
     // Steam switch held at power-on opens the BLE pairing window; read it here since steamBtn->setup() runs later.
@@ -168,6 +173,9 @@ void GaggiMateController::setup() {
     }
     if (meterLink != nullptr) {
         meterLink->setup();
+    }
+    if (scaleLink != nullptr) {
+        scaleLink->setup();
     }
 
     if (this->gearpumpAddon != nullptr) {
@@ -353,6 +361,9 @@ void GaggiMateController::setup() {
         if (meterLink != nullptr) {
             meterLink->sendZero(); // display tare = shot start / shot saved: zero the meter's volume counter
         }
+        if (scaleLink != nullptr) {
+            scaleLink->sendTare();
+        }
         if (!_config.capabilites.dimming) {
             return;
         }
@@ -361,6 +372,9 @@ void GaggiMateController::setup() {
     });
     _comms.onScaleFactors(
         [this](float scaleFactor1, float scaleFactor2, uint16_t sampleRateSps, float idleFilterAlpha, float activeFilterAlpha) {
+            if (scaleLink != nullptr) {
+                scaleLink->setConfiguration(scaleFactor1, scaleFactor2, sampleRateSps, idleFilterAlpha, activeFilterAlpha);
+            }
             if (hardwareScale == nullptr || !hardwareScale->isAvailable()) {
                 return;
             }
@@ -374,10 +388,13 @@ void GaggiMateController::loop() {
 
     // Keep zero tracking and idle display quantization out of the measurement
     // path whenever the brew valve or pump can be adding liquid to the cup.
-    if (hardwareScale != nullptr) {
+    if (hardwareScale != nullptr || scaleLink != nullptr) {
         const float pumpPower = pump != nullptr && pump->getPumpPowerPtr() != nullptr ? *pump->getPumpPowerPtr() : 0.0f;
         const bool scaleActivity = (valve != nullptr && valve->getState()) || pumpPower > 0.01f;
-        hardwareScale->setBrewingActive(scaleActivity);
+        if (hardwareScale != nullptr)
+            hardwareScale->setBrewingActive(scaleActivity);
+        if (scaleLink != nullptr)
+            scaleLink->setActive(scaleActivity); // sent as $B; the board runs the same stock filter logic
     }
 
     if (lastPingTime < now && (now - lastPingTime) / 1000 > PING_TIMEOUT_SECONDS) {
@@ -459,6 +476,27 @@ void GaggiMateController::setupMeterLink() {
     });
     ESP_LOGI(LOG_TAG, "Meter link configured on %s (RX gpio%u, TX gpio%u), Alba over link: %d", port, rxPin, txPin,
              METER_LINK_ALBA);
+#endif
+}
+
+// Fork (meterlink.12): serial link to the scale board on J4. Its readings go to the display through the same
+// sendScaleMeasurement() the stock HX711 code uses, so the display's weight, stop-at-weight and Hardware Scale
+// settings work unchanged.
+void GaggiMateController::setupScaleLink() {
+#ifdef SCALE_LINK_PORT
+    if (_config.sunriseSdaPin == 0 || _config.sunriseSclPin == 0 || _config.capabilites.dualBoiler) {
+        ESP_LOGW(LOG_TAG, "Scale link needs J4; not enabled on %s", _config.name.c_str());
+        return;
+    }
+    const uint8_t rxPin = _config.sunriseSclPin; // J4 "RX" = gpio44 on the Pro
+    const uint8_t txPin = _config.sunriseSdaPin; // J4 "TX" = gpio43
+    scaleLink = new ScaleLink(rxPin, txPin, 2);
+    scaleLink->onReading([this](const scalewire::Reading &r) {
+        if (_comms.isConnected()) {
+            _comms.sendScaleMeasurement(r.grams, r.cell1, r.cell2, r.cell1Valid, r.cell2Valid);
+        }
+    });
+    ESP_LOGI(LOG_TAG, "Scale link configured on J4 (RX gpio%u, TX gpio%u); Alba bus not started", rxPin, txPin);
 #endif
 }
 
@@ -721,6 +759,15 @@ void GaggiMateController::printStatus() {
                  dimmedPump->isFlowLoopFaulted());
         ESP_LOGI("Controller", "║  └─ Gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%%", g.kp,
                  g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f);
+        ESP_LOGI("Controller", "║");
+    }
+
+    if (scaleLink != nullptr) {
+        ESP_LOGI("Controller", "╠═ Scale link (RX gpio%u, TX gpio%u)", scaleLink->rxPin(), scaleLink->txPin());
+        ESP_LOGI("Controller", "║  ├─ Link: %s, scale: %s, weight %.2f g", scaleLink->linkUp() ? "up" : "down",
+                 scaleLink->scaleAvailable() ? "ok" : "not available", scaleLink->lastGrams());
+        ESP_LOGI("Controller", "║  └─ Lines ok/bad: %lu/%lu, readings: %lu", static_cast<unsigned long>(scaleLink->goodLines()),
+                 static_cast<unsigned long>(scaleLink->badLines()), static_cast<unsigned long>(scaleLink->readings()));
         ESP_LOGI("Controller", "║");
     }
 

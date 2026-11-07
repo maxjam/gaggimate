@@ -12,6 +12,7 @@
 #include <peripherals/Max31855Thermocouple.h>
 #include <peripherals/MeterLink.h>
 #include <peripherals/PressureSensor.h>
+#include <peripherals/ScaleLink.h>
 #include <peripherals/Pump.h>
 #include <peripherals/SimpleRelay.h>
 #include <peripherals/addons/GearpumpAddon.h>
@@ -44,6 +45,21 @@ constexpr int kMeterLinkPort = METER_LINK_PORT;
 constexpr int kMeterLinkPort = 0;
 #endif
 
+// Fork (meterlink.12): SCALE_LINK_PORT=4 puts the Waveshare scale board on J4 (gpio44 RX / gpio43 TX).
+// The board reads the drip-tray load cells and its readings reach the display as the built-in hardware
+// scale; the Alba's SoftWire bus on J4 is not started. Needs the meter link off J4 (METER_LINK_PORT=5).
+#ifdef SCALE_LINK_PORT
+#if SCALE_LINK_PORT != 4
+#error "SCALE_LINK_PORT must be 4 (J4)"
+#endif
+#if defined(METER_LINK_PORT) && METER_LINK_PORT == 4
+#error "The scale board and the meter board cannot both use J4"
+#endif
+constexpr int kScaleLinkPort = SCALE_LINK_PORT;
+#else
+constexpr int kScaleLinkPort = 0;
+#endif
+
 class GaggiMateController {
   public:
     explicit GaggiMateController(String version);
@@ -66,6 +82,7 @@ class GaggiMateController {
     void handleConsoleLine(const char *line);
     void printStatus();
     void setupMeterLink();
+    void setupScaleLink();
     bool isSteamSwitchOn() const;
 
     ControllerConfig _config = ControllerConfig{};
@@ -94,6 +111,7 @@ class GaggiMateController {
     FlowSensor *flowSensor = nullptr;
     HardwareScale *hardwareScale = nullptr;
     MeterLink *meterLink = nullptr;
+    ScaleLink *scaleLink = nullptr;
 
     GearpumpAddon *gearpumpAddon = nullptr;
 
