@@ -83,6 +83,7 @@ class GaggiMateController {
     void printStatus();
     void setupMeterLink();
     void setupScaleLink();
+    void updateScaleActivity();
     bool isSteamSwitchOn() const;
 
     ControllerConfig _config = ControllerConfig{};

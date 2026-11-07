@@ -4,12 +4,14 @@
 // Same framing as the meter link (LineProtocol.h): "$<payload>*XX\r\n", 115200 8N1.
 //
 //   scale board -> Pro
-//     $W,<grams>,<cell1_g>,<cell2_g>,<valid>,<seq>*XX   about 10 per second, one per published reading
+//     $W,<grams>,<cell1_g>,<cell2_g>,<valid>,<seq>,<tare_ack>*XX   about 10 per second, one per reading
 //         valid: bit 0 = cell 1 good, bit 1 = cell 2 good. 0 with grams = -9999 means "no scale"
 //         (HX711 missing or faulted), the same sentinel the stock HardwareScale sends.
+//         tare_ack: id of the last $Z the board received (0 = none yet); optional when parsing.
 //     $H,<uptime_s>*XX                                   1 per second
 //   Pro -> scale board
-//     $Z*XX                                              tare (display hold, shot start, shot saved, web tare)
+//     $Z,<id>*XX                                         tare (display hold, shot start, shot saved, web tare).
+//                                                        Resent with the same id until a $W acknowledges it.
 //     $B,<0|1>*XX                                        brew valve open or pump running: pauses idle zero
 //                                                        tracking and enables the brew-time outlier filter
 //     $C,<factor1>,<factor2>,<sps>,<idle_alpha>,<active_alpha>*XX
@@ -25,6 +27,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 
 namespace scalewire {
 
@@ -38,6 +41,7 @@ struct Reading {
     bool cell1Valid = false;
     bool cell2Valid = false;
     uint32_t seq = 0;
+    uint32_t tareAck = 0; // last $Z id the board received
     bool available() const { return cell1Valid && cell2Valid; }
 };
 
@@ -63,6 +67,7 @@ inline bool parseWeight(const lineproto::Message &m, Reading &out) {
     r.cell1Valid = (valid & 1) != 0;
     r.cell2Valid = (valid & 2) != 0;
     r.seq = static_cast<uint32_t>(m.i(4, 0));
+    r.tareAck = m.count >= 6 ? static_cast<uint32_t>(strtoul(m.field[5] ? m.field[5] : "0", nullptr, 10)) : 0;
     if (r.available()) {
         if (!std::isfinite(c1) || !std::isfinite(c2) || std::fabs(grams) > MAX_GRAMS)
             return false;
@@ -82,8 +87,10 @@ inline bool parseWeight(const lineproto::Message &m, Reading &out) {
 inline int formatWeight(const Reading &r, char *out, size_t size) {
     const int valid = (r.cell1Valid ? 1 : 0) | (r.cell2Valid ? 2 : 0);
     if (valid != 3)
-        return snprintf(out, size, "W,-9999,0,0,0,%lu", static_cast<unsigned long>(r.seq));
-    return snprintf(out, size, "W,%.2f,%.2f,%.2f,%d,%lu", r.grams, r.cell1, r.cell2, valid, static_cast<unsigned long>(r.seq));
+        return snprintf(out, size, "W,-9999,0,0,0,%lu,%lu", static_cast<unsigned long>(r.seq),
+                        static_cast<unsigned long>(r.tareAck));
+    return snprintf(out, size, "W,%.2f,%.2f,%.2f,%d,%lu,%lu", r.grams, r.cell1, r.cell2, valid, static_cast<unsigned long>(r.seq),
+                    static_cast<unsigned long>(r.tareAck));
 }
 
 // $C -> Config. False if a field is missing or not a number; range checks are the scale's job.
@@ -107,6 +114,14 @@ inline bool parseConfig(const lineproto::Message &m, Config &out) {
 inline int formatConfig(const Config &c, char *out, size_t size) {
     return snprintf(out, size, "C,%.3f,%.3f,%u,%.3f,%.3f", c.factor1, c.factor2, static_cast<unsigned>(c.sps), c.idleAlpha,
                     c.activeAlpha);
+}
+
+// $Z[,<id>] -> id (0 when the line carries none). False if it is not a tare line.
+inline bool parseTare(const lineproto::Message &m, uint32_t &id) {
+    if (m.type[0] != 'Z' || m.type[1] != '\0')
+        return false;
+    id = (m.count >= 1 && m.field[0] != nullptr) ? static_cast<uint32_t>(strtoul(m.field[0], nullptr, 10)) : 0;
+    return true;
 }
 
 inline bool sameConfig(const Config &a, const Config &b) {

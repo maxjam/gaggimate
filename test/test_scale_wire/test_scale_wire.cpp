@@ -31,6 +31,7 @@ void test_weight_round_trip() {
     in.cell2 = 19.32f;
     in.cell1Valid = in.cell2Valid = true;
     in.seq = 1234;
+    in.tareAck = 512345;
     char payload[MAX_LINE];
     TEST_ASSERT_TRUE(scalewire::formatWeight(in, payload, sizeof(payload)) > 0);
     LineReader r;
@@ -43,6 +44,7 @@ void test_weight_round_trip() {
     TEST_ASSERT_FLOAT_WITHIN(0.006f, 17.10f, out.cell1);
     TEST_ASSERT_FLOAT_WITHIN(0.006f, 19.32f, out.cell2);
     TEST_ASSERT_EQUAL_UINT32(1234, out.seq);
+    TEST_ASSERT_EQUAL_UINT32(512345, out.tareAck);
 }
 
 void test_negative_weight_kept() {
@@ -66,7 +68,7 @@ void test_unavailable_is_stock_sentinel() {
     in.seq = 7;
     char payload[MAX_LINE];
     scalewire::formatWeight(in, payload, sizeof(payload));
-    TEST_ASSERT_EQUAL_STRING("W,-9999,0,0,0,7", payload);
+    TEST_ASSERT_EQUAL_STRING("W,-9999,0,0,0,7,0", payload);
     LineReader r;
     Message m;
     TEST_ASSERT_TRUE(roundTrip(payload, m, r));
@@ -76,6 +78,31 @@ void test_unavailable_is_stock_sentinel() {
     TEST_ASSERT_FALSE(out.cell1Valid);
     TEST_ASSERT_FALSE(out.cell2Valid);
     TEST_ASSERT_FLOAT_WITHIN(0.01f, -9999.0f, out.grams);
+}
+
+void test_weight_without_ack_field() {
+    // Five fields (no tare ack) still parse; the ack reads as 0.
+    LineReader r;
+    Message m;
+    TEST_ASSERT_TRUE(roundTrip("W,12.00,6.00,6.00,3,9", m, r));
+    scalewire::Reading out;
+    TEST_ASSERT_TRUE(scalewire::parseWeight(m, out));
+    TEST_ASSERT_TRUE(out.available());
+    TEST_ASSERT_EQUAL_UINT32(0, out.tareAck);
+}
+
+void test_tare_ids() {
+    LineReader r;
+    Message m;
+    uint32_t id = 1;
+    TEST_ASSERT_TRUE(roundTrip("Z,734512", m, r));
+    TEST_ASSERT_TRUE(scalewire::parseTare(m, id));
+    TEST_ASSERT_EQUAL_UINT32(734512, id);
+    TEST_ASSERT_TRUE(roundTrip("Z", m, r));
+    TEST_ASSERT_TRUE(scalewire::parseTare(m, id));
+    TEST_ASSERT_EQUAL_UINT32(0, id);
+    TEST_ASSERT_TRUE(roundTrip("W,1,1,0,3,1", m, r));
+    TEST_ASSERT_FALSE(scalewire::parseTare(m, id));
 }
 
 void test_one_cell_counts_as_no_scale() {
@@ -158,6 +185,7 @@ void test_worst_case_lines_fit() {
     w.cell2 = -4999.99f;
     w.cell1Valid = w.cell2Valid = true;
     w.seq = 4294967295u;
+    w.tareAck = 4294967295u;
     char payload[MAX_LINE];
     const int n = scalewire::formatWeight(w, payload, sizeof(payload));
     TEST_ASSERT_TRUE(n > 0 && static_cast<size_t>(n) + 4 <= MAX_LINE);
@@ -177,6 +205,8 @@ int main(int, char **) {
     RUN_TEST(test_weight_round_trip);
     RUN_TEST(test_negative_weight_kept);
     RUN_TEST(test_unavailable_is_stock_sentinel);
+    RUN_TEST(test_weight_without_ack_field);
+    RUN_TEST(test_tare_ids);
     RUN_TEST(test_one_cell_counts_as_no_scale);
     RUN_TEST(test_bad_weight_lines_rejected);
     RUN_TEST(test_config_round_trip);

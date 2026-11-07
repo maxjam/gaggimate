@@ -23,6 +23,8 @@ class ScaleLink {
     static constexpr uint32_t BREW_REFRESH_MS = 500;    // $B repeated while brewing (and on every change)
     static constexpr uint32_t IDLE_REFRESH_MS = 2000;   // $B,0 repeated while idle
     static constexpr uint32_t CONFIG_REFRESH_MS = 5000; // $C repeated (the board applies it only when it changed)
+    static constexpr uint32_t TARE_RESEND_MS = 150;     // $Z repeated until the board acknowledges its id...
+    static constexpr uint32_t TARE_GIVE_UP_MS = 1500;   // ...for at most this long
     static constexpr uint32_t BAUD = 115200;
 
     ScaleLink(uint8_t rxPin, uint8_t txPin, uint8_t uartNum = 2);
@@ -33,7 +35,7 @@ class ScaleLink {
     void onReading(reading_callback_t cb) { _readingCb = std::move(cb); } // set before setup()
 
     // --- command side (any task) ---
-    void sendTare();
+    void sendTare(); // any task: queued, sent and resent by the link task until acknowledged
     void setConfiguration(float factor1, float factor2, uint16_t sps, float idleAlpha, float activeAlpha);
     void setActive(bool active) { _active.store(active); } // brew valve open or pump on, from the controller loop
 
@@ -42,6 +44,7 @@ class ScaleLink {
     uint32_t goodLines() const { return _good.load(); }
     uint32_t badLines() const { return _bad.load(); }
     uint32_t readings() const { return _readings.load(); }
+    uint32_t taresLost() const { return _taresLost.load(); }
     float lastGrams() const { return _lastGrams.load(); }
     bool scaleAvailable() const { return _available.load(); }
     uint8_t rxPin() const { return _rxPin; }
@@ -75,6 +78,12 @@ class ScaleLink {
     std::atomic<uint32_t> _readings{0};
     std::atomic<float> _lastGrams{scalewire::UNAVAILABLE_GRAMS};
     std::atomic<bool> _available{false};
+    std::atomic<uint32_t> _tareReq{0};  // id of the newest tare asked for
+    std::atomic<uint32_t> _tareAck{0};  // id the board last acknowledged
+    std::atomic<uint32_t> _taresLost{0};
+    uint32_t _tareActive = 0;           // id being sent now
+    uint32_t _tareFirstMs = 0;
+    uint32_t _tareLastMs = 0;
     uint32_t _lastHeartbeatMs = 0;
     uint32_t _lastBrewMs = 0;
     uint32_t _lastConfigMs = 0;

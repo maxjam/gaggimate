@@ -260,6 +260,7 @@ void GaggiMateController::setup() {
                     gearpumpAddon->stop();
                 }
             }
+            updateScaleActivity();
             return;
         }
         if (!_config.capabilites.dimming) {
@@ -308,6 +309,7 @@ void GaggiMateController::setup() {
         if (meterLink != nullptr) {
             meterLink->sendBrewing(open);
         }
+        updateScaleActivity(); // $B before the tare GaggiMate sends when a process ends
     });
     // Heaters stay off until the display delivers these; coordination is applied before the gains enable heating.
     _comms.onHeaterSettings([this](const gm::HeaterSettings &settings) {
@@ -388,14 +390,7 @@ void GaggiMateController::loop() {
 
     // Keep zero tracking and idle display quantization out of the measurement
     // path whenever the brew valve or pump can be adding liquid to the cup.
-    if (hardwareScale != nullptr || scaleLink != nullptr) {
-        const float pumpPower = pump != nullptr && pump->getPumpPowerPtr() != nullptr ? *pump->getPumpPowerPtr() : 0.0f;
-        const bool scaleActivity = (valve != nullptr && valve->getState()) || pumpPower > 0.01f;
-        if (hardwareScale != nullptr)
-            hardwareScale->setBrewingActive(scaleActivity);
-        if (scaleLink != nullptr)
-            scaleLink->setActive(scaleActivity); // sent as $B; the board runs the same stock filter logic
-    }
+    updateScaleActivity();
 
     if (lastPingTime < now && (now - lastPingTime) / 1000 > PING_TIMEOUT_SECONDS) {
         handlePingTimeout();
@@ -477,6 +472,19 @@ void GaggiMateController::setupMeterLink() {
     ESP_LOGI(LOG_TAG, "Meter link configured on %s (RX gpio%u, TX gpio%u), Alba over link: %d", port, rxPin, txPin,
              METER_LINK_ALBA);
 #endif
+}
+
+// Brew valve open or pump running: the stock HardwareScale's brewing flag, and $B to the scale board. Called from
+// the loop and (fork) right after valve/pump commands, so the board sees the change before a following tare.
+void GaggiMateController::updateScaleActivity() {
+    if (hardwareScale == nullptr && scaleLink == nullptr)
+        return;
+    const float pumpPower = pump != nullptr && pump->getPumpPowerPtr() != nullptr ? *pump->getPumpPowerPtr() : 0.0f;
+    const bool scaleActivity = (valve != nullptr && valve->getState()) || pumpPower > 0.01f;
+    if (hardwareScale != nullptr)
+        hardwareScale->setBrewingActive(scaleActivity);
+    if (scaleLink != nullptr)
+        scaleLink->setActive(scaleActivity); // sent as $B; the board runs the same stock filter logic
 }
 
 // Fork (meterlink.12): serial link to the scale board on J4. Its readings go to the display through the same
@@ -766,8 +774,9 @@ void GaggiMateController::printStatus() {
         ESP_LOGI("Controller", "╠═ Scale link (RX gpio%u, TX gpio%u)", scaleLink->rxPin(), scaleLink->txPin());
         ESP_LOGI("Controller", "║  ├─ Link: %s, scale: %s, weight %.2f g", scaleLink->linkUp() ? "up" : "down",
                  scaleLink->scaleAvailable() ? "ok" : "not available", scaleLink->lastGrams());
-        ESP_LOGI("Controller", "║  └─ Lines ok/bad: %lu/%lu, readings: %lu", static_cast<unsigned long>(scaleLink->goodLines()),
-                 static_cast<unsigned long>(scaleLink->badLines()), static_cast<unsigned long>(scaleLink->readings()));
+        ESP_LOGI("Controller", "║  └─ Lines ok/bad: %lu/%lu, readings: %lu, tares not acknowledged: %lu",
+                 static_cast<unsigned long>(scaleLink->goodLines()), static_cast<unsigned long>(scaleLink->badLines()),
+                 static_cast<unsigned long>(scaleLink->readings()), static_cast<unsigned long>(scaleLink->taresLost()));
         ESP_LOGI("Controller", "║");
     }
 
