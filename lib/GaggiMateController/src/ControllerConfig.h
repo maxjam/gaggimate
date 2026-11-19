@@ -38,6 +38,7 @@ struct ControllerConfig {
     uint8_t waterSensePin = 0;
     uint8_t tankLevelPin = 0;
     uint8_t ledPin = 0;
+    uint8_t baristaLedPin = 0;
 
     uint8_t pressureScl = 0;
     uint8_t pressureSda = 0;
@@ -276,6 +277,7 @@ const ControllerConfig GM_MAX_REV10 = {.name = "GaggiMate Max Rev 1.x",
                                        .waterSensePin = 38,
                                        .tankLevelPin = 17,
                                        .ledPin = 9,
+                                       .baristaLedPin = 1,
                                        .pressureScl = 47,
                                        .pressureSda = 48,
                                        .brewButtonPin = 6,
@@ -289,8 +291,8 @@ const ControllerConfig GM_MAX_REV10 = {.name = "GaggiMate Max Rev 1.x",
                                        .ext1Pin = 2,
                                        .ext2Pin = 47,
                                        .ext3Pin = 48,
-                                       .ext4Pin = 43,
-                                       .ext5Pin = 44,
+                                       .ext4Pin = 44,
+                                       .ext5Pin = 43,
                                        .capabilites =
                                            {
                                                .dimming = true,

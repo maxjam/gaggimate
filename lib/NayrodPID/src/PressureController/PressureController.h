@@ -9,6 +9,7 @@ static constexpr float M_PI = 3.14159265358979323846f;
 #include "SimpleKalmanFilter/SimpleKalmanFilter.h"
 #include <algorithm>
 #include <cmath> // std::fmax (getCoffeeOutputEstimate())
+#include <memory>
 
 class PressureController {
   private:
@@ -165,7 +166,7 @@ class PressureController {
     bool _puckState[3] = {};
     int _puckCounter = 0;
     float exportPumpFlowRate = 0.0f; // To disociate the exported value from the internal because of filtering (cosmetic) purpose
-    SimpleKalmanFilter *_pressureKalmanFilter;
+    std::unique_ptr<SimpleKalmanFilter> _pressureKalmanFilter;
 
     // === Measured-flow loop state (fork) ===
     bool _flowLoopEnabled = false;

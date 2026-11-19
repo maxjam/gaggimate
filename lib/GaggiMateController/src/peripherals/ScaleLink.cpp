@@ -9,6 +9,8 @@ void ScaleLink::setup() {
     const uint32_t base = 100000 + esp_random() % 900000;
     _tareReq.store(base);
     _tareActive = base;
+    _endReq.store(base);
+    _endActive = base;
     _serial.setRxBufferSize(512);
     _serial.begin(BAUD, SERIAL_8N1, _rxPin, _txPin);
     ESP_LOGI(LOG_TAG, "Scale link on RX=%u TX=%u, %lu baud", _rxPin, _txPin, static_cast<unsigned long>(BAUD));
@@ -50,6 +52,8 @@ void ScaleLink::sendConfig() {
 }
 
 void ScaleLink::sendTare() { _tareReq.fetch_add(1); }
+
+void ScaleLink::sendVolumeReset() { _endReq.fetch_add(1); }
 
 void ScaleLink::loop() {
     lineproto::Message msg;
@@ -114,6 +118,20 @@ void ScaleLink::loop() {
         }
     } else if (_tareFirstMs != 0) {
         _tareFirstMs = 0; // acknowledged
+    }
+
+    // Volume reset: no ack in the protocol, so the newest id goes out END_REPEATS times; the board acts once per id.
+    const uint32_t endReq = _endReq.load();
+    if (endReq != _endActive) {
+        _endActive = endReq;
+        _endSends = 0;
+    }
+    if (_endSends < END_REPEATS && (_endSends == 0 || now - _endLastMs >= END_REPEAT_MS)) {
+        _endSends++;
+        _endLastMs = now;
+        char payload[24];
+        snprintf(payload, sizeof(payload), "E,%lu", static_cast<unsigned long>(_endActive));
+        sendLine(payload);
     }
 
     if (_configDirty.exchange(false) || now - _lastConfigMs >= CONFIG_REFRESH_MS) {

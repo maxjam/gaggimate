@@ -1,12 +1,15 @@
+import { confirmProfileApply, waitForMachineHardware } from '../../utils/machineProfiles.js';
+import { requestSettings } from '../../utils/settingsRequest.js';
 import { faFileExport } from '@fortawesome/free-solid-svg-icons/faFileExport';
 import { faFileImport } from '@fortawesome/free-solid-svg-icons/faFileImport';
 import { faEllipsisVertical } from '@fortawesome/free-solid-svg-icons/faEllipsisVertical';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { useRoute } from 'preact-iso';
+import { useLocation, useRoute } from 'preact-iso';
 import { Plural, Trans, useLingui } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
 import {
+  machine,
   prefetchSettings,
   updateSettingsCache,
   getCachedSettings,
@@ -17,6 +20,7 @@ import {
   setClock24h,
 } from '../../utils/dashboardManager.js';
 import { downloadJson } from '../../utils/download.js';
+import { validateTankCalibration } from '../../utils/waterLevel.js';
 import { getStoredTheme, handleThemeChange } from '../../utils/themeManager.js';
 
 import PageLayout from '../../components/PageLayout.jsx';
@@ -58,24 +62,28 @@ import { faPuzzlePiece } from '@fortawesome/free-solid-svg-icons/faPuzzlePiece';
 import { faBluetoothB } from '@fortawesome/free-brands-svg-icons/faBluetoothB';
 import { faRotate } from '@fortawesome/free-solid-svg-icons/faRotate';
 import { isApp } from '../../app/platform.js';
-
-const CHECKBOX_KEYS = [
-  'homekit',
-  'boilerFillActive',
-  'smartGrindActive',
-  'mahlkonigActive',
-  'homeAssistant',
-  'momentaryButtons',
-  'heaterCoordinationEnabled',
-  'delayAdjust',
-  'clock24hFormat',
-  'autowakeupEnabled',
-  'smartGrindToggle',
-  'pressureRelease',
-];
+import {
+  CHECKBOX_KEYS,
+  parseAutoWakeupSchedules,
+  serializeAutoWakeupSchedules,
+  splitPidString,
+} from './settingsForm.js';
 
 // Device facts GET /api/settings reports for display only; never saved, exported or imported.
-const READ_ONLY_KEYS = ['deviceIp'];
+const READ_ONLY_KEYS = [
+  'deviceIp',
+  'setupDone',
+  'apMode',
+  'setupStep',
+  'machineHardwareApplyPending',
+  'machineHardwareReady',
+  'machineHardwareError',
+  'steamControlsAvailable',
+  'machineProfileBoard',
+  'machineProfileCapabilities',
+  'machineHardwareConfiguration',
+  'machineProfileSupportedFields',
+];
 
 // Form-only fields that never come back from GET /api/settings.
 const FORM_ONLY_KEYS = [
@@ -87,43 +95,18 @@ const FORM_ONLY_KEYS = [
   'dashboardLayout',
 ];
 
+// Owned by the Bluetooth pairing flow; only a settings import may write them (GM-288).
+const IMPORT_ONLY_KEYS = ['savedScale', 'savedScaleName'];
+
 const DEFAULT_SCALE_FACTOR_1 = -2500.0;
 const DEFAULT_SCALE_FACTOR_2 = 2500.0;
 const DEFAULT_HARDWARE_SCALE_SAMPLE_RATE_SPS = 10;
 const DEFAULT_HARDWARE_SCALE_FILTER_ALPHA = 0.8;
 
-function splitPidString(pidString) {
-  if (!pidString) return { pid: pidString, kf: '0.000' };
-  const parts = pidString.split(',');
-  if (parts.length >= 4) {
-    return { pid: parts.slice(0, 3).join(','), kf: parts[3] };
-  }
-  return { pid: pidString, kf: '0.000' };
-}
-
 function splitButtons(buttonBehavior) {
   if (!buttonBehavior) return {};
   const [button0, button1, button2] = buttonBehavior.split(',');
   return { button0, button1, button2 };
-}
-
-function parseAutoWakeupSchedules(autowakeupSchedules) {
-  const defaultSchedule = [{ time: '07:00', days: [true, true, true, true, true, true, true] }];
-  if (!autowakeupSchedules) {
-    return defaultSchedule;
-  }
-  const schedules = [];
-  if (typeof autowakeupSchedules === 'string' && autowakeupSchedules.trim()) {
-    const scheduleStrings = autowakeupSchedules.split(';');
-    for (const scheduleStr of scheduleStrings) {
-      const [time, daysStr] = scheduleStr.split('|');
-      if (time && daysStr && daysStr.length === 7) {
-        const days = daysStr.split('').map(d => d === '1');
-        schedules.push({ time, days });
-      }
-    }
-  }
-  return schedules.length > 0 ? schedules : defaultSchedule;
 }
 
 function transformFetchedSettings(fetchedSettings) {
@@ -170,12 +153,6 @@ function transformFetchedSettings(fetchedSettings) {
   return settingsWithToggle;
 }
 
-function serializeAutoWakeupSchedules(autowakeupSchedules) {
-  return autowakeupSchedules
-    .map(schedule => `${schedule.time}|${schedule.days.map(d => (d ? '1' : '0')).join('')}`)
-    .join(';');
-}
-
 function isTruthySetting(value) {
   return value === true || value === 1 || value === '1' || value === 'true' || value === 'on';
 }
@@ -212,11 +189,12 @@ function normalizeImportedSettings(data, knownKeys) {
   return { fields, schedules, ignored, count };
 }
 
-function buildSubmitFormData(formData, autowakeupSchedules, restart) {
+function buildSubmitFormData(formData, autowakeupSchedules, restart, importedKeys) {
   const formDataToSubmit = new FormData();
 
   for (const [key, value] of Object.entries(formData)) {
     if (value === undefined || value === null || READ_ONLY_KEYS.includes(key)) continue;
+    if (IMPORT_ONLY_KEYS.includes(key) && !importedKeys.has(key)) continue;
 
     if (CHECKBOX_KEYS.includes(key)) {
       // Always explicit: the firmware leaves absent booleans untouched (GM-214).
@@ -257,11 +235,13 @@ function buildSubmitFormData(formData, autowakeupSchedules, restart) {
 export function Settings() {
   const { t } = useLingui();
   const { params } = useRoute();
+  const { route } = useLocation();
   const tab = params.tab || 'general';
   const isFormTab = ['general', 'machine', 'plugins'].includes(tab);
 
   const { profiles } = useProfileList();
   const [submitting, setSubmitting] = useState(false);
+  const [smartDoseSaving, setSmartDoseSaving] = useState(false);
   const [formData, setFormData] = useState({});
   const [currentTheme, setCurrentTheme] = useState('light');
   const [showWifiPassword, setShowWifiPassword] = useState(false);
@@ -271,6 +251,7 @@ export function Settings() {
   ]);
 
   const [importNotice, setImportNotice] = useState(null);
+  const [importedKeys, setImportedKeys] = useState(() => new Set());
 
   const [fetchedSettings, setFetchedSettings] = useState(() => getCachedSettings());
   const [isLoading, setIsLoading] = useState(!fetchedSettings);
@@ -358,6 +339,11 @@ export function Settings() {
     setFormData(prev => ({ ...prev, [key]: value }));
   }, []);
 
+  const onSmartDoseSaved = useCallback((key, value, settings) => {
+    updateSettingsCache(settings);
+    setFormData(prev => ({ ...prev, [key]: value }));
+  }, []);
+
   const addAutoWakeupSchedule = () => {
     setAutoWakeupSchedules([
       ...autowakeupSchedules,
@@ -390,16 +376,36 @@ export function Settings() {
   const onSubmit = useCallback(
     async (e, restart = false) => {
       if (e) e.preventDefault();
+      // Save & Restart and imports skip native validation, and the tank fields are only mounted on the Machine tab.
+      const tankErrors = validateTankCalibration(
+        formData.emptyTankDistance,
+        formData.fullTankDistance,
+      );
+      if (
+        !isLoading &&
+        machine.value.capabilities.ledControl &&
+        (tankErrors.empty || tankErrors.full)
+      ) {
+        if (tab === 'machine') formRef.current.reportValidity();
+        else route('/settings/machine');
+        return;
+      }
+      if (smartDoseSaving || submitting) return;
       setSubmitting(true);
-      const form = formRef.current;
-      const formDataToSubmit = buildSubmitFormData(formData, autowakeupSchedules, restart);
+      const formDataToSubmit = buildSubmitFormData(
+        formData,
+        autowakeupSchedules,
+        restart,
+        importedKeys,
+      );
 
       try {
-        const response = await fetch(form.action, {
-          method: 'post',
+        if (!(await confirmProfileApply(formData))) return;
+        let data = await requestSettings({
+          method: 'POST',
           body: formDataToSubmit,
         });
-        const data = await response.json();
+        if (!restart && data.machineHardwareApplyPending) data = await waitForMachineHardware();
 
         const splitPid = data.pid ? splitPidString(data.pid) : null;
         const buttonFields = data.buttonBehavior ? splitButtons(data.buttonBehavior) : {};
@@ -415,13 +421,24 @@ export function Settings() {
         updateSettingsCache(data);
         setFormData(updatedData);
         setImportNotice(null);
+        setImportedKeys(new Set());
       } catch (error) {
         console.error('Failed to save settings:', error);
+        window.alert(error.message);
       } finally {
         setSubmitting(false);
       }
     },
-    [formData, autowakeupSchedules],
+    [
+      formData,
+      autowakeupSchedules,
+      importedKeys,
+      tab,
+      route,
+      isLoading,
+      smartDoseSaving,
+      submitting,
+    ],
   );
 
   const onExport = useCallback(() => {
@@ -449,6 +466,7 @@ export function Settings() {
       if (!count) throw new Error(t`The file contains no known settings.`);
 
       setFormData(prev => ({ ...prev, ...fields }));
+      setImportedKeys(prev => new Set([...prev, ...Object.keys(fields)]));
       if (schedules) setAutoWakeupSchedules(schedules);
       if (fields.clock24hFormat !== undefined) setClock24h(fields.clock24hFormat);
       if (fields.dashboardLayout !== undefined) setDashboardLayout(fields.dashboardLayout);
@@ -467,6 +485,7 @@ export function Settings() {
     setAutoWakeupSchedules(parseAutoWakeupSchedules(current?.autowakeupSchedules));
     setClock24h(!!current?.clock24hFormat);
     setImportNotice(null);
+    setImportedKeys(new Set());
   }, [fetchedSettings]);
 
   const settingsTabs = [
@@ -632,13 +651,21 @@ export function Settings() {
           (isLoading ? (
             <MachineTabSkeleton />
           ) : (
-            <LazyMachineTab formData={formData} onChange={onChange} setField={setField} />
+            <LazyMachineTab
+              formData={formData}
+              onChange={onChange}
+              setField={setField}
+              profiles={profiles}
+            />
           ))}
         {tab === 'plugins' &&
           (isLoading ? (
             <PluginsTabSkeleton />
           ) : (
             <LazyPluginsTab
+              onSmartDoseSaved={onSmartDoseSaved}
+              onSmartDoseSaving={setSmartDoseSaving}
+              settingsDisabled={submitting}
               formData={formData}
               onChange={onChange}
               autowakeupSchedules={autowakeupSchedules}
@@ -650,7 +677,10 @@ export function Settings() {
           ))}
 
         {isFormTab && (
-          <StickyFormFooter submitting={submitting} onRestart={e => onSubmit(e, true)} />
+          <StickyFormFooter
+            submitting={submitting || smartDoseSaving}
+            onRestart={e => onSubmit(e, true)}
+          />
         )}
       </form>
 

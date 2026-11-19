@@ -105,6 +105,23 @@ void test_tare_ids() {
     TEST_ASSERT_FALSE(scalewire::parseTare(m, id));
 }
 
+void test_volume_reset_ids() {
+    LineReader r;
+    Message m;
+    uint32_t id = 1;
+    TEST_ASSERT_TRUE(roundTrip("E,623001", m, r));
+    TEST_ASSERT_TRUE(scalewire::parseVolumeReset(m, id));
+    TEST_ASSERT_EQUAL_UINT32(623001, id);
+    uint32_t tareId = 5;
+    TEST_ASSERT_FALSE(scalewire::parseTare(m, tareId)); // $E never reads as a tare
+    TEST_ASSERT_EQUAL_UINT32(5, tareId);
+    TEST_ASSERT_TRUE(roundTrip("E", m, r));
+    TEST_ASSERT_TRUE(scalewire::parseVolumeReset(m, id));
+    TEST_ASSERT_EQUAL_UINT32(0, id);
+    TEST_ASSERT_TRUE(roundTrip("Z,9", m, r));
+    TEST_ASSERT_FALSE(scalewire::parseVolumeReset(m, id));
+}
+
 void test_one_cell_counts_as_no_scale() {
     // Only one cell good: the display must get the stock "unavailable" message, not half a weight.
     LineReader r;
@@ -207,6 +224,7 @@ int main(int, char **) {
     RUN_TEST(test_unavailable_is_stock_sentinel);
     RUN_TEST(test_weight_without_ack_field);
     RUN_TEST(test_tare_ids);
+    RUN_TEST(test_volume_reset_ids);
     RUN_TEST(test_one_cell_counts_as_no_scale);
     RUN_TEST(test_bad_weight_lines_rejected);
     RUN_TEST(test_config_round_trip);

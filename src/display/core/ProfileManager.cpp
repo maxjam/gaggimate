@@ -105,7 +105,7 @@ void ProfileManager::migrate(const std::vector<String> &existingProfiles) {
     Profile profile{};
     profile.id = generateShortID();
     profile.label = "Default";
-    profile.description = "Default profile";
+    profile.description = "Automatically created default profile - runs the machine as before";
     profile.temperature = 93;
     profile.type = "standard";
     Phase brewPhase{};
@@ -238,6 +238,10 @@ bool ProfileManager::deleteProfile(const String &uuid) {
         ESP_LOGW("ProfileManager", "Refusing to delete system profile %s", uuid.c_str());
         return false;
     }
+    if (uuid == _settings.getSelectedProfile()) {
+        ESP_LOGW("ProfileManager", "Refusing to delete selected profile %s", uuid.c_str());
+        return false;
+    }
     removeFavoritedProfile(uuid);
     if (_settings.getStartupProfile() == uuid) {
         _settings.setStartupProfile("");
@@ -295,12 +299,18 @@ uint8_t *ProfileManager::loadProfileImage(const String &uuid) {
     return pixels;
 }
 
-void ProfileManager::selectProfile(const String &uuid) {
+bool ProfileManager::selectProfile(const String &uuid) {
+    Profile profile{};
+    if (!loadProfile(uuid, profile)) {
+        ESP_LOGW("ProfileManager", "Refusing to select unreadable profile %s", uuid.c_str());
+        return false;
+    }
     ESP_LOGI("ProfileManager", "Selecting profile %s", uuid.c_str());
     _settings.setSelectedProfile(uuid);
-    selectedProfile = Profile{};
-    loadSelectedProfile(selectedProfile);
+    selectedProfile = std::move(profile);
+    selectedProfile.selected = true;
     _plugin_manager->trigger("profiles:profile:select", "id", uuid);
+    return true;
 }
 
 Profile &ProfileManager::getSelectedProfile() { return selectedProfile; }

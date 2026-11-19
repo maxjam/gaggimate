@@ -7,6 +7,10 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: ja\n"
 
+#: src/components/MachineProfileControl.jsx
+msgid "-- Incompatible --"
+msgstr "-- 非対応 --"
+
 #: src/pages/Statistics/components/StatisticsSearchHelp.jsx
 msgid "(exact)"
 msgstr "（完全一致）"
@@ -55,6 +59,11 @@ msgstr "{0, plural, other {# プロファイル}}"
 msgid "{0, plural, one {# shot} other {# shots}}"
 msgstr "{0, plural, other {# ショット}}"
 
+#. placeholder {0}: formatStopReason(target.type)
+#: src/pages/ShotAnalyzer/services/analyzer/skippedPhases.js
+msgid "{0} (skipped)"
+msgstr "{0}(スキップ)"
+
 #: src/pages/Statistics/components/toolbar/helpers.js
 msgid "{candidateCount, plural, one {# candidate} other {# candidates}}"
 msgstr "{candidateCount, plural, other {# 件の候補}}"
@@ -70,6 +79,10 @@ msgstr "{diffWeeks, plural, other {# 週間前}}"
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotMainInfoCard.jsx
 msgid "{diffYears, plural, one {# year ago} other {# years ago}}"
 msgstr "{diffYears, plural, other {# 年前}}"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "{historyCount, plural, one {This will permanently delete the only shot on the device. This cannot be undone.} other {This will permanently delete all # shots from the device. This cannot be undone.}}"
+msgstr "{historyCount, plural, other {デバイス上のショット # 件をすべて完全に削除します。この操作は元に戻せません。}}"
 
 #: src/app/ConnectionGate.jsx
 msgid "{host} isn't answering. Make sure the machine is on and your phone is on the same Wi-Fi network."
@@ -99,13 +112,21 @@ msgstr "{pending} は次回アプリを離れたときにインストールさ�
 msgid "{recentShotCount, plural, one {# shot} other {# shots}}"
 msgstr "{recentShotCount, plural, other {# ショット}}"
 
-#: src/pages/Settings/tabs/SystemTab.jsx
-msgid "{rssi}dB (Roundtrip: {lat} ms, Resends: {rtx})"
-msgstr "{rssi}dB（往復: {lat} ms、再送: {rtx}）"
-
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "{scaleName} disconnected"
 msgstr "{scaleName} の接続が切れました"
+
+#: src/pages/Settings/PatchNotes.jsx
+msgid "{total, plural, one {# commit} other {# commits}}"
+msgstr "{total, plural, other {# 件のコミット}}"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "{totalFilteredItems, plural, one {Delete # shot} other {Delete # shots}}"
+msgstr "{totalFilteredItems, plural, other {# 件のショットを削除}}"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "{totalFilteredItems, plural, one {This will permanently delete the # shot matching your current search and filters. This cannot be undone.} other {This will permanently delete the # shots matching your current search and filters (across all pages). This cannot be undone.}}"
+msgstr "{totalFilteredItems, plural, other {現在の検索とフィルターに一致するショット # 件を完全に削除します(すべてのページが対象)。この操作は元に戻せません。}}"
 
 #: src/pages/ShotHistory/index.jsx
 msgid "{totalFilteredItems} of {historyCount} shots"
@@ -143,6 +164,14 @@ msgstr "マシンで抽出が開始されました。"
 msgid "A cleaning warning is shown once either interval is reached; set an interval to 0 to turn it off. Running the cleaning profile to the end marks it complete."
 msgstr "いずれかの間隔に達するとクリーニングの警告が表示されます。間隔を 0 にするとオフになります。クリーニングプロファイルを最後まで実行すると完了として記録されます。"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "A few brew profiles come pre-installed for use after configuring your machine:"
+msgstr "マシンの設定後に使用できる抽出プロファイルがいくつかプリインストールされています:"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "A few profiles come pre-installed so you can start right away, from a classic 9 bar shot to lever-style pressure curves:"
+msgstr "すぐに始められるよう、クラシックな 9 bar のショットからレバー式の圧力カーブまで、いくつかのプロファイルがプリインストールされています:"
+
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "A given alpha behaves faster in time at 80 SPS because it is applied more often. Tune the two alpha values independently for your installed sample rate. Changing sample rate resets both values to 0.80 at 10 SPS or 0.40 at 80 SPS as sensible starting points."
 msgstr "同じ alpha 値でも 80 SPS ではより頻繁に適用されるため、時間的には速く反応します。2 つの alpha 値は、使用するサンプルレートに合わせてそれぞれ調整してください。サンプルレートを変更すると、妥当な初期値として両方の値が 10 SPS では 0.80、80 SPS では 0.40 にリセットされます。"
@@ -155,7 +184,7 @@ msgstr "アクセスポイントのパスワード"
 msgid "Actions for {label} profile"
 msgstr "{label} プロファイルの操作"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Activate this if your coffee machine is equipped with momentary buttons. A momentary button set to Brew or a profile starts a flush instead when held."
 msgstr "コーヒーマシンにモメンタリーボタンが付いている場合は有効にしてください。抽出またはプロファイルに設定したモメンタリーボタンを長押しすると、代わりにフラッシュが始まります。"
 
@@ -246,6 +275,18 @@ msgctxt "dashboard view"
 msgid "Advanced"
 msgstr "詳細"
 
+#: src/components/MachineProfileFields.jsx
+msgid "Advanced hardware settings"
+msgstr "ハードウェアの詳細設定"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "After the restart, reconnect to your Wi-Fi network and open Settings → Machine to configure your machine before use."
+msgstr "再起動後、Wi-Fi ネットワークに再接続し、使用前に 設定 → マシン でマシンを設定してください。"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Alba add-on"
+msgstr "Alba アドオン"
+
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Alba Settings"
 msgstr "Alba 設定"
@@ -285,6 +326,10 @@ msgstr "利用可能なパネルはすべて表示されています。"
 #: src/pages/ShotAnalyzer/components/analysisTable/ColumnControls.jsx
 msgid "All Metrics"
 msgstr "すべてのメトリクス"
+
+#: src/pages/Settings/PatchNotes.jsx
+msgid "All nightly changes"
+msgstr "Nightly のすべての変更"
 
 #: src/pages/ShotHistory/index.jsx
 msgid "All Shots"
@@ -327,6 +372,14 @@ msgstr "アプリ設定"
 msgid "Appearance"
 msgstr "外観"
 
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Apply Preset"
+msgstr "プリセットを適用"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Applying and waiting for controller…"
+msgstr "適用してコントローラーを待機中…"
+
 #: src/pages/ShotAnalyzer/components/library/LibraryPanel.jsx
 msgid "Are you sure you want to delete \"{itemName}\"?"
 msgstr "「{itemName}」を削除してもよろしいですか？"
@@ -334,10 +387,6 @@ msgstr "「{itemName}」を削除してもよろしいですか？"
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "At how many bars should the pump assist stop. This makes it so the pump will only run when steam is flowing."
 msgstr "ポンプアシストを停止する圧力（bar）。スチームが出ているときだけポンプが動作するようになります。"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "At most one pulse per this many seconds (minimum 5)."
-msgstr ""
 
 #: src/services/VisualizerService.js
 msgid "Authentication failed - please check your username and password"
@@ -387,6 +436,10 @@ msgstr "オートチューン失敗"
 #: src/pages/Settings/tabs/CalibrationTab.jsx
 msgid "Autotune in Progress"
 msgstr "オートチューン実行中"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Available"
+msgstr "利用可能"
 
 #: src/pages/Statistics/components/PhaseStatistics.jsx
 msgid "Average target value and deviation"
@@ -484,10 +537,6 @@ msgstr "平均パック抵抗"
 msgid "Avg. Pump Flow"
 msgstr "平均ポンプ流量"
 
-#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
-msgid "Avg. Pump Power"
-msgstr "平均ポンプ出力"
-
 #: src/pages/Statistics/components/MetricsTable.jsx
 msgid "Avg. Target Temperature"
 msgstr "平均目標温度"
@@ -508,6 +557,7 @@ msgstr "平均重量流量"
 #: src/pages/ProfileEdit/ExtendedProfileForm.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 #: src/pages/Settings/tabs/SystemTab.jsx
+#: src/pages/SetupWizard/index.jsx
 msgid "Back"
 msgstr "戻る"
 
@@ -557,13 +607,21 @@ msgstr "豆"
 msgid "Bitter"
 msgstr "苦味"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "BLDC Pump Settings"
 msgstr "BLDC ポンプ設定"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Block steam boiler refill when Alba reports a low reservoir level or its reading is unavailable. Leave off if no reservoir distance sensor is installed."
+msgstr "Alba が水タンクの残量低下を報告した場合、またはその値を取得できない場合に、スチームボイラーへの給水をブロックします。水タンクの距離センサーを取り付けていない場合はオフのままにしてください。"
 
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "Bluetooth Devices"
 msgstr "Bluetooth デバイス"
+
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Bluetooth, {rssi}dB (Roundtrip: {lat} ms, Resends: {rtx})"
+msgstr "Bluetooth、{rssi}dB（往復: {lat} ms、再送: {rtx}）"
 
 #: src/app/notifications.js
 msgid "Boiler at {temperature} °C"
@@ -592,11 +650,11 @@ msgctxt "predictive scale delay"
 msgid "Brew"
 msgstr "抽出"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Brew button"
 msgstr "抽出ボタン"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Brew Button Behavior"
 msgstr "抽出ボタンの動作"
 
@@ -620,6 +678,10 @@ msgstr "抽出フェーズ"
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Brew phases configuration"
 msgstr "抽出フェーズの設定"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Brew PID Values"
+msgstr "抽出の PID 値"
 
 #: src/components/OverviewChart.jsx
 msgid "Brew Progress - {windowSeconds}s View"
@@ -659,6 +721,10 @@ msgstr "構築"
 #: src/pages/Statistics/components/statisticsView/StatisticsView.jsx
 msgid "Build and show Shot Charts"
 msgstr "ショットチャートを作成して表示"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Building pressure…"
+msgstr "加圧中…"
 
 #: src/pages/ProfileList/index.jsx
 msgid "Built-in profile, can be edited but not deleted"
@@ -705,10 +771,17 @@ msgstr "{name} に接続できません"
 #: src/app/MachineSetup.jsx
 #: src/components/PumpFlowCalibration/Footer.jsx
 #: src/components/VisualizerUploadModal.jsx
+#: src/pages/SetupWizard/MachineStep.jsx
 #: src/pages/ShotAnalyzer/components/shotChart/controls/chartReplayControls.jsx
+#: src/pages/ShotHistory/ConfirmDeleteModal.jsx
+#: src/pages/ShotHistory/index.jsx
 #: src/pages/ShotHistory/ShotNotesCard.jsx
 msgid "Cancel"
 msgstr "キャンセル"
+
+#: src/pages/ShotHistory/ConfirmDeleteModal.jsx
+msgid "Cancel deletion"
+msgstr "削除を中止"
 
 #: src/app/MachineSetup.jsx
 msgid "Cancel renaming"
@@ -730,6 +803,10 @@ msgstr "このブラウザーはキャンバスのキャプチャに対応して
 msgid "Canvas export is not supported in this environment."
 msgstr "この環境ではキャンバスのエクスポートはサポートされていません。"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Caution: pressurized hot water"
+msgstr "注意: 加圧された熱湯"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "celsius"
@@ -743,6 +820,10 @@ msgstr "チャートとメトリクス"
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Chart First"
 msgstr "チャート優先"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Check the connection to your machine and try again."
+msgstr "マシンとの接続を確認して、もう一度お試しください。"
 
 #: src/app/ConnectionGate.jsx
 msgid "Choose another machine"
@@ -788,6 +869,8 @@ msgstr "クリックしてライブラリを開きます。下のインポート
 #: src/app/MachineSetup.jsx
 #: src/components/VisualizerUploadModal.jsx
 #: src/pages/Home/BrewConfirmModal.jsx
+#: src/pages/Settings/PatchNotes.jsx
+#: src/pages/ShotHistory/ConfirmDeleteModal.jsx
 msgid "Close"
 msgstr "閉じる"
 
@@ -853,7 +936,7 @@ msgstr "統計ツールバーを折りたたむ"
 msgid "Column Spacing"
 msgstr "列の間隔"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Commutation Gain"
 msgstr "転流ゲイン"
 
@@ -899,6 +982,10 @@ msgstr "比較ショットのメトリクス"
 #: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
 msgid "Compare shots"
 msgstr "ショットを比較"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Configuration Preset"
+msgstr "設定プリセット"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Configure acquisition and filtering, then tare and calibrate each load cell."
@@ -980,13 +1067,13 @@ msgstr "接続中…"
 msgid "Control Column Style"
 msgstr "コントロール列のスタイル"
 
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Controller Connection"
+msgstr "コントローラーの接続"
+
 #: src/app/appSettings.js
 msgid "Controller errors and error-level warnings."
 msgstr "コントローラーのエラーとエラーレベルの警告。"
-
-#: src/pages/Settings/tabs/SystemTab.jsx
-msgid "Controller Signal Strength"
-msgstr "コントローラーの信号強度"
 
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "Controller Version"
@@ -1000,7 +1087,7 @@ msgstr "パネルの縦方向の配置を設定します。上詰めにするか
 msgid "Controls how the last, incomplete row of metrics is laid out: stretch items evenly to fill the row, or keep them aligned to the column grid."
 msgstr "メトリクスの最後の不完全な行の配置を設定します。項目を均等に伸ばして行を埋めるか、列のグリッドに揃えたままにします。"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Convergence Gain"
 msgstr "収束ゲイン"
 
@@ -1012,9 +1099,38 @@ msgstr "Pro に変換"
 msgid "Could not delete calibration profile: {message}"
 msgstr "キャリブレーションプロファイルを削除できませんでした: {message}"
 
+#. placeholder {0}: resp.error
+#: src/pages/ShotHistory/index.jsx
+msgid "Could not delete history: {0}"
+msgstr "履歴を削除できませんでした: {0}"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Could not delete history. Please try again."
+msgstr "履歴を削除できませんでした。もう一度お試しください。"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Could not delete shot {id}. Please try again."
+msgstr "ショット {id} を削除できませんでした。もう一度お試しください。"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Could not export any shots. Please try again."
+msgstr "ショットをエクスポートできませんでした。もう一度お試しください。"
+
+#: src/pages/ProfileEdit/ProfileImageUpload.jsx
+msgid "Could not generate an image."
+msgstr "画像を生成できませんでした。"
+
 #: src/pages/Settings/index.jsx
 msgid "Could not import {importName}: {importMessage}"
 msgstr "{importName} をインポートできませんでした: {importMessage}"
+
+#: src/pages/Settings/PatchNotes.jsx
+msgid "Could not load release notes"
+msgstr "リリースノートを読み込めませんでした"
+
+#: src/pages/ProfileEdit/ProfileImageUpload.jsx
+msgid "Could not load the saved profile."
+msgstr "保存済みのプロファイルを読み込めませんでした。"
 
 #: src/pages/ProfileEdit/ProfileImageUpload.jsx
 msgid "Could not read this image."
@@ -1098,9 +1214,26 @@ msgstr "現在:"
 msgid "Currently Volumetric"
 msgstr "現在は容量制御"
 
+#: src/components/MachineProfileControl.jsx
+#: src/components/MachineProfileFields.jsx
+msgid "Custom"
+msgstr "カスタム"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Custom machine"
+msgstr "カスタムマシン"
+
+#: src/components/MachineProfileFields.jsx
+msgid "Custom resistance (kΩ)"
+msgstr "カスタム抵抗値 (kΩ)"
+
 #: src/components/Navigation.jsx
 msgid "Customize"
 msgstr "カスタマイズ"
+
+#: src/components/MachineProfileFields.jsx
+msgid "Cycle time (seconds)"
+msgstr "サイクル時間（秒）"
 
 #: src/pages/Statistics/components/ActivityHeatmap.jsx
 msgid "Daily average: <0>{dailyAvg} shots</0>"
@@ -1213,7 +1346,7 @@ msgstr "デフォルトのスチーム温度"
 msgid "Default Water Temperature"
 msgstr "デフォルトの給湯温度"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Define behavior for physical buttons when pressed. Make sure they are wired to the buttons header. Pressing the brew and steam buttons together (or a third button wired to both) triggers the water button behavior."
 msgstr "物理ボタンを押したときの動作を設定します。ボタンがボタン用ヘッダーに配線されていることを確認してください。抽出ボタンとスチームボタンを同時に押す（または両方に配線した 3 つ目のボタンを押す）と、給湯ボタンの動作が実行されます。"
 
@@ -1231,6 +1364,10 @@ msgstr "削除"
 msgid "Delete {label} profile"
 msgstr "{label} プロファイルを削除"
 
+#: src/pages/ShotHistory/index.jsx
+msgid "Delete all"
+msgstr "すべて削除"
+
 #: src/pages/ShotAnalyzer/components/library/LibrarySection.jsx
 msgid "Delete All"
 msgstr "すべて削除"
@@ -1239,9 +1376,33 @@ msgstr "すべて削除"
 msgid "Delete all profiles"
 msgstr "すべてのプロファイルを削除"
 
+#: src/pages/ShotHistory/index.jsx
+msgid "Delete all shots"
+msgstr "すべてのショットを削除"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Delete all shots?"
+msgstr "すべてのショットを削除しますか?"
+
 #: src/pages/ShotAnalyzer/components/library/LibraryPanel.jsx
 msgid "Delete failed: {message}"
 msgstr "削除に失敗しました: {message}"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Delete filtered shots"
+msgstr "絞り込んだショットを削除"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Delete filtered shots ({totalFilteredItems})"
+msgstr "絞り込んだショットを削除 ({totalFilteredItems})"
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Delete filtered shots?"
+msgstr "絞り込んだショットを削除しますか?"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Delete imported profile"
+msgstr "インポートしたプロファイルを削除"
 
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Delete phase {phaseNumber}"
@@ -1259,6 +1420,10 @@ msgstr "プロファイルを削除"
 msgid "Delete shot"
 msgstr "ショットを削除"
 
+#: src/components/MachineProfileControl.jsx
+msgid "Delete this imported profile?"
+msgstr "このインポートしたプロファイルを削除しますか？"
+
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Delete this phase"
 msgstr "このフェーズを削除"
@@ -1271,9 +1436,25 @@ msgstr "このプリセットを削除しますか？"
 msgid "Delete this schedule"
 msgstr "このスケジュールを削除"
 
+#. placeholder {0}: targets.length
+#. placeholder {1}: failedIds.join(', ')
+#: src/pages/ShotHistory/index.jsx
+msgid "Deleted {done} of {0} shots. Failed: {1}"
+msgstr "{0} 件中 {done} 件のショットを削除しました。失敗: {1}"
+
 #: src/pages/Settings/PluginCard.jsx
 msgid "Deleted profile"
 msgstr "プロファイルを削除しました"
+
+#. placeholder {0}: progress.current
+#. placeholder {1}: progress.total
+#: src/pages/ShotHistory/ConfirmDeleteModal.jsx
+msgid "Deleting shot {0} of {1}..."
+msgstr "ショットを削除中 ({0}/{1})..."
+
+#: src/pages/ShotHistory/ConfirmDeleteModal.jsx
+msgid "Deleting…"
+msgstr "削除中…"
 
 #: src/pages/Settings/tabs/CleaningSection.jsx
 msgid "Descaling"
@@ -1291,6 +1472,14 @@ msgstr "説明"
 msgid "Deselect {itemName}"
 msgstr "{itemName} の選択を解除"
 
+#: src/pages/Settings/PatchNotes.jsx
+msgid "Details"
+msgstr "詳細"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Detected board"
+msgstr "検出されたボード"
+
 #: src/components/Navigation.jsx
 #: src/pages/Settings/index.jsx
 msgid "Device Settings"
@@ -1304,6 +1493,10 @@ msgstr "差分"
 #: src/pages/ShotAnalyzer/components/analyzerActionBar/ActionBarButtons.jsx
 msgid "Disable compare mode"
 msgstr "比較モードを無効にする"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Disabled"
+msgstr "無効"
 
 #: src/components/PumpFlowCalibration/Footer.jsx
 #: src/pages/Settings/index.jsx
@@ -1349,6 +1542,7 @@ msgid "Do you really want to export all {count} filtered shots? (Shots are downl
 msgstr "絞り込まれた {count} 件のショットをすべてエクスポートしますか？（ショットは 1 件ずつ順番にダウンロードされます。）"
 
 #: src/components/PumpFlowCalibration/Footer.jsx
+#: src/pages/SetupWizard/index.jsx
 msgid "Done"
 msgstr "完了"
 
@@ -1403,6 +1597,15 @@ msgstr "ドラッグして並べ替え"
 #: src/pages/ShotAnalyzer/components/library/AnalyzerPanelSlot.jsx
 msgid "Drop shot or profile JSON here"
 msgstr "ショットまたはプロファイルの JSON をここにドロップ"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Dual boiler"
+msgstr "デュアルボイラー"
+
+#: src/components/MachineProfileFields.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Dual Boiler Hardware"
+msgstr "デュアルボイラーのハードウェア"
 
 #: src/pages/ProfileList/index.jsx
 msgid "Duplicate"
@@ -1514,10 +1717,6 @@ msgstr "ボイラー給水を有効にする"
 msgid "Enable compare mode"
 msgstr "比較モードを有効にする"
 
-#: src/pages/Settings/tabs/HeaterCoordinationSection.jsx
-msgid "Enable heater coordination"
-msgstr "ヒーター協調を有効にする"
-
 #: src/pages/Settings/PluginCard.jsx
 msgid "Enable Home Assistant"
 msgstr "Home Assistant を有効にする"
@@ -1541,6 +1740,10 @@ msgstr "スマートグラインドを有効にする"
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Enable standby display"
 msgstr "スタンバイ画面を有効にする"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Enabled"
+msgstr "有効"
 
 #: src/pages/DashboardSettings/index.jsx
 msgid "Enables compact mode for this panel"
@@ -1567,6 +1770,10 @@ msgstr "このフェーズの名前を入力"
 #: src/pages/ProfileEdit/ProfileMainInformation.jsx
 msgid "Enter a name for this profile"
 msgstr "このプロファイルの名前を入力"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Enter a whole number of millimeters, 0 or more."
+msgstr "ミリメートル単位の整数（0以上）を入力してください。"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Enter the bar rating of the pressure sensor being used"
@@ -1709,9 +1916,17 @@ msgstr "エクスポートに失敗しました: {message}"
 msgid "Export File"
 msgstr "ファイルをエクスポート"
 
+#: src/pages/ShotHistory/index.jsx
+msgid "Export filtered shots"
+msgstr "絞り込んだショットをエクスポート"
+
 #: src/pages/ProfileList/index.jsx
 msgid "Export profile"
 msgstr "プロファイルをエクスポート"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Export saved configuration"
+msgstr "保存した設定をエクスポート"
 
 #: src/pages/Settings/index.jsx
 msgid "Export settings"
@@ -1725,9 +1940,26 @@ msgstr "設定をエクスポート"
 msgid "Export shot data"
 msgstr "ショットデータをエクスポート"
 
+#. placeholder {0}: exported.length
+#. placeholder {1}: targets.length
+#: src/pages/ShotHistory/index.jsx
+msgid "Exported {0} of {1} shots ({failed} failed)."
+msgstr "{1} 件中 {0} 件のショットをエクスポートしました(失敗 {failed} 件)。"
+
+#. placeholder {0}: exportProgress.current
+#. placeholder {1}: exportProgress.total
+#: src/pages/ShotHistory/index.jsx
+msgid "Exporting shot {0} of {1}..."
+msgstr "ショットをエクスポート中 ({0}/{1})..."
+
+#: src/pages/ShotAnalyzer/components/analysisTable/analysisTablePhases.js
 #: src/pages/ShotAnalyzer/utils/columns.js
 msgid "Extended Record"
 msgstr "拡張記録"
+
+#: src/pages/ShotAnalyzer/components/analysisTable/AnalysisTableCells.jsx
+msgid "Extended:"
+msgstr "延長込み:"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "External LED ({extLedPct}%)"
@@ -1776,6 +2008,10 @@ msgstr "フィールド"
 msgid "File export failed."
 msgstr "ファイルのエクスポートに失敗しました。"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Fill the water tank and close the steam knob."
+msgstr "水タンクに水を入れ、スチームノブを閉じてください。"
+
 #: src/pages/ShotAnalyzer/components/library/LibrarySection.jsx
 msgid "Filter library source"
 msgstr "ライブラリのソースで絞り込む"
@@ -1784,6 +2020,10 @@ msgstr "ライブラリのソースで絞り込む"
 msgctxt "process action"
 msgid "Finish"
 msgstr "終了"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Finish and restart"
+msgstr "完了して再起動"
 
 #: src/pages/Home/cards/ProfileCard.jsx
 #: src/pages/Settings/tabs/SystemTab.jsx
@@ -1853,7 +2093,7 @@ msgctxt "action"
 msgid "Flush"
 msgstr "フラッシュ"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgctxt "button behavior"
 msgid "Flush"
 msgstr "フラッシュ"
@@ -1874,6 +2114,14 @@ msgstr "フラッシュを推奨"
 #: src/pages/Home/FlushButton.jsx
 msgid "Flush water"
 msgstr "フラッシュ水量"
+
+#: src/pages/Settings/tabs/HeaterCoordinationSection.jsx
+msgid "For 120 V machines, heater coordination should generally remain enabled. Running the brew and steam heaters simultaneously can overload the circuit, blow a fuse or trip a breaker, and create a fire hazard. Only disable it if the machine and supply circuit are rated to power both heaters together."
+msgstr "120 V のマシンでは、通常ヒーター協調を有効のままにしてください。抽出ヒーターとスチームヒーターを同時に動作させると回路が過負荷になり、ヒューズが切れたりブレーカーが落ちたりして、火災の危険があります。マシンと電源回路が両方のヒーターを同時に動作させる定格を満たしている場合にのみ無効にしてください。"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "For further information on how to use and configure GaggiMate please consult our documentation and guides!"
+msgstr "GaggiMate の使い方や設定方法について詳しくは、ドキュメントとガイドをご覧ください！"
 
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "Forget"
@@ -1911,9 +2159,17 @@ msgctxt "panel view"
 msgid "Full"
 msgstr "フル"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Further Resources"
+msgstr "その他のリソース"
+
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "GaggiMate (GM)"
 msgstr "GaggiMate (GM)"
+
+#: src/pages/SetupWizard/PluginsStep.jsx
+msgid "GaggiMate can connect to your smart home, grinder and more. Enable what you need now; you can always change this later in the settings."
+msgstr "GaggiMate はスマートホームやグラインダーなどと連携できます。必要なものを今すぐ有効にしてください。あとから設定でいつでも変更できます。"
 
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "GaggiMate didn't accept the request. Check the connection and try again."
@@ -1923,17 +2179,33 @@ msgstr "GaggiMate がリクエストを受け付けませんでした。接続�
 msgid "GaggiMate export"
 msgstr "GaggiMate エクスポート"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "GaggiMate is joining {ssid}"
+msgstr "GaggiMate は {ssid} に接続しています"
+
 #: src/pages/Settings/PluginCard.jsx
 msgid "GaggiMate is not affiliated with, endorsed by or supported by Mahlkönig or its parent company, the Hemro Group. Mahlkönig, E64 WS, Grind-by-Sync and Xenia are trademarks of their respective owners."
 msgstr "GaggiMate は、Mahlkönig およびその親会社である Hemro Group とは提携しておらず、承認や支援も受けていません。Mahlkönig、E64 WS、Grind-by-Sync、Xenia は各所有者の商標です。"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "GaggiMate is running its own Wi-Fi network. Pick your home network so you can reach GaggiMate from any device. It connects when it restarts at the end of the setup."
+msgstr "GaggiMate は現在、独自の Wi-Fi ネットワークで動作しています。どのデバイスからも GaggiMate にアクセスできるよう、ご自宅のネットワークを選択してください。セットアップの最後に再起動したときに接続されます。"
 
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "GaggiMate reconnects automatically once the scale is switched on and in range."
 msgstr "スケールの電源が入り、範囲内に入ると GaggiMate は自動的に再接続します。"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "GaggiMate restarts when you finish so it can connect to {joinSsid}. Plugins you enabled start with it."
+msgstr "完了すると GaggiMate は {joinSsid} に接続するため再起動します。有効にしたプラグインも一緒に起動します。"
+
 #: src/app/MachineSetup.jsx
 msgid "gaggimate.local or 192.168.1.20"
 msgstr "gaggimate.local または 192.168.1.20"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Gear pump add-on"
+msgstr "ギアポンプアドオン"
 
 #: src/pages/Settings/index.jsx
 msgid "General"
@@ -1942,6 +2214,14 @@ msgstr "一般"
 #: src/pages/DashboardSettings/index.jsx
 msgid "General Settings"
 msgstr "一般設定"
+
+#: src/pages/ProfileEdit/ProfileImageUpload.jsx
+msgid "Generate"
+msgstr "生成"
+
+#: src/pages/ProfileEdit/ProfileImageUpload.jsx
+msgid "Generate draws a picture from the saved profile."
+msgstr "「生成」は保存済みのプロファイルから画像を作成します。"
 
 #: src/pages/ProfileEdit/ProfileImageUpload.jsx
 msgid "GIF images are not supported. Please use PNG, JPEG, WebP or BMP."
@@ -1954,6 +2234,10 @@ msgstr "全体のメトリクス平均"
 #: src/pages/_404.jsx
 msgid "Go Home"
 msgstr "ホームへ"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Good"
+msgstr "良好"
 
 #: src/pages/ProfileEdit/ProfileMainInformation.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
@@ -2010,13 +2294,25 @@ msgstr "ハードウェア"
 msgid "Hardware Scale"
 msgstr "ハードウェアスケール"
 
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Hardware scales"
+msgstr "ハードウェアスケール"
+
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Headless Version"
+msgstr "Headless のバージョン"
+
+#: src/pages/Settings/tabs/HeaterCoordinationSection.jsx
+msgid "Heater coordination"
+msgstr "ヒーター協調"
+
 #: src/pages/Settings/tabs/HeaterCoordinationSection.jsx
 msgid "Heater Coordination"
 msgstr "ヒーター協調"
 
-#: src/pages/Settings/tabs/HeaterCoordinationSection.jsx
-msgid "Heater handover pause (ms)"
-msgstr "ヒーター切り替え時の休止 (ms)"
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Heater off, waiting for the temperature to rise…"
+msgstr "ヒーター停止中、温度の上昇を待っています…"
 
 #: src/utils/metricDefinitions.js
 msgid "Heater Power"
@@ -2030,9 +2326,25 @@ msgstr "ヒーター出力 (W)"
 msgid "Heater wattage in Watts (e.g. Gaggia Classic: 1360 W, Rancilio Silvia 120V: 950W, Rancilio Silvia 230V: 1100W)."
 msgstr "ヒーターの消費電力（ワット）（例: Gaggia Classic: 1360 W、Rancilio Silvia 120V: 950W、Rancilio Silvia 230V: 1100W）。"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Heating & Pump Settings"
+msgstr "加熱とポンプの設定"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Heating Parameters"
+msgstr "加熱パラメーター"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Heating test"
+msgstr "加熱テスト"
+
 #: src/components/SettingsFormField.jsx
 msgid "Hidden / Available"
 msgstr "非表示 / 利用可能"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Hide"
+msgstr "非表示"
 
 #: src/pages/ShotAnalyzer/components/shotChart/controls/compareControls.jsx
 msgid "Hide compare annotations"
@@ -2105,16 +2417,16 @@ msgid "Hostname"
 msgstr "ホスト名"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
-msgid "How long the brew valve stays open per pulse (50 to 2000)."
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "How many ml/s to pump into the boiler during steaming"
 msgstr "スチーム中にボイラーへ送る水量 (ml/s)"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "HX711 Sample Rate"
 msgstr "HX711 サンプルレート"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "I have read this and the machine is ready"
+msgstr "内容を確認し、マシンの準備ができました"
 
 #: src/pages/Statistics/components/toolbar/subcomponents.jsx
 msgid "ID: {shotId}"
@@ -2128,9 +2440,9 @@ msgstr "待機時の色"
 msgid "Idle Filter Alpha"
 msgstr "待機時フィルター Alpha"
 
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Idle Pressure Release"
-msgstr ""
+#: src/pages/SetupWizard/index.jsx
+msgid "If it can't connect, GaggiMate opens its own network again so you can correct the password in the settings."
+msgstr "接続できない場合、GaggiMate は再び独自のネットワークを開くので、設定でパスワードを修正できます。"
 
 #: src/utils/warnings.js
 msgctxt "warning level"
@@ -2158,6 +2470,10 @@ msgstr "インポート"
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "Import a shot file or select one from your library to start analyzing."
 msgstr "ショットファイルをインポートするか、ライブラリから選択して分析を開始してください。"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Import configuration"
+msgstr "設定をインポート"
 
 #: src/pages/ShotAnalyzer/components/library/libraryImport.js
 msgid "Import failed. Please check the file format."
@@ -2204,7 +2520,7 @@ msgctxt "ramp style"
 msgid "Instant"
 msgstr "即時"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Integral Gain"
 msgstr "積分ゲイン"
 
@@ -2304,6 +2620,10 @@ msgstr "長さ（長い順）"
 msgid "Length (Short)"
 msgstr "長さ（短い順）"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Let's make sure everything is wired up correctly. Make sure the water tank is filled before you start."
+msgstr "すべてが正しく配線されているか確認しましょう。開始する前に水タンクに水が入っていることを確認してください。"
+
 #: src/pages/Settings/PluginCard.jsx
 msgid "Lets an E64 WS start shots with its knob and dial in its grind from the shot time and weight. A grind selects the profile mapped to its recipe, and the grinder's target weight overrides that profile's weight target. Save and restart to apply."
 msgstr "E64 WS のノブでショットを開始し、ショットの時間と重量から挽き目を調整できるようにします。挽くとそのレシピに割り当てられたプロファイルが選択され、グラインダーの目標重量がそのプロファイルの重量目標より優先されます。保存して再起動すると適用されます。"
@@ -2378,6 +2698,10 @@ msgstr "読み込み中"
 msgid "loading candidates"
 msgstr "候補を読み込み中"
 
+#: src/pages/SetupWizard/PluginsStep.jsx
+msgid "Loading plugin settings…"
+msgstr "プラグイン設定を読み込み中…"
+
 #: src/pages/ProfileList/index.jsx
 msgid "Loading profiles"
 msgstr "プロファイルを読み込み中"
@@ -2406,6 +2730,11 @@ msgstr "最長連続記録:"
 msgid "Looking for machines… If yours doesn't show up, add it by its address."
 msgstr "マシンを検索中… 表示されない場合は、アドレスで追加してください。"
 
+#: src/pages/Home/cards/MachineLevelsCard.jsx
+#: src/utils/metricDefinitions.js
+msgid "Low"
+msgstr "低"
+
 #: src/pages/ShotHistory/index.jsx
 msgid "Lowest ID first"
 msgstr "ID の小さい順"
@@ -2428,6 +2757,10 @@ msgctxt "weekday initial: Monday"
 msgid "M"
 msgstr "月"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Machine"
+msgstr "マシン"
+
 #: src/pages/Settings/index.jsx
 msgctxt "settings tab"
 msgid "Machine"
@@ -2436,6 +2769,18 @@ msgstr "マシン"
 #: src/pages/Settings/PluginCard.jsx
 msgid "Machine address for the grinder"
 msgstr "グラインダー用のマシンアドレス"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Machine configuration"
+msgstr "マシン設定"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Machine Configuration"
+msgstr "マシン設定"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Machine configuration required"
+msgstr "マシン設定が必要です"
 
 #: src/app/notifications.js
 msgid "Machine error"
@@ -2449,13 +2794,17 @@ msgstr "マシンのイベント"
 msgid "Machine is ready, wake up to use"
 msgstr "マシンの準備ができました。スリープを解除して使用してください"
 
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Machine not listed? Continue setup and configure it later."
+msgstr "お使いのマシンが一覧にない場合は、セットアップを続けて後で設定してください。"
+
 #: src/app/appSettings.js
 msgid "Machine preheated"
 msgstr "マシンの予熱が完了しました"
 
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Machine Settings"
-msgstr "マシン設定"
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Machine settings saved"
+msgstr "マシン設定を保存しました"
 
 #: src/app/AppSettings.jsx
 #: src/app/MachineSwitcher.jsx
@@ -2481,6 +2830,10 @@ msgstr "圧力を維持"
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "Maintenance & Support"
 msgstr "メンテナンスとサポート"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Make sure the drip tray is in place."
+msgstr "ドリップトレイがセットされていることを確認してください。"
 
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "Make sure to backup your profiles from the profiles screen before updating the display."
@@ -2509,6 +2862,10 @@ msgstr "完了にする"
 #: src/pages/Statistics/components/PhaseStatistics.jsx
 msgid "Max"
 msgstr "最大"
+
+#: src/components/MachineProfileFields.jsx
+msgid "Max brightness"
+msgstr "最大輝度"
 
 #: src/pages/DashboardSettings/index.jsx
 msgid "Max Pressure"
@@ -2558,7 +2915,7 @@ msgstr "最大圧力"
 msgid "Maximum Pressure (0 = Ignore)"
 msgstr "最大圧力（0 = 無視）"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Maximum Pump Power (0 - 1)"
 msgstr "最大ポンプ出力（0 - 1）"
 
@@ -2595,13 +2952,16 @@ msgid "millimeter"
 msgstr "ミリメートル"
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
-#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "milliseconds"
 msgstr "ミリ秒"
 
 #: src/pages/Statistics/components/PhaseStatistics.jsx
 msgid "Min"
 msgstr "最小"
+
+#: src/components/MachineProfileFields.jsx
+msgid "Min brightness"
+msgstr "最小輝度"
 
 #: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
 #: src/pages/ShotAnalyzer/components/analysisTable/ColumnControls.jsx
@@ -2618,7 +2978,7 @@ msgstr "モード"
 msgid "Mode Selector"
 msgstr "モード選択"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Momentary Buttons"
 msgstr "モメンタリーボタン"
 
@@ -2686,6 +3046,10 @@ msgid "Multiple Cards"
 msgstr "複数カード"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Must be larger than the distance to the fill line."
+msgstr "満水ラインまでの距離より大きい値にしてください。"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Must match the physical RATE-jumper configuration on the HX711 board. This setting does not switch the RATE pin."
 msgstr "HX711 基板の RATE ジャンパーの物理的な設定と一致させる必要があります。この設定で RATE ピンが切り替わるわけではありません。"
 
@@ -2713,6 +3077,10 @@ msgstr "{host} の名前"
 msgid "Name for new Preset:"
 msgstr "新しいプリセットの名前:"
 
+#: src/components/MachineProfileControl.jsx
+msgid "Name for the exported configuration"
+msgstr "エクスポートする設定の名前"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Name..."
@@ -2721,6 +3089,14 @@ msgstr "名前..."
 #: src/services/VisualizerService.js
 msgid "Network error: Unable to connect to visualizer.coffee"
 msgstr "ネットワークエラー: visualizer.coffee に接続できません"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Network name (SSID)"
+msgstr "ネットワーク名（SSID）"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Networks nearby"
+msgstr "近くのネットワーク"
 
 #: src/pages/Settings/tabs/CleaningSection.jsx
 msgid "Never"
@@ -2739,6 +3115,7 @@ msgid "Newest First"
 msgstr "新しい順"
 
 #: src/pages/ProfileEdit/ExtendedProfileForm.jsx
+#: src/pages/SetupWizard/index.jsx
 #: src/pages/ShotHistory/index.jsx
 msgid "Next"
 msgstr "次へ"
@@ -2787,6 +3164,10 @@ msgstr "項目が見つかりません。"
 msgid "No more types available"
 msgstr "追加できる種類はもうありません"
 
+#: src/pages/Settings/PatchNotes.jsx
+msgid "No new commits since the installed version"
+msgstr "インストール済みのバージョン以降、新しいコミットはありません"
+
 #: src/pages/ShotHistory/ShotNotesCard.jsx
 msgid "No notes added"
 msgstr "メモはありません"
@@ -2804,6 +3185,7 @@ msgid "No phases"
 msgstr "フェーズなし"
 
 #: src/pages/ProfileEdit/ExtendedProfileForm.jsx
+#: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "No phases yet. Add a phase to configure brewing."
 msgstr "まだフェーズがありません。フェーズを追加して抽出を設定してください。"
 
@@ -2811,9 +3193,13 @@ msgstr "まだフェーズがありません。フェーズを追加して抽出
 msgid "No pinned items found."
 msgstr "固定された項目が見つかりません。"
 
-#: src/pages/ShotAnalyzer/utils/formatting.js
-msgid "No preceding phase"
-msgstr "前のフェーズなし"
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "No pressure sensor was detected."
+msgstr "圧力センサーが検出されませんでした。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "No pressure was measured. Check that the water tank is full, prime the pump and check the pressure sensor wiring."
+msgstr "圧力が計測されませんでした。水タンクが満水であることを確認し、ポンプのプライミングを行い、圧力センサーの配線を確認してください。"
 
 #: src/pages/ShotAnalyzer/components/library/libraryDisplay.js
 msgid "No Profile Loaded"
@@ -2865,7 +3251,7 @@ msgstr "タイムスタンプがありません"
 msgid "No valid gains were produced. Your existing PID settings have been preserved. Try increasing Test Duration or confirm the boiler was cold at start."
 msgstr "有効なゲインが得られませんでした。既存の PID 設定は保持されています。テスト時間を長くするか、開始時にボイラーが冷えていたか確認してください。"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgctxt "button behavior"
 msgid "None"
 msgstr "なし"
@@ -2875,6 +3261,10 @@ msgctxt "relay function"
 msgid "None"
 msgstr "なし"
 
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Not connected"
+msgstr "未接続"
+
 #: src/components/PumpFlowCalibration/Footer.jsx
 msgid "Not connected to the machine"
 msgstr "マシンに接続されていません"
@@ -2882,6 +3272,10 @@ msgstr "マシンに接続されていません"
 #: src/pages/Settings/PluginCard.jsx
 msgid "Not connected to Wi-Fi"
 msgstr "Wi-Fi に接続されていません"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Not detected"
+msgstr "未検出"
 
 #: src/utils/pumpFlowCalibration.js
 msgid "Not enough samples for tp={targetPressure} bar (Measure phase). Was the valve closed enough to reach {targetPressure} bar?"
@@ -2909,6 +3303,18 @@ msgstr "記録なし"
 msgid "Notes"
 msgstr "メモ"
 
+#: src/pages/ShotAnalyzer/components/useShotNotesState.js
+msgid "Notes for shot #{shotId} changed elsewhere. Autosave was stopped to protect those changes. Reopen that shot before editing again."
+msgstr "ショット #{shotId} のメモが別の場所で変更されました。その変更を保護するため、自動保存を停止しました。編集を続ける前に、このショットを開き直してください。"
+
+#: src/pages/ShotAnalyzer/components/useShotNotesState.js
+msgid "Notes for shot #{shotId} could not be loaded. Nothing was overwritten. Check the connection and reopen that shot."
+msgstr "ショット #{shotId} のメモを読み込めませんでした。データは上書きされていません。接続を確認し、このショットを開き直してください。"
+
+#: src/pages/ShotAnalyzer/components/useShotNotesState.js
+msgid "Notes for shot #{shotId} could not be saved. Check the connection and reopen that shot before editing again."
+msgstr "ショット #{shotId} のメモを保存できませんでした。接続を確認し、編集を続ける前にこのショットを開き直してください。"
+
 #: src/app/AppSettings.jsx
 msgid "Notifications"
 msgstr "通知"
@@ -2926,6 +3332,11 @@ msgstr "抽出中"
 msgctxt "pump mode"
 msgid "Off"
 msgstr "オフ"
+
+#: src/pages/Home/cards/MachineLevelsCard.jsx
+#: src/utils/metricDefinitions.js
+msgid "OK"
+msgstr "OK"
 
 #: src/app/FirmwareWarning.jsx
 msgid "Old firmware"
@@ -2990,6 +3401,10 @@ msgstr "プロファイルの操作メニューを開く"
 msgid "Open profiles actions menu"
 msgstr "プロファイル一覧の操作メニューを開く"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Open Settings → Machine to configure your machine before use."
+msgstr "使用前に 設定 → マシン でマシンを設定してください。"
+
 #: src/pages/ShotAnalyzer/components/library/LibraryRow.jsx
 msgid "Open shot actions menu"
 msgstr "ショットの操作メニューを開く"
@@ -3027,6 +3442,10 @@ msgstr "または"
 msgid "Or every"
 msgstr "または毎"
 
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Other network…"
+msgstr "その他のネットワーク…"
+
 #: src/pages/DashboardSettings/index.jsx
 msgid "Pack to top"
 msgstr "上詰め"
@@ -3048,6 +3467,7 @@ msgid "password"
 msgstr "パスワード"
 
 #: src/components/VisualizerUploadModal.jsx
+#: src/pages/SetupWizard/WifiStep.jsx
 msgid "Password"
 msgstr "パスワード"
 
@@ -3064,6 +3484,17 @@ msgstr "リプレイを一時停止"
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotMetricCards.jsx
 msgid "Peak Pressure"
 msgstr "ピーク圧力"
+
+#. placeholder {0}: Number(status.maxPressure).toFixed(1)
+#. placeholder {1}: Number(status.residualPressure).toFixed(1)
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Peak pressure: {0} bar, after release: {1} bar"
+msgstr "ピーク圧力: {0} bar、解放後: {1} bar"
+
+#. placeholder {0}: Number(status.maxPressure).toFixed(1)
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Peak: {0} bar"
+msgstr "ピーク: {0} bar"
 
 #: src/pages/ShotAnalyzer/components/shotChart/controls/compareControls.jsx
 msgid "Per Shot"
@@ -3126,6 +3557,10 @@ msgstr "フェーズ名"
 msgid "Phase navigation"
 msgstr "フェーズのナビゲーション"
 
+#: src/pages/ShotAnalyzer/utils/formatting.js
+msgid "Phase not reached"
+msgstr "フェーズに到達しませんでした"
+
 #: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
 msgid "PHASE REVIEW ADVISED"
 msgstr "フェーズの確認を推奨"
@@ -3144,7 +3579,7 @@ msgstr "フェーズの種類"
 msgid "Phases"
 msgstr "フェーズ"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Physical Buttons"
 msgstr "物理ボタン"
 
@@ -3188,6 +3623,10 @@ msgstr "スチームワンドの下にカップを載せたスケールを置い
 msgid "Play statistics"
 msgstr "統計を再生"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Please confirm the safety notice first."
+msgstr "先に安全上の注意を確認してください。"
+
 #: src/pages/Settings/tabs/CalibrationTab.jsx
 msgid "Please ensure the boiler temperature is below 50°C before starting the autotune process."
 msgstr "オートチューンを開始する前に、ボイラー温度が 50°C 未満であることを確認してください。"
@@ -3206,6 +3645,7 @@ msgstr "Bluetooth スケールを使用するには、GaggiMate をスタンバ�
 
 #: src/pages/Settings/index.jsx
 #: src/pages/Settings/tabs/PluginsTab.jsx
+#: src/pages/SetupWizard/index.jsx
 msgid "Plugins"
 msgstr "プラグイン"
 
@@ -3220,8 +3660,8 @@ msgid "Power"
 msgstr "出力"
 
 #: src/pages/Settings/tabs/HeaterCoordinationSection.jsx
-msgid "Power the heaters one at a time instead of in parallel, brew boiler first. Only needed when the circuit cannot carry both heaters at once (e.g. 120 V); 230 V supplies can run both."
-msgstr "ヒーターを同時ではなく 1 つずつ、抽出ボイラーから順に通電します。回路が両方のヒーターを同時に賄えない場合（例: 120 V）にのみ必要です。230 V 電源なら両方を動かせます。"
+msgid "Power the heaters one at a time instead of in parallel, brew boiler first."
+msgstr "ヒーターを並列ではなく 1 つずつ、抽出ボイラーから順に通電します。"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
@@ -3252,6 +3692,14 @@ msgstr "予熱中..."
 #: src/pages/Home/utils.js
 msgid "Preinfusion"
 msgstr "プレインフュージョン"
+
+#: src/pages/ShotHistory/ConfirmDeleteModal.jsx
+msgid "Preparing deletion..."
+msgstr "削除を準備中..."
+
+#: src/pages/ShotHistory/index.jsx
+msgid "Preparing export..."
+msgstr "エクスポートを準備中..."
 
 #: src/pages/ShotAnalyzer/components/shotChart/constants.js
 msgid "Preparing MP4 export..."
@@ -3312,6 +3760,14 @@ msgstr "圧力が次より上"
 msgid "Pressure below"
 msgstr "圧力が次より下"
 
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Pressure control"
+msgstr "圧力制御"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Pressure did not drop after opening the 3-way valve. Check the valve and its wiring."
+msgstr "三方弁を開いても圧力が下がりませんでした。バルブとその配線を確認してください。"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Pressure in bar"
@@ -3325,13 +3781,21 @@ msgstr "圧力制限"
 msgid "Pressure Offset"
 msgstr "圧力オフセット"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Pressure peaked above 12.5 bar. That works, but you may want to adjust the OPV to around 10–11 bar."
+msgstr "圧力のピークが 12.5 bar を超えました。動作はしますが、OPV を 10〜11 bar 程度に調整することをおすすめします。"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pressure polynomial (a,b,c,d) for vane-/gear-pump internal leakage. Leave at 0,0,0,0 if uncalibrated."
 msgstr "ベーンポンプ/ギアポンプの内部リーク用の圧力多項式 (a,b,c,d)。未キャリブレーションの場合は 0,0,0,0 のままにしてください。"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pressure Sensor Rating"
 msgstr "圧力センサーの定格"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Pressure stayed below 10 bar. Prime the pump and check for leaks and the OPV setting."
+msgstr "圧力が 10 bar 未満のままでした。ポンプのプライミングを行い、漏れと OPV の設定を確認してください。"
 
 #: src/pages/ShotAnalyzer/utils/formatting.js
 msgid "Pressure Stop"
@@ -3344,6 +3808,10 @@ msgstr "圧力目標"
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Pressure Target"
 msgstr "圧力目標"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Pressure test"
+msgstr "圧力テスト"
 
 #: src/pages/ProfileEdit/ExtendedProfileForm.jsx
 #: src/pages/ShotHistory/index.jsx
@@ -3411,9 +3879,17 @@ msgstr "プロファイル A-Z"
 msgid "Profile Chart Height"
 msgstr "プロファイルチャートの高さ"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Profile Creation"
+msgstr "プロファイルの作成"
+
 #: src/pages/ProfileList/index.jsx
 msgid "Profile details for {label}"
 msgstr "{label} のプロファイル詳細"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Profile has been updated - please reload."
+msgstr "プロファイルが更新されました。再読み込みしてください。"
 
 #: src/pages/ShotAnalyzer/services/LibraryService.js
 msgid "Profile ID missing for export"
@@ -3426,6 +3902,10 @@ msgstr "プロファイル画像"
 #: src/pages/ProfileEdit/ProfileMainInformation.jsx
 msgid "Profile Information"
 msgstr "プロファイル情報"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Profile is too large."
+msgstr "プロファイルが大きすぎます。"
 
 #: src/pages/ShotAnalyzer/services/IndexedDBService.js
 msgid "Profile label is required for browser storage"
@@ -3459,11 +3939,19 @@ msgstr "プロファイル統計"
 msgid "Profile type: {typeText}"
 msgstr "プロファイルの種類: {typeText}"
 
+#: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
+msgid "Profile updated"
+msgstr "プロファイル更新"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Profile values"
+msgstr "プロファイルの値"
+
 #: src/pages/ShotHistory/index.jsx
 msgid "Profile Z-A"
 msgstr "プロファイル Z-A"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Profile: {profileLabel}"
 msgstr "プロファイル: {profileLabel}"
 
@@ -3506,10 +3994,6 @@ msgstr "パック抵抗"
 #: src/pages/ShotAnalyzer/utils/constants.js
 msgid "Puck Resistance (s·√bar/mL)"
 msgstr "パック抵抗 (s·√bar/mL)"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Pulse the brew valve when the idle pressure is above this."
-msgstr ""
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Assist Cutoff"
@@ -3571,18 +4055,15 @@ msgstr "ポンプモードの選択"
 msgid "Pump off"
 msgstr "ポンプ停止"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Parameters"
+msgstr "ポンプのパラメーター"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
-#: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
-#: src/pages/ShotHistory/HistoryChart.jsx
 #: src/utils/metricDefinitions.js
 msgid "Pump Power"
 msgstr "ポンプ出力"
-
-#: src/pages/ShotAnalyzer/utils/columns.js
-#: src/pages/ShotAnalyzer/utils/constants.js
-msgid "Pump Power (%)"
-msgstr "ポンプ出力 (%)"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
@@ -3602,7 +4083,7 @@ msgstr "ポンプ圧力モード"
 msgid "Pump pressure mode (PRO feature)"
 msgstr "ポンプ圧力モード（PRO 機能）"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Slip Coefficients"
 msgstr "ポンプスリップ係数"
 
@@ -3748,17 +4229,13 @@ msgstr "基準ショット"
 msgid "Relative time: <0>h</0> (now), <1>h-7d</1> (7 days ago)"
 msgstr "相対時間: <0>h</0>（現在）、<1>h-7d</1>（7 日前）"
 
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Above"
-msgstr ""
+#: src/pages/Settings/PatchNotes.jsx
+msgid "Release notes"
+msgstr "リリースノート"
 
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Interval"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Pulse"
-msgstr ""
+#: src/components/MachineProfileControl.jsx
+msgid "Reload updated profile"
+msgstr "更新されたプロファイルを再読み込み"
 
 #: src/components/VisualizerUploadModal.jsx
 msgid "Remember credentials"
@@ -3793,6 +4270,10 @@ msgstr "フェーズを削除"
 msgid "Remove target"
 msgstr "目標を削除"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Remove the portafilter and place a cup under the group head: hot water comes out of the group head when the valve opens. Keep your hands clear."
+msgstr "ポルタフィルターを外し、グループヘッドの下にカップを置いてください。バルブが開くとグループヘッドからお湯が出ます。手を近づけないでください。"
+
 #: src/components/PumpFlowCalibration/usePumpFlowCalibration.js
 msgid "Removing calibration profile..."
 msgstr "キャリブレーションプロファイルを削除中..."
@@ -3812,6 +4293,14 @@ msgstr "PNG エクスポートをレンダリング中..."
 #: src/pages/ProfileEdit/ProfileImageUpload.jsx
 msgid "Replace image"
 msgstr "画像を置き換え"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Replace these machine settings?"
+msgstr "このマシン設定を置き換えますか？"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Replace this imported profile?"
+msgstr "このインポートしたプロファイルを置き換えますか？"
 
 #: src/pages/ShotAnalyzer/components/shotChart/controls/chartReplayControls.jsx
 msgid "Replay chart"
@@ -3860,6 +4349,14 @@ msgstr "リプレイの画像エクスポートはキャンセルされました
 msgid "Replay recording failed."
 msgstr "リプレイの録画に失敗しました。"
 
+#: src/components/MachineProfileFields.jsx
+msgid "Requires controller restart."
+msgstr "コントローラーの再起動が必要です。"
+
+#: src/components/MachineProfileFields.jsx
+msgid "Requires hardware configuration support."
+msgstr "ハードウェア設定のサポートが必要です。"
+
 #: src/pages/ShotAnalyzer/components/analysisTable/ColumnControls.jsx
 msgid "Reset columns to system defaults?"
 msgstr "列をシステムのデフォルトにリセットしますか？"
@@ -3867,6 +4364,14 @@ msgstr "列をシステムのデフォルトにリセットしますか？"
 #: src/pages/ShotAnalyzer/components/analysisTable/ColumnControls.jsx
 msgid "Reset Defaults"
 msgstr "デフォルトに戻す"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Restart"
+msgstr "再起動"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Restore profile defaults"
+msgstr "プロファイルのデフォルトに戻す"
 
 #: src/components/PumpFlowCalibration/usePumpFlowCalibration.js
 msgid "Restoring previous profile..."
@@ -3876,8 +4381,10 @@ msgstr "以前のプロファイルを復元中..."
 msgid "Resume replay"
 msgstr "リプレイを再開"
 
+#: src/components/MachineProfileControl.jsx
 #: src/components/PumpFlowCalibration/Footer.jsx
 #: src/pages/Settings/tabs/CalibrationTab.jsx
+#: src/pages/SetupWizard/PluginsStep.jsx
 msgid "Retry"
 msgstr "再試行"
 
@@ -3897,6 +4404,14 @@ msgstr "このフェーズの停止理由を確認してください。アルゴ
 msgid "Rules are separated with <0>;</0>. Visual filters and DSL are combined with AND."
 msgstr "ルールは <0>;</0> で区切ります。ビジュアルフィルターと DSL は AND で結合されます。"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Run again"
+msgstr "もう一度実行"
+
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Run Setup Wizard"
+msgstr "セットアップウィザードを実行"
+
 #: src/components/PumpFlowCalibration/Footer.jsx
 msgid "Running shot..."
 msgstr "ショット実行中..."
@@ -3910,11 +4425,6 @@ msgstr "土"
 msgctxt "Sunday, one letter"
 msgid "S"
 msgstr "日"
-
-#: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
-msgctxt "column type, short for start/end"
-msgid "S/E"
-msgstr "開/終"
 
 #: src/pages/ShotAnalyzer/services/analyzer/exitReasons.js
 msgid "Safety timeout"
@@ -4030,6 +4540,11 @@ msgstr "保存済みのスケール"
 msgid "Saving calibration profile..."
 msgstr "キャリブレーションプロファイルを保存中..."
 
+#: src/pages/SetupWizard/index.jsx
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Saving failed"
+msgstr "保存に失敗しました"
+
 #: src/pages/ProfileEdit/ExtendedProfileForm.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Saving profile..."
@@ -4079,6 +4594,14 @@ msgstr "デバイスをスキャン"
 msgid "Scan for nearby Bluetooth scales to connect them to GaggiMate."
 msgstr "近くの Bluetooth スケールをスキャンして GaggiMate に接続します。"
 
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Scanning failed."
+msgstr "スキャンに失敗しました。"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Scanning only works while GaggiMate runs its own Wi-Fi network."
+msgstr "スキャンは GaggiMate が独自の Wi-Fi ネットワークで動作している間のみ可能です。"
+
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "Scanning shot history files..."
 msgstr "ショット履歴ファイルをスキャン中..."
@@ -4107,6 +4630,14 @@ msgstr "ショットの時間をスクラブ"
 msgid "Search {labelLower}..."
 msgstr "{labelLower} を検索..."
 
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Search again"
+msgstr "再検索"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Search failed"
+msgstr "検索に失敗しました"
+
 #: src/pages/Statistics/components/StatisticsSearchHelp.jsx
 msgid "Search help"
 msgstr "検索のヘルプ"
@@ -4128,10 +4659,13 @@ msgstr "検索..."
 msgid "Searching"
 msgstr "検索中"
 
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Searching for networks…"
+msgstr "ネットワークを検索中…"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 #: src/pages/Settings/tabs/GeneralTab.jsx
-#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "seconds"
 msgstr "秒"
 
@@ -4142,6 +4676,10 @@ msgstr "{itemName} を選択"
 #: src/pages/ProfileList/index.jsx
 msgid "Select {label} profile"
 msgstr "{label} プロファイルを選択"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Select a configuration preset"
+msgstr "設定プリセットを選択"
 
 #: src/pages/ProfileList/index.jsx
 msgid "Select a JSON file containing profile data to import"
@@ -4184,9 +4722,21 @@ msgstr "統計モードを選択"
 msgid "Select the type of brew phase"
 msgstr "抽出フェーズの種類を選択"
 
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Select your machine and apply recommended defaults."
+msgstr "マシンを選択して推奨のデフォルト値を適用します。"
+
 #: src/pages/Statistics/components/StatisticsMultiSelectDropdown.jsx
 msgid "Select..."
 msgstr "選択..."
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Selected profile"
+msgstr "選択中のプロファイル"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Selecting a profile prefills the values. Save to apply. Choose Custom to edit machine values."
+msgstr "プロファイルを選択すると値が入力されます。保存すると適用されます。マシンの値を編集するにはカスタムを選択してください。"
 
 #: src/components/PumpFlowCalibration/usePumpFlowCalibration.js
 msgid "Selecting calibration profile..."
@@ -4199,6 +4749,10 @@ msgstr "サーバーエラー - API がこのデータ形式またはアカウ�
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotMainInfoCard.jsx
 msgid "Set rating to {value} of 5"
 msgstr "評価を 5 段階中 {value} に設定"
+
+#: src/pages/Home/cards/WaterLevelCard.jsx
+msgid "Set the tank distances in Settings → Machine to see the level."
+msgstr "水位を表示するには、設定 → マシン でタンクの距離を設定してください。"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Set to 0 to disable feedforward control."
@@ -4221,6 +4775,10 @@ msgstr "最大列数を設定します。小さい画面では、メトリクス
 msgid "Settings"
 msgstr "設定"
 
+#: src/components/MachineProfileControl.jsx
+msgid "Settings differ from this profile. Reload to restore profile defaults."
+msgstr "設定がこのプロファイルと異なります。再読み込みするとプロファイルのデフォルトに戻ります。"
+
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Settings for this phone, like the theme and notifications, are in <0>App Settings</0>. The dashboard layout is in the dashboard's customize view."
 msgstr "テーマや通知など、このスマートフォンの設定は<0>アプリ設定</0>にあります。ダッシュボードのレイアウトはダッシュボードのカスタマイズ画面で設定します。"
@@ -4228,6 +4786,14 @@ msgstr "テーマや通知など、このスマートフォンの設定は<0>ア
 #: src/pages/Settings/index.jsx
 msgid "Settings have not loaded yet."
 msgstr "設定はまだ読み込まれていません。"
+
+#: src/utils/machineProfiles.js
+msgid "Settings saved. Temperature fault detected. Check that both brew and steam NTC sensors are connected and correctly configured. Restart the controller and retry Apply Preset."
+msgstr "設定を保存しました。温度異常を検出しました。抽出用とスチーム用の両方の NTC センサーが接続され、正しく設定されていることを確認してください。コントローラーを再起動し、プリセットの適用をもう一度行ってください。"
+
+#: src/utils/machineProfiles.js
+msgid "Settings saved. Temperature fault detected. Check the temperature sensor and its connection. Restart the controller and retry Apply Preset."
+msgstr "設定を保存しました。温度異常を検出しました。温度センサーとその接続を確認してください。コントローラーを再起動し、プリセットの適用をもう一度行ってください。"
 
 #: src/pages/ShotAnalyzer/components/shotChart/controls/chartReplayControls.jsx
 msgid "Share"
@@ -4386,6 +4952,10 @@ msgstr "ショット / {granularityLabel}"
 msgid "Shots: {shotCount}"
 msgstr "ショット: {shotCount}"
 
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Show"
+msgstr "表示"
+
 #: src/pages/Statistics/components/StatisticsMultiSelectDropdown.jsx
 msgid "Show all {labelLower}"
 msgstr "すべての{labelLower}を表示"
@@ -4435,6 +5005,15 @@ msgstr "最近のショットを表示"
 msgid "Show the control column panels as separate cards, or group them into a single unified card."
 msgstr "コントロール列のパネルを個別のカードとして表示するか、1 つのカードにまとめて表示します。"
 
+#. placeholder {0}: commits.length
+#: src/pages/Settings/PatchNotes.jsx
+msgid "showing the newest {0}"
+msgstr "最新の {0} 件を表示"
+
+#: src/pages/Statistics/components/StatisticsShotCompareSection.jsx
+msgid "Showing up to 100 latest shots. Refine with filters."
+msgstr "最新のショットを最大100件表示しています。フィルターで絞り込めます。"
+
 #: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
 msgid "Shown when the scale briefly loses connection during the brew. In this case, weight is ignored for stop detection for that brew, even if the scale reconnects later."
 msgstr "抽出中にスケールの接続が一時的に途切れたときに表示されます。この場合、後でスケールが再接続しても、その抽出では停止判定に重量が使われません。"
@@ -4461,6 +5040,14 @@ msgstr "シンプルプロファイル"
 msgid "Simple Profile"
 msgstr "シンプルプロファイル"
 
+#: src/pages/Settings/PatchNotes.jsx
+msgid "Since the last update"
+msgstr "前回のアップデート以降"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Single boiler"
+msgstr "シングルボイラー"
+
 #: src/pages/DashboardSettings/index.jsx
 msgid "Single Card"
 msgstr "単一カード"
@@ -4468,6 +5055,18 @@ msgstr "単一カード"
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotDetailsCard.jsx
 msgid "Single Origin, Blend..."
 msgstr "シングルオリジン、ブレンド..."
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Skip"
+msgstr "スキップ"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Skip setup"
+msgstr "セットアップをスキップ"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Skip this to keep using the GaggiMate network. You can add your Wi-Fi later in the settings."
+msgstr "スキップすると GaggiMate のネットワークを引き続き使用します。Wi-Fi は後から設定で追加できます。"
 
 #: src/components/PumpFlowCalibration/api.js
 msgid "slog not ready, waiting for flush... ({attempt})"
@@ -4484,6 +5083,10 @@ msgstr "スロット {slotNumber}"
 #: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
 msgid "SLOW SAMPLING"
 msgstr "低速サンプリング"
+
+#: src/utils/panelDefinitions.js
+msgid "Smart Dosing"
+msgstr "スマートドーシング"
 
 #: src/pages/Settings/PluginCard.jsx
 msgid "Smart Grind Plugin"
@@ -4519,6 +5122,7 @@ msgid "Space evenly"
 msgstr "均等に配置"
 
 #: src/app/AppSettings.jsx
+#: src/pages/Settings/PatchNotes.jsx
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgctxt "update channel"
 msgid "Stable"
@@ -4579,6 +5183,10 @@ msgstr "オートチューンを開始"
 msgid "Start brew anyway?"
 msgstr "それでも抽出を開始しますか？"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Start brewing"
+msgstr "抽出を開始"
+
 #: src/components/PumpFlowCalibration/Footer.jsx
 msgid "Start calibration"
 msgstr "キャリブレーションを開始"
@@ -4591,9 +5199,17 @@ msgstr "開始日"
 msgid "Start from previous setpoint"
 msgstr "前回の設定値から開始"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Start heating test"
+msgstr "加熱テストを開始"
+
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "Start or end compare mode."
 msgstr "比較モードを開始または終了します。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Start pressure test"
+msgstr "圧力テストを開始"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgid "Start Ramp from"
@@ -4603,6 +5219,7 @@ msgstr "ランプの開始値"
 msgid "Start Volumetric"
 msgstr "容量制御を開始"
 
+#: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
 #: src/pages/ShotAnalyzer/components/analysisTable/ColumnControls.jsx
 msgctxt "column type"
 msgid "Start/End"
@@ -4649,15 +5266,23 @@ msgctxt "machine mode"
 msgid "Steam"
 msgstr "スチーム"
 
+#: src/pages/Home/cards/MachineLevelsCard.jsx
+msgid "Steam Boiler"
+msgstr "スチームボイラー"
+
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Steam Boiler (Coming Soon)"
 msgstr "スチームボイラー（近日対応）"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/utils/metricDefinitions.js
+msgid "Steam Boiler Level"
+msgstr "スチームボイラーの水位"
+
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Steam button"
 msgstr "スチームボタン"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Steam Button Behavior"
 msgstr "スチームボタンの動作"
 
@@ -4668,6 +5293,10 @@ msgstr "スチームが 5 分間オンになっています。"
 #: src/app/appSettings.js
 msgid "Steam mode left on"
 msgstr "スチームモードがオンのままです"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Steam PID Values"
+msgstr "スチームの PID 値"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Steam Pump Assist"
@@ -4692,6 +5321,10 @@ msgstr "最後のパネルを下に固定"
 #: src/app/notifications.js
 msgid "Still in steam mode"
 msgstr "まだスチームモードです"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Stop"
+msgstr "停止"
 
 #: src/pages/ShotAnalyzer/components/shotChart/tooltip/StaticTooltipContent.jsx
 msgctxt "shot stop"
@@ -4737,6 +5370,10 @@ msgstr "ストレージとメモリ"
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "Stores imported external shots and profiles locally in this browser on this device. They are not automatically available in other browsers or on other devices."
 msgstr "インポートした外部のショットとプロファイルを、このデバイスのこのブラウザーにローカル保存します。他のブラウザーや他のデバイスでは自動的には利用できません。"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Strong"
+msgstr "強"
 
 #: src/pages/Settings/PluginCard.jsx
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotMainInfoCard.jsx
@@ -4834,6 +5471,10 @@ msgstr "木"
 msgctxt "Tuesday, one letter"
 msgid "T"
 msgstr "火"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Tap a profile to select it."
+msgstr "プロファイルをタップすると選択できます。"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Tare"
@@ -5004,9 +5645,11 @@ msgstr "温度が安定していません"
 msgid "Temperature Offset (°C)"
 msgstr "温度オフセット (°C)"
 
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Temperature Settings"
-msgstr "温度設定"
+#. placeholder {0}: rise.toFixed(1)
+#. placeholder {1}: targetRise.toFixed(1)
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Temperature rise: {0} of {1} °C"
+msgstr "温度上昇: {0} / {1} °C"
 
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "Temporary View (VIEW)"
@@ -5016,13 +5659,53 @@ msgstr "一時表示 (VIEW)"
 msgid "Test Duration (seconds)"
 msgstr "テスト時間（秒）"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Test failed"
+msgstr "テスト失敗"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Test not started"
+msgstr "テスト未実行"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Test passed"
+msgstr "テスト合格"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Test stopped"
+msgstr "テスト停止"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Testing"
+msgstr "テスト"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Thank you for installing GaggiMate!"
+msgstr "GaggiMate をインストールしていただきありがとうございます！"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "Thank you for installing GaggiMate! Your machine is ready for its first shot."
+msgstr "GaggiMate をインストールしていただきありがとうございます！マシンは最初のショットの準備ができました。"
+
+#: src/utils/machineProfiles.js
+msgid "The {profileName} profile is not supported by your current board or firmware."
+msgstr "{profileName} プロファイルは、現在のボードまたはファームウェアではサポートされていません。"
+
 #: src/app/MachineSetup.jsx
 msgid "The app forgets {host}. Nothing changes on the machine, and you can add it again any time."
 msgstr "アプリから {host} を削除します。マシン側には何も変更はなく、いつでも再度追加できます。"
 
-#: src/pages/Settings/PluginCard.jsx
+#: src/components/MachineProfileControl.jsx
+msgid "The applied profile is unavailable. Your saved machine settings are unchanged."
+msgstr "適用されたプロファイルは利用できません。保存済みのマシン設定は変更されていません。"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "The BLDC pump addon was detected in your system. You can change the pump control characteristics using the values below."
 msgstr "システムで BLDC ポンプアドオンが検出されました。以下の値でポンプ制御の特性を変更できます。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The boiler is already hot, so the heater works."
+msgstr "ボイラーがすでに熱いため、ヒーターは動作しています。"
 
 #: src/app/appSettings.js
 msgid "The boiler reached brew temperature."
@@ -5033,12 +5716,16 @@ msgid "The boiler will heat at full power until its temperature inflection is de
 msgstr "ボイラーは温度の変曲点が検出されるまで全出力で加熱し、その後 SIMC チューニング則で PID ゲインを算出します。マシンにより通常 1～3 分かかります。"
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
-msgid "The chart is shown for Pro profiles only"
-msgstr "チャートは Pro プロファイルでのみ表示されます"
+msgid "The chart is not shown for utility profiles"
+msgstr "ユーティリティプロファイルではチャートは表示されません"
 
 #: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
 msgid "The configured or inferred scale delay is unusually high. Review the scale-delay setting before relying on predictive weight stops."
 msgstr "設定または推定されたスケール遅延が異常に大きくなっています。予測重量停止を使う前にスケール遅延の設定を確認してください。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The controller is not connected yet."
+msgstr "コントローラーはまだ接続されていません。"
 
 #: src/app/notifications.js
 msgid "The controller reported an error."
@@ -5052,6 +5739,10 @@ msgstr "ファイルに既知の設定が含まれていません。"
 msgid "The file does not contain a settings object."
 msgstr "ファイルに設定オブジェクトが含まれていません。"
 
+#: src/pages/Settings/PatchNotes.jsx
+msgid "The firmware version is not known yet"
+msgstr "ファームウェアのバージョンはまだ不明です"
+
 #: src/pages/Home/BrewConfirmModal.jsx
 msgid "The following warnings are currently active:"
 msgstr "現在有効な警告:"
@@ -5060,13 +5751,45 @@ msgstr "現在有効な警告:"
 msgid "The grinder reaches GaggiMate at this address, so both need to share a network (the E64 WS is 2.4 GHz only) and the address must not change: reserve it for GaggiMate in your router."
 msgstr "グラインダーはこのアドレスで GaggiMate に接続するため、両方が同じネットワーク上にある必要があり（E64 WS は 2.4 GHz のみ対応）、アドレスが変わってはいけません。ルーターで GaggiMate 用にアドレスを予約してください。"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The heater runs at full power for up to 10 seconds. The test passes as soon as the boiler temperature has risen by a few degrees, which can take up to 30 more seconds on a larger boiler."
+msgstr "ヒーターを最大出力で最長 10 秒間動作させます。ボイラーの温度が数度上昇した時点でテストは合格です。大きなボイラーでは、さらに最長 30 秒かかる場合があります。"
+
 #: src/app/appSettings.js
 msgid "The machine has been in steam mode for 5 minutes."
 msgstr "マシンが 5 分間スチームモードのままです。"
 
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "The machine is busy, try again in a moment."
+msgstr "マシンがビジー状態です。しばらくしてからもう一度お試しください。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The machine is busy. Stop the running process and try again."
+msgstr "マシンがビジー状態です。実行中のプロセスを停止して、もう一度お試しください。"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "The machine restarts and connects to your network. Connect this device to {ssid} as well, then open <0>http://{host}</0> or scan the QR code on the machine's display."
+msgstr "マシンが再起動してネットワークに接続します。このデバイスも {ssid} に接続してから、<0>http://{host}</0> を開くか、マシンのディスプレイに表示される QR コードをスキャンしてください。"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The physical reservoir sensor takes priority."
+msgstr "物理的な水タンクセンサーが優先されます。"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "The plugins you enabled start the next time the machine is switched on."
+msgstr "有効にしたプラグインは、次回マシンの電源を入れたときに起動します。"
+
+#: src/pages/ShotAnalyzer/components/analysisTable/analysisTableModel.js
+msgid "The profile was probably updated since this shot was recorded. You can select the matching profile manually in the profile picker. Tip: For larger profile changes, duplicate the profile and add a version number to its name."
+msgstr "このショットの記録後にプロファイルが更新された可能性があります。プロファイル選択で、対応するプロファイルを手動で選べます。ヒント：大きな変更を加える場合は、プロファイルを複製し、名前にバージョン番号を追加してください。"
+
 #: src/pages/Settings/PluginCard.jsx
 msgid "The profile's dose is saved to the shot history."
 msgstr "プロファイルのドーズがショット履歴に保存されます。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The pump runs with the 3-way valve closed until pressure stops rising. Then the pump stops and the valve opens, which should release the pressure to about 0 bar."
+msgstr "三方弁を閉じた状態で、圧力が上がらなくなるまでポンプを動作させます。その後ポンプが停止してバルブが開き、圧力が約 0 bar まで解放されるはずです。"
 
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "The scale was found, but the Bluetooth connection failed. Try again or restart the scale."
@@ -5075,6 +5798,22 @@ msgstr "スケールは見つかりましたが、Bluetooth 接続に失敗し�
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "The scale wasn't found. Make sure it's switched on and nearby, then scan again."
 msgstr "スケールが見つかりませんでした。電源が入っていて近くにあることを確認してから、もう一度スキャンしてください。"
+
+#: src/pages/ProfileList/index.jsx
+msgid "The selected profile can't be deleted"
+msgstr "選択中のプロファイルは削除できません"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The temperature did not rise. Check the heater wiring, the SSR and the thermal fuses."
+msgstr "温度が上昇しませんでした。ヒーターの配線、SSR、温度ヒューズを確認してください。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The temperature sensor returned an invalid reading. Check the thermocouple and its wiring."
+msgstr "温度センサーが無効な値を返しました。熱電対とその配線を確認してください。"
+
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "The test was stopped before it finished."
+msgstr "テストは完了前に停止されました。"
 
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "The update could not be completed and the device kept its current firmware. Check the network connection and start the update again."
@@ -5112,6 +5851,10 @@ msgstr "この機能は Home Assistant または MQTT に接続し、現在の�
 #: src/pages/Settings/PluginCard.jsx
 msgid "This feature controls a Tasmota Plug to turn off your grinder after the target has been reached."
 msgstr "この機能は Tasmota プラグを制御し、目標に達した後にグラインダーをオフにします。"
+
+#: src/utils/machineProfiles.js
+msgid "This profile includes settings outside machine configuration. Remove them from the profile before importing it."
+msgstr "このプロファイルにはマシン設定以外の設定が含まれています。インポートする前にプロファイルから削除してください。"
 
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "This scale model couldn't be set up."
@@ -5220,6 +5963,10 @@ msgstr "合計重量"
 msgid "Totals"
 msgstr "合計"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Touch Screen Guide"
+msgstr "タッチスクリーンガイド"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgid "Transition duration in {rampUnit}"
 msgstr "遷移時間（{rampUnit}）"
@@ -5257,6 +6004,10 @@ msgstr "目標でオフ"
 msgid "Turn on at start, off at target"
 msgstr "開始時にオン、目標でオフ"
 
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "UART (Roundtrip: {lat} ms, Resends: {rtx})"
+msgstr "UART（往復: {lat} ms、再送: {rtx}）"
+
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Unavailable / uncalibrated"
 msgstr "利用不可 / 未キャリブレーション"
@@ -5273,11 +6024,13 @@ msgstr "お気に入り解除"
 msgid "unknown"
 msgstr "不明"
 
+#: src/pages/Home/cards/MachineLevelsCard.jsx
 #: src/pages/ShotAnalyzer/components/library/LibraryRow.jsx
 #: src/pages/ShotAnalyzer/services/analyzer/exitReasons.js
 #: src/pages/ShotAnalyzer/utils/formatting.js
 #: src/pages/ShotAnalyzer/utils/profiles.js
 #: src/pages/Statistics/components/PhaseStatistics.jsx
+#: src/utils/metricDefinitions.js
 msgid "Unknown"
 msgstr "不明"
 
@@ -5379,6 +6132,10 @@ msgstr "ディスプレイを更新"
 msgid "Update failed"
 msgstr "アップデートに失敗しました"
 
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Update Headless"
+msgstr "Headless を更新"
+
 #: src/app/AppSettings.jsx
 msgid "Updates"
 msgstr "アップデート"
@@ -5394,6 +6151,14 @@ msgstr "ディスプレイのファイルシステムを更新中"
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "Updating Display firmware"
 msgstr "ディスプレイのファームウェアを更新中"
+
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Updating Headless filesystem"
+msgstr "Headless のファイルシステムを更新中"
+
+#: src/pages/Settings/tabs/SystemTab.jsx
+msgid "Updating Headless firmware"
+msgstr "Headless のファームウェアを更新中"
 
 #: src/pages/Statistics/components/toolbar/constants.js
 msgctxt "date basis"
@@ -5440,6 +6205,14 @@ msgstr "<0>></0>、<1>>=</1>、<2><</2>、<3><=</3>、<4>=</4> を使用しま�
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Use 24h Format"
 msgstr "24 時間表示を使用"
+
+#: src/components/MachineProfileControl.jsx
+msgid "Use a different ID for a customized built-in profile."
+msgstr "カスタマイズした組み込みプロファイルには別の ID を使用してください。"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Use Alba reservoir level to interlock steam refill"
+msgstr "Alba の水タンク水位でスチーム給水をインターロックする"
 
 #: src/pages/Statistics/components/toolbar/helpers.js
 msgid "Use shot timestamp only"
@@ -5505,6 +6278,10 @@ msgstr "バルブ閉"
 msgid "Valve open"
 msgstr "バルブ開"
 
+#: src/pages/SetupWizard/TestStep.jsx
+msgid "Valve open, releasing pressure…"
+msgstr "バルブ開放、圧力を解放中…"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Valve state selection"
@@ -5535,6 +6312,10 @@ msgstr "表示"
 msgctxt "import mode badge"
 msgid "VIEW"
 msgstr "VIEW"
+
+#: src/pages/Settings/PatchNotes.jsx
+msgid "View on GitHub"
+msgstr "GitHub で見る"
 
 #: src/pages/ProfileList/index.jsx
 msgid "View statistics for {label} profile"
@@ -5586,6 +6367,18 @@ msgctxt "weekday initial: Wednesday"
 msgid "W"
 msgstr "水"
 
+#: src/components/MachineProfileControl.jsx
+msgid "Wait for the controller to confirm the applied configuration before exporting."
+msgstr "エクスポートする前に、コントローラーが適用された設定を確認するまでお待ちください。"
+
+#: src/pages/SetupWizard/MachineStep.jsx
+msgid "Waiting for controller configuration…"
+msgstr "コントローラーの設定を待機中…"
+
+#: src/utils/machineProfiles.js
+msgid "Waiting for your controller to identify its board. Please keep the machine connected."
+msgstr "コントローラーがボードを識別するのを待っています。マシンを接続したままにしてください。"
+
 #: src/utils/warnings.js
 msgctxt "warning level"
 msgid "Warn"
@@ -5618,11 +6411,11 @@ msgctxt "machine mode"
 msgid "Water"
 msgstr "給湯"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Water button"
 msgstr "給湯ボタン"
 
-#: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/PhysicalButtonsSection.jsx
 msgid "Water Button Behavior"
 msgstr "給湯ボタンの動作"
 
@@ -5634,6 +6427,11 @@ msgstr "抽出した水量"
 msgid "Water Level"
 msgstr "水位"
 
+#: src/pages/Home/cards/MachineLevelsCard.jsx
+#: src/utils/panelDefinitions.js
+msgid "Water Levels"
+msgstr "水位"
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgid "Water pumped"
 msgstr "送水量"
@@ -5642,18 +6440,23 @@ msgstr "送水量"
 msgid "Water pumped in phase"
 msgstr "フェーズの送水量"
 
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode."
-msgstr ""
-
+#: src/pages/Home/cards/MachineLevelsCard.jsx
 #: src/pages/Home/cards/WaterLevelCard.jsx
 #: src/utils/panelDefinitions.js
 msgid "Water Tank"
 msgstr "水タンク"
 
+#: src/utils/metricDefinitions.js
+msgid "Water Tank Level"
+msgstr "水タンクの水位"
+
 #: src/utils/warnings.js
 msgid "Water tank low"
 msgstr "水タンクの残量低下"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Weak"
+msgstr "弱"
 
 #: src/pages/Statistics/components/toolbar/constants.js
 msgctxt "shot source: browser storage"
@@ -5744,6 +6547,10 @@ msgstr "重量に到達"
 msgid "Weight Stop"
 msgstr "重量で停止"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Welcome to GaggiMate"
+msgstr "GaggiMate へようこそ"
+
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "What percentage to run the pump at during steaming"
 msgstr "スチーム中にポンプを動かす割合（%）"
@@ -5756,9 +6563,17 @@ msgstr "オフにすると輝度は 0 に設定されます"
 msgid "While GaggiMate is in the background it keeps watching your machines and shows a permanent “Watching machines” notification. This uses some extra battery."
 msgstr "GaggiMate はバックグラウンドでもマシンの監視を続け、「マシンを監視中」という通知を常に表示します。バッテリーを多少多く消費します。"
 
+#: src/pages/SetupWizard/index.jsx
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Wi-Fi Password"
 msgstr "Wi-Fi パスワード"
+
+#: src/pages/SetupWizard/WifiStep.jsx
+msgid "Wi-Fi passwords have at least {WPA_MIN_PASSWORD} characters."
+msgstr "Wi-Fi のパスワードは {WPA_MIN_PASSWORD} 文字以上です。"
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Wi-Fi SSID"
@@ -5781,6 +6596,18 @@ msgstr "昨日"
 #: src/components/VisualizerUploadModal.jsx
 msgid "Yield:"
 msgstr "抽出量:"
+
+#: src/pages/SetupWizard/index.jsx
+msgid "You can run this wizard again any time from Settings → System."
+msgstr "このウィザードは 設定 → システム からいつでも再実行できます。"
+
+#: src/utils/machineProfiles.js
+msgid "Your {currentBoard} board is not compatible with the {profileName} dual boiler machine. You will need a GaggiMate Max board."
+msgstr "お使いの {currentBoard} ボードは {profileName} デュアルボイラーマシンに対応していません。GaggiMate Max ボードが必要です。"
+
+#: src/utils/machineProfiles.js
+msgid "Your {currentBoard} board is not compatible with the {profileName} single boiler machine. You will need a GaggiMate Pro/Standard board."
+msgstr "お使いの {currentBoard} ボードは {profileName} シングルボイラーマシンに対応していません。GaggiMate Pro/Standard ボードが必要です。"
 
 #: src/components/VisualizerUploadModal.jsx
 msgid "Your credentials are only used for this upload and will be stored locally only if you choose to remember your username."
@@ -5805,3 +6632,43 @@ msgstr "スマートフォンをマシンと同じ Wi-Fi ネットワークに�
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "Your saved shots and profiles directly from the GaggiMate internal storage."
 msgstr "GaggiMate の内部ストレージに保存されたショットとプロファイルを直接表示します。"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "At most one pulse per this many seconds (minimum 5)."
+msgstr ""
+
+#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
+msgid "Avg. Pump Power"
+msgstr "平均ポンプ出力"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "How long the brew valve stays open per pulse (50 to 2000)."
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Idle Pressure Release"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pulse the brew valve when the idle pressure is above this."
+msgstr ""
+
+#: src/pages/ShotAnalyzer/utils/columns.js src/pages/ShotAnalyzer/utils/constants.js
+msgid "Pump Power (%)"
+msgstr "ポンプ出力 (%)"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Above"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Interval"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Pulse"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode."
+msgstr ""

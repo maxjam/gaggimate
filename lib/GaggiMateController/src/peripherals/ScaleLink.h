@@ -25,6 +25,8 @@ class ScaleLink {
     static constexpr uint32_t CONFIG_REFRESH_MS = 5000; // $C repeated (the board applies it only when it changed)
     static constexpr uint32_t TARE_RESEND_MS = 150;     // $Z repeated until the board acknowledges its id...
     static constexpr uint32_t TARE_GIVE_UP_MS = 1500;   // ...for at most this long
+    static constexpr uint32_t END_REPEAT_MS = 100;      // $E sent END_REPEATS times this far apart (no ack)
+    static constexpr uint8_t END_REPEATS = 3;
     static constexpr uint32_t BAUD = 115200;
 
     ScaleLink(uint8_t rxPin, uint8_t txPin, uint8_t uartNum = 2);
@@ -36,6 +38,7 @@ class ScaleLink {
 
     // --- command side (any task) ---
     void sendTare(); // any task: queued, sent and resent by the link task until acknowledged
+    void sendVolumeReset(); // any task: $E, a process boundary that does not zero the scale (meterlink.13)
     void setConfiguration(float factor1, float factor2, uint16_t sps, float idleAlpha, float activeAlpha);
     void setActive(bool active) { _active.store(active); } // brew valve open or pump on, from the controller loop
 
@@ -81,6 +84,10 @@ class ScaleLink {
     std::atomic<uint32_t> _tareReq{0};  // id of the newest tare asked for
     std::atomic<uint32_t> _tareAck{0};  // id the board last acknowledged
     std::atomic<uint32_t> _taresLost{0};
+    std::atomic<uint32_t> _endReq{0};   // id of the newest volume reset asked for
+    uint32_t _endActive = 0;            // id being sent now
+    uint8_t _endSends = END_REPEATS;    // copies of _endActive sent so far
+    uint32_t _endLastMs = 0;
     uint32_t _tareActive = 0;           // id being sent now
     uint32_t _tareFirstMs = 0;
     uint32_t _tareLastMs = 0;

@@ -10,8 +10,11 @@
 //         tare_ack: id of the last $Z the board received (0 = none yet); optional when parsing.
 //     $H,<uptime_s>*XX                                   1 per second
 //   Pro -> scale board
-//     $Z,<id>*XX                                         tare (display hold, shot start, shot saved, web tare).
-//                                                        Resent with the same id until a $W acknowledges it.
+//     $Z,<id>*XX                                         tare (brew about to start, grind start, Smart Dose, tare
+//                                                        buttons). Resent with the same id until a $W acknowledges it.
+//     $E,<id>*XX                                         pump-volume reset without zeroing (a process starts, a
+//                                                        non-shot process ends, a finished shot was saved): the board
+//                                                        closes a finished shot. Sent 3 times, 100 ms apart, same id.
 //     $B,<0|1>*XX                                        brew valve open or pump running: pauses idle zero
 //                                                        tracking and enables the brew-time outlier filter
 //     $C,<factor1>,<factor2>,<sps>,<idle_alpha>,<active_alpha>*XX
@@ -119,6 +122,14 @@ inline int formatConfig(const Config &c, char *out, size_t size) {
 // $Z[,<id>] -> id (0 when the line carries none). False if it is not a tare line.
 inline bool parseTare(const lineproto::Message &m, uint32_t &id) {
     if (m.type[0] != 'Z' || m.type[1] != '\0')
+        return false;
+    id = (m.count >= 1 && m.field[0] != nullptr) ? static_cast<uint32_t>(strtoul(m.field[0], nullptr, 10)) : 0;
+    return true;
+}
+
+// $E[,<id>] -> id (0 when the line carries none). False if it is not a volume-reset line.
+inline bool parseVolumeReset(const lineproto::Message &m, uint32_t &id) {
+    if (m.type[0] != 'E' || m.type[1] != '\0')
         return false;
     id = (m.count >= 1 && m.field[0] != nullptr) ? static_cast<uint32_t>(strtoul(m.field[0], nullptr, 10)) : 0;
     return true;
