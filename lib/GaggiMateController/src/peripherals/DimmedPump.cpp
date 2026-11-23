@@ -134,7 +134,11 @@ void DimmedPump::updatePower(bool freshPressure, float sampleTime, float elapsed
     _pumpedWater += _currentFlow * elapsed;
     _pressureController.update(static_cast<PressureController::ControlMode>(_mode), freshPressure, sampleTime, elapsed);
     if (_mode != ControlMode::POWER) {
-        _power = _controllerPower;
+        // The floor is not fed back: below vane speed it moves no water, so the flow model keeps the raw output.
+        // Fork: the latched 12.5 bar cutoff still stops the pump; the floor never overrides it.
+        const bool floor = (_ctrlPressure > 0.0f || _ctrlFlow > 0.0f) && _controllerPower < _minPower &&
+                           !_pressureController.isCutoffLatched();
+        _power = floor ? _minPower : _controllerPower;
     } else {
         // Re-assert the manual power here in the control task: setPower() runs in the BLE task and a control
         // cycle that was mid-flight when the shot ended could leave the last flow duty in _controllerPower,
@@ -166,6 +170,8 @@ void DimmedPump::setPressureTarget(float targetPressure, float flowLimit) {
 void DimmedPump::setValveState(bool open) { _valveStatus = open; }
 
 void DimmedPump::setBinaryMode(bool binaryMode) { _binaryMode = binaryMode; }
+
+void DimmedPump::setMinPower(float minPower) { _minPower = std::isfinite(minPower) ? std::clamp(minPower, 0.0f, 100.0f) : 0.0f; }
 
 void DimmedPump::setPumpFlowCoeff(float oneBarFlow, float nineBarFlow) {
     _pressureController.setPumpFlowCoeff(oneBarFlow, nineBarFlow);

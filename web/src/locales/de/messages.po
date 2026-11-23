@@ -422,8 +422,8 @@ msgid "Automatic Wakeup Schedule"
 msgstr "Zeitplan für automatisches Aufwecken"
 
 #: src/pages/Settings/PluginCard.jsx
-msgid "Automatically switch to brew mode at specified time(s) of day."
-msgstr "Zu festgelegten Tageszeiten automatisch in den Bezugsmodus wechseln."
+msgid "Automatically switch to brew mode at specified time(s) of day. An optional off time switches back to standby once the machine was idle for two minutes."
+msgstr "Zu festgelegten Tageszeiten automatisch in den Bezugsmodus wechseln. Eine optionale Ausschaltzeit wechselt zurück in den Standby, sobald die Maschine zwei Minuten lang nicht benutzt wurde."
 
 #: src/pages/Settings/tabs/CalibrationTab.jsx
 msgid "Autotune Complete!"
@@ -2969,6 +2969,10 @@ msgctxt "column type"
 msgid "Min/Max"
 msgstr "Min./Max."
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Minimum Pump Power (0 - 1)"
+msgstr "Minimale Pumpenleistung (0 - 1)"
+
 #: src/pages/Settings/PluginCard.jsx
 msgctxt "smart grind mode"
 msgid "Mode"
@@ -5009,6 +5013,7 @@ msgstr "Zeige die Panels der Bedienspalte als separate Karten oder fasse sie in 
 #: src/pages/Settings/PatchNotes.jsx
 msgid "showing the newest {0}"
 msgstr "die neuesten {0} werden angezeigt"
+
 #: src/pages/Statistics/components/StatisticsShotCompareSection.jsx
 msgid "Showing up to 100 latest shots. Refine with filters."
 msgstr "Es werden bis zu 100 der neuesten Shots angezeigt. Mit Filtern eingrenzen."
@@ -5408,6 +5413,14 @@ msgstr "Importmodus auf Im Browser speichern umschalten"
 msgid "Switch import mode to View temporarily"
 msgstr "Importmodus vorübergehend auf Ansehen umschalten"
 
+#: src/pages/Settings/PluginCard.jsx
+msgid "Switch off (optional)"
+msgstr "Ausschalten (optional)"
+
+#: src/pages/Settings/PluginCard.jsx
+msgid "Switch on"
+msgstr "Einschalten"
+
 #: src/pages/DashboardSettings/index.jsx
 msgid "Switch to compact view"
 msgstr "Zur Kompaktansicht wechseln"
@@ -5785,6 +5798,10 @@ msgstr "Das Profil wurde wahrscheinlich seit der Aufzeichnung dieses Shots aktua
 #: src/pages/Settings/PluginCard.jsx
 msgid "The profile's dose is saved to the shot history."
 msgstr "Die Dosis des Profils wird im Shot-Verlauf gespeichert."
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The pump never drops below this while it has a pressure or flow target above zero, so the motor driver does not shut down mid-shot. 0 turns it off."
+msgstr "Die Pumpe fällt nie unter diesen Wert, solange sie ein Druck- oder Flussziel über null hat. So schaltet der Motortreiber während des Bezugs nicht ab. 0 deaktiviert die Funktion."
 
 #: src/pages/SetupWizard/TestStep.jsx
 msgid "The pump runs with the 3-way valve closed until pressure stops rising. Then the pump stops and the valve opens, which should release the pressure to about 0 bar."

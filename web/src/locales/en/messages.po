@@ -422,8 +422,8 @@ msgid "Automatic Wakeup Schedule"
 msgstr "Automatic Wakeup Schedule"
 
 #: src/pages/Settings/PluginCard.jsx
-msgid "Automatically switch to brew mode at specified time(s) of day."
-msgstr "Automatically switch to brew mode at specified time(s) of day."
+msgid "Automatically switch to brew mode at specified time(s) of day. An optional off time switches back to standby once the machine was idle for two minutes."
+msgstr "Automatically switch to brew mode at specified time(s) of day. An optional off time switches back to standby once the machine was idle for two minutes."
 
 #: src/pages/Settings/tabs/CalibrationTab.jsx
 msgid "Autotune Complete!"
@@ -2969,6 +2969,10 @@ msgctxt "column type"
 msgid "Min/Max"
 msgstr "Min/Max"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Minimum Pump Power (0 - 1)"
+msgstr "Minimum Pump Power (0 - 1)"
+
 #: src/pages/Settings/PluginCard.jsx
 msgctxt "smart grind mode"
 msgid "Mode"
@@ -5009,6 +5013,7 @@ msgstr "Show the control column panels as separate cards, or group them into a s
 #: src/pages/Settings/PatchNotes.jsx
 msgid "showing the newest {0}"
 msgstr "showing the newest {0}"
+
 #: src/pages/Statistics/components/StatisticsShotCompareSection.jsx
 msgid "Showing up to 100 latest shots. Refine with filters."
 msgstr "Showing up to 100 latest shots. Refine with filters."
@@ -5408,6 +5413,14 @@ msgstr "Switch import mode to Save to Browser"
 msgid "Switch import mode to View temporarily"
 msgstr "Switch import mode to View temporarily"
 
+#: src/pages/Settings/PluginCard.jsx
+msgid "Switch off (optional)"
+msgstr "Switch off (optional)"
+
+#: src/pages/Settings/PluginCard.jsx
+msgid "Switch on"
+msgstr "Switch on"
+
 #: src/pages/DashboardSettings/index.jsx
 msgid "Switch to compact view"
 msgstr "Switch to compact view"
@@ -5785,6 +5798,10 @@ msgstr "The profile was probably updated since this shot was recorded. You can s
 #: src/pages/Settings/PluginCard.jsx
 msgid "The profile's dose is saved to the shot history."
 msgstr "The profile's dose is saved to the shot history."
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The pump never drops below this while it has a pressure or flow target above zero, so the motor driver does not shut down mid-shot. 0 turns it off."
+msgstr "The pump never drops below this while it has a pressure or flow target above zero, so the motor driver does not shut down mid-shot. 0 turns it off."
 
 #: src/pages/SetupWizard/TestStep.jsx
 msgid "The pump runs with the 3-way valve closed until pressure stops rising. Then the pump stops and the valve opens, which should release the pressure to about 0 bar."

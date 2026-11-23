@@ -422,8 +422,8 @@ msgid "Automatic Wakeup Schedule"
 msgstr "自动唤醒计划"
 
 #: src/pages/Settings/PluginCard.jsx
-msgid "Automatically switch to brew mode at specified time(s) of day."
-msgstr "在每天指定时间自动切换到冲煮模式。"
+msgid "Automatically switch to brew mode at specified time(s) of day. An optional off time switches back to standby once the machine was idle for two minutes."
+msgstr "在指定时间自动切换到冲煮模式。可选的关闭时间会在机器闲置两分钟后切回待机。"
 
 #: src/pages/Settings/tabs/CalibrationTab.jsx
 msgid "Autotune Complete!"
@@ -2969,6 +2969,10 @@ msgctxt "column type"
 msgid "Min/Max"
 msgstr "最小/最大"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Minimum Pump Power (0 - 1)"
+msgstr "最小泵功率 (0 - 1)"
+
 #: src/pages/Settings/PluginCard.jsx
 msgctxt "smart grind mode"
 msgid "Mode"
@@ -5009,6 +5013,7 @@ msgstr "将控制列面板显示为独立卡片，或合并为一张统一卡片
 #: src/pages/Settings/PatchNotes.jsx
 msgid "showing the newest {0}"
 msgstr "显示最新的 {0} 个"
+
 #: src/pages/Statistics/components/StatisticsShotCompareSection.jsx
 msgid "Showing up to 100 latest shots. Refine with filters."
 msgstr "最多显示最近 100 条萃取记录。可使用筛选条件缩小范围。"
@@ -5408,6 +5413,14 @@ msgstr "将导入模式切换为保存到浏览器"
 msgid "Switch import mode to View temporarily"
 msgstr "将导入模式切换为临时查看"
 
+#: src/pages/Settings/PluginCard.jsx
+msgid "Switch off (optional)"
+msgstr "关闭（可选）"
+
+#: src/pages/Settings/PluginCard.jsx
+msgid "Switch on"
+msgstr "开启"
+
 #: src/pages/DashboardSettings/index.jsx
 msgid "Switch to compact view"
 msgstr "切换到紧凑视图"
@@ -5785,6 +5798,10 @@ msgstr "此配置可能在这次萃取记录后已被更新。你可以在配置
 #: src/pages/Settings/PluginCard.jsx
 msgid "The profile's dose is saved to the shot history."
 msgstr "曲线的粉量会保存到萃取历史中。"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The pump never drops below this while it has a pressure or flow target above zero, so the motor driver does not shut down mid-shot. 0 turns it off."
+msgstr "只要泵的压力或流量目标大于零，泵就不会低于此值，这样电机驱动器就不会在萃取途中关闭。设为 0 则关闭此功能。"
 
 #: src/pages/SetupWizard/TestStep.jsx
 msgid "The pump runs with the 3-way valve closed until pressure stops rising. Then the pump stops and the valve opens, which should release the pressure to about 0 bar."
