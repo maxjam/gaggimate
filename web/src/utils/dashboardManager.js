@@ -494,7 +494,7 @@ const DASHBOARD_PRESETS = {
       isMobileViewport()
         ? ['pressure', 'flow', 'temp', 'steamtemp', 'weight']
         : ['pressure', 'flow', 'temp', 'steamtemp', 'weight', 'pumppower', 'heaterpower'],
-    panelOrder: ['mode', 'profile', 'favorites', 'metrics', 'dose', 'watertank', 'action'],
+    panelOrder: ['mode', 'profile', 'favorites', 'metrics', 'dose', 'watertank', 'pumps', 'action'],
     stickyTop: false,
     stickyBottom: true,
     showRecentShots: true,
