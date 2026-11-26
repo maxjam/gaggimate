@@ -118,6 +118,7 @@ class GaggiMateController {
     void setupScaleLink();
     void setupVescCan();
     void sendVescStatus();
+    void logBleHeadroom(unsigned long now);
     // A BLDC pump on either drive: the Velofuso adapter (analog) or the Flipsky over CAN.
     bool hasGearPump() const { return gearpumpAddon != nullptr || vescCan != nullptr; }
     void updateScaleActivity();
@@ -179,6 +180,9 @@ class GaggiMateController {
     unsigned long lastLedHealthCheck = 0;
     unsigned long lastTankLevelSend = 0;
     unsigned long lastFlowFaultLog = 0;
+    unsigned long lastBleHeadroomCheck = 0;
+    uint16_t bleHostPeakLogged = 0;
+    uint16_t bleControllerPeakLogged = 0;
     size_t errorState = ERROR_CODE_NONE;
     char consoleLine[96] = {0};
     size_t consoleLen = 0;

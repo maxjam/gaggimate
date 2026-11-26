@@ -136,15 +136,15 @@ bool Endpoint::encodeFrame(const gm::Frame &frame, uint8_t *buf, size_t bufSize,
     return true;
 }
 
+// Fork (maxa4turbo.17): the ACK is written straight into the buffer. It is a Frame with one field set (ack; id 0
+// and an empty payload list are not encoded), so the bytes are the ones pb_encode() made from a whole Frame.
+// The whole Frame was a local here: 780 bytes on the stack of the task that received the frame, and for
+// Bluetooth that is NimBLE's host task (docs/maxa4turbo-fork.md, "Bluetooth host task stack").
 void Endpoint::sendAck(uint32_t id) {
-    gm::Frame frame = gaggimate_Frame_init_zero;
-    frame.id = 0; // ACKs are never themselves acknowledged
-    frame.ack = id;
-    frame.payloads_count = 0;
     uint8_t buf[16];
-    size_t len = 0;
-    if (encodeFrame(frame, buf, sizeof(buf), &len))
-        _transport.send(buf, len);
+    pb_ostream_t os = pb_ostream_from_buffer(buf, sizeof(buf));
+    if (pb_encode_tag(&os, PB_WT_VARINT, gaggimate_Frame_ack_tag) && pb_encode_varint(&os, id))
+        _transport.send(buf, os.bytes_written);
 }
 
 // A fixed timeout shorter than the real round trip resends every frame that did arrive and overloads a slow link.

@@ -8,6 +8,7 @@
 #include <peripherals/SimplePump.h>
 
 #include <algorithm>
+#include <ble/BleHeadroom.h>
 #include <memory>
 #include <peripherals/NtcThermistor.h>
 #include <utility>
@@ -532,6 +533,7 @@ void GaggiMateController::loop() {
     if (tankLevel != nullptr && now - lastTankLevelSend >= TANK_LEVEL_SEND_INTERVAL_MS) {
         sendTankLevel();
     }
+    logBleHeadroom(now);
     if (errorState != ERROR_CODE_NONE && errorState != ERROR_CODE_TIMEOUT) {
         ESP_LOGW("GaggiMateController", "Error state: %d", errorState);
     }
@@ -542,6 +544,28 @@ void GaggiMateController::loop() {
             handleSerialCommand(c);
         }
     }
+}
+
+// Fork (maxa4turbo.17): one log line whenever one of the two Bluetooth tasks has used at least 64 bytes more of
+// its stack than at the last line (BleHeadroom.h). The peaks only grow, so the lines stop once the link has seen
+// its deepest moment. They are the check on the maxa4turbo.16 reboot loop: there the NimBLE host task ran out of
+// its 4096 bytes while it acknowledged the display's first frame.
+void GaggiMateController::logBleHeadroom(unsigned long now) {
+    static constexpr unsigned long CHECK_INTERVAL_MS = 1000;
+    static constexpr uint16_t STEP_BYTES = 64;
+    if (now - lastBleHeadroomCheck < CHECK_INTERVAL_MS)
+        return;
+    lastBleHeadroomCheck = now;
+    const BleHeadroom headroom = bleHeadroom();
+    if (headroom.hostStackSize == 0)
+        return;
+    if (headroom.hostStackPeak < bleHostPeakLogged + STEP_BYTES &&
+        headroom.controllerStackPeak < bleControllerPeakLogged + STEP_BYTES)
+        return;
+    bleHostPeakLogged = headroom.hostStackPeak;
+    bleControllerPeakLogged = headroom.controllerStackPeak;
+    ESP_LOGI(LOG_TAG, "Bluetooth stacks, most used so far: NimBLE host task %u of %u bytes, controller task %u of %u bytes",
+             headroom.hostStackPeak, headroom.hostStackSize, headroom.controllerStackPeak, headroom.controllerStackSize);
 }
 
 // Reed switch closed (state true) means water present, so report a full-tank distance.
@@ -1127,6 +1151,12 @@ void GaggiMateController::printStatus() {
                      v.trip != vesc::Trip::NONE ? ", still holding the pumps off" : "");
         ESP_LOGI("Controller", "║");
     }
+
+    const BleHeadroom headroom = bleHeadroom();
+    ESP_LOGI("Controller", "╠═ Bluetooth stacks, most used so far");
+    ESP_LOGI("Controller", "║  ├─ NimBLE host task: %u of %u bytes", headroom.hostStackPeak, headroom.hostStackSize);
+    ESP_LOGI("Controller", "║  └─ Controller task: %u of %u bytes", headroom.controllerStackPeak, headroom.controllerStackSize);
+    ESP_LOGI("Controller", "║");
 
     size_t free = heap_caps_get_free_size(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
     size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
