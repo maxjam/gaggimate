@@ -17,9 +17,10 @@
 #include <peripherals/MeterLink.h>
 #include <peripherals/PressureSensor.h>
 #include <peripherals/Pump.h>
-#include <peripherals/ScaleLink.h>
 #include <peripherals/PwmLight.h>
+#include <peripherals/ScaleLink.h>
 #include <peripherals/SimpleRelay.h>
+#include <peripherals/VescCan.h>
 #include <peripherals/addons/GearpumpAddon.h>
 #include <vector>
 
@@ -73,6 +74,20 @@ constexpr bool kDisplayUartLink = false;
 constexpr bool kDisplayUartLink = true;
 #endif
 
+// Fork (meterlink.15): VESC_CAN=1 drives the pump(s) through a Flipsky dual VESC over CAN on J6
+// (ext5 = TX gpio13, ext4 = RX gpio12, SN65HVD230 transceiver) whenever the Velofuso adapter is not found on J6.
+// With the adapter plugged in the build works like meterlink.14 (analog output through the adapter), so the same
+// firmware covers both sides of the hardware swap. The wired display link would use the same two pins; it is
+// off in every meter-link build.
+#ifdef VESC_CAN
+#ifndef METER_LINK_PORT
+#error "VESC_CAN needs a meter-link build: the wired display link uses the same J6 pins"
+#endif
+constexpr bool kVescCan = true;
+#else
+constexpr bool kVescCan = false;
+#endif
+
 class GaggiMateController {
   public:
     explicit GaggiMateController(String version);
@@ -101,6 +116,10 @@ class GaggiMateController {
     void printStatus();
     void setupMeterLink();
     void setupScaleLink();
+    void setupVescCan();
+    void sendVescStatus();
+    // A BLDC pump on either drive: the Velofuso adapter (analog) or the Flipsky over CAN.
+    bool hasGearPump() const { return gearpumpAddon != nullptr || vescCan != nullptr; }
     void updateScaleActivity();
     bool isBondingSwitchOn() const;
 
@@ -146,6 +165,7 @@ class GaggiMateController {
     std::unique_ptr<ScaleLink> scaleLink;
 
     std::unique_ptr<GearpumpAddon> gearpumpAddon;
+    std::unique_ptr<VescCan> vescCan; // fork (meterlink.15): set when the pump drive is the Flipsky over CAN
 
     std::array<char, 128> albaSwTxBuffer{};
     std::array<char, 128> albaSwRxBuffer{};

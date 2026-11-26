@@ -88,6 +88,10 @@ msgstr "{historyCount, plural, other {デバイス上のショット # 件をす
 msgid "{host} isn't answering. Make sure the machine is on and your phone is on the same Wi-Fi network."
 msgstr "{host} が応答しません。マシンの電源が入っていて、スマートフォンが同じ Wi-Fi ネットワークに接続されていることを確認してください。"
 
+#: src/utils/pumpDrive.js
+msgid "{hours} h ago"
+msgstr ""
+
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "{label} severity"
 msgstr "{label} の重要度"
@@ -104,6 +108,10 @@ msgstr "{machineCount} 台保存済み"
 msgid "{metricsColumns, plural, one {# column} other {# columns}}"
 msgstr "{metricsColumns, plural, other {# 列}}"
 
+#: src/utils/pumpDrive.js
+msgid "{minutes} min ago"
+msgstr ""
+
 #: src/app/AppSettings.jsx
 msgid "{pending} installs the next time you leave the app"
 msgstr "{pending} は次回アプリを離れたときにインストールされます"
@@ -115,6 +123,10 @@ msgstr "{recentShotCount, plural, other {# ショット}}"
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "{scaleName} disconnected"
 msgstr "{scaleName} の接続が切れました"
+
+#: src/utils/pumpDrive.js
+msgid "{seconds} s ago"
+msgstr ""
 
 #: src/pages/Settings/PatchNotes.jsx
 msgid "{total, plural, one {# commit} other {# commits}}"
@@ -388,6 +400,10 @@ msgstr "「{itemName}」を削除してもよろしいですか？"
 msgid "At how many bars should the pump assist stop. This makes it so the pump will only run when steam is flowing."
 msgstr "ポンプアシストを停止する圧力（bar）。スチームが出ているときだけポンプが動作するようになります。"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "At most one pulse per this many seconds (minimum 5)."
+msgstr ""
+
 #: src/services/VisualizerService.js
 msgid "Authentication failed - please check your username and password"
 msgstr "認証に失敗しました。ユーザー名とパスワードを確認してください"
@@ -536,6 +552,10 @@ msgstr "平均パック抵抗"
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotMetricCards.jsx
 msgid "Avg. Pump Flow"
 msgstr "平均ポンプ流量"
+
+#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
+msgid "Avg. Pump Power"
+msgstr "平均ポンプ出力"
 
 #: src/pages/Statistics/components/MetricsTable.jsx
 msgid "Avg. Target Temperature"
@@ -762,6 +782,10 @@ msgstr "キャリブレーションをキャンセルしました。"
 #: src/utils/pumpFlowCalibration.js
 msgid "Calibration factor for tp={targetPressure} bar is out of plausible range ({shownFactor}). Did pressure actually reach {targetPressure} bar during the Measure phase?"
 msgstr "tp={targetPressure} bar のキャリブレーション係数が妥当な範囲外です（{shownFactor}）。測定フェーズ中に圧力が実際に {targetPressure} bar に達しましたか？"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "CAN bus is down (bus-off). Check the wiring and the 500K bit rate."
+msgstr ""
 
 #: src/app/ConnectionGate.jsx
 msgid "Can't reach {name}"
@@ -1652,6 +1676,10 @@ msgstr "時間: {duration}s"
 msgid "During the shot, adjust the valve so pressure reaches 1 bar, then 9 bar. Keep it stable during the <0>Measure</0> phases (10 s each)."
 msgstr "ショット中にバルブを調整し、圧力を 1 bar、次に 9 bar に合わせてください。<0>Measure</0>フェーズ（各 10 秒）の間は安定させてください。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Duty {dutyText}"
+msgstr ""
+
 #: src/app/appSettings.js
 msgid "E.g. water tank low, scale battery low."
 msgstr "例: 水タンクの残量低下、スケールのバッテリー残量低下。"
@@ -1996,9 +2024,21 @@ msgstr "絞り込み用のショット/プロファイルの読み込みに失�
 msgid "Failed to load statistics. Please try again."
 msgstr "統計の読み込みに失敗しました。もう一度お試しください。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Fault"
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "FAULT"
+msgstr ""
+
 #: src/pages/ProfileList/index.jsx
 msgid "Favorite"
 msgstr "お気に入り"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "FET °C"
+msgstr ""
 
 #: src/pages/Statistics/components/StatisticsSearchHelp.jsx
 msgid "Fields"
@@ -2416,6 +2456,14 @@ msgstr "HomeKit セットアップコード"
 msgid "Hostname"
 msgstr "ホスト名"
 
+#: src/utils/pumpDrive.js
+msgid "HOT"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "How long the brew valve stays open per pulse (50 to 2000)."
+msgstr ""
+
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "How many ml/s to pump into the boiler during steaming"
 msgstr "スチーム中にボイラーへ送る水量 (ml/s)"
@@ -2439,6 +2487,10 @@ msgstr "待機時の色"
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Idle Filter Alpha"
 msgstr "待機時フィルター Alpha"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Idle Pressure Release"
+msgstr ""
 
 #: src/pages/SetupWizard/index.jsx
 msgid "If it can't connect, GaggiMate opens its own network again so you can correct the password in the settings."
@@ -2515,6 +2567,10 @@ msgstr "未完了"
 msgid "Infusion"
 msgstr "インフュージョン"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Input"
+msgstr ""
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgctxt "ramp style"
 msgid "Instant"
@@ -2576,6 +2632,10 @@ msgstr "{field} の値が無効です: {valueError}"
 msgid "iOS only lets GaggiMate stay connected to your machines while the app is open. Notifications stop a few seconds after you switch to another app or lock your phone."
 msgstr "iOS では、アプリを開いている間しか GaggiMate がマシンとの接続を維持できません。別のアプリに切り替えたりスマートフォンをロックしたりすると、数秒後に通知が停止します。"
 
+#: src/utils/pumpDrive.js
+msgid "just now"
+msgstr ""
+
 #: src/pages/Settings/PluginCard.jsx
 msgid "Keep selected profile"
 msgstr "選択中のプロファイルを維持"
@@ -2599,6 +2659,10 @@ msgstr "alpha が大きいほど反応が速く平滑化は弱くなり、小さ
 #: src/pages/DashboardSettings/index.jsx
 msgid "Last Row Fill"
 msgstr "最終行の配置"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Last stop:"
+msgstr ""
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Last used profile"
@@ -2952,6 +3016,7 @@ msgid "millimeter"
 msgstr "ミリメートル"
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "milliseconds"
 msgstr "ミリ秒"
 
@@ -3004,6 +3069,14 @@ msgstr "その他の操作"
 #: src/pages/Settings/index.jsx
 msgid "More options"
 msgstr "その他のオプション"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Motor °C"
+msgstr ""
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Motor A"
+msgstr ""
 
 #: src/pages/ProfileList/index.jsx
 msgid "Move {label} to bottom"
@@ -3142,6 +3215,10 @@ msgstr "Nightly では新機能をいち早く利用できます。Nightly フ�
 msgid "no answer (timed out)"
 msgstr "応答なし（タイムアウト）"
 
+#: src/utils/pumpDrive.js
+msgid "NO DATA"
+msgstr ""
+
 #: src/pages/Statistics/components/statisticsView/helpers.js
 #: src/pages/Statistics/components/toolbar/helpers.js
 msgid "No date"
@@ -3208,6 +3285,10 @@ msgstr "圧力が計測されませんでした。水タンクが満水である
 #: src/pages/ShotAnalyzer/components/library/libraryDisplay.js
 msgid "No Profile Loaded"
 msgstr "プロファイルが読み込まれていません"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "No pump readings from the controller."
+msgstr ""
 
 #: src/pages/ShotAnalyzer/services/analyzer/shotAnalysis.js
 msgid "No sample data available for analysis."
@@ -3301,6 +3382,10 @@ msgstr "未評価"
 msgid "Not recorded"
 msgstr "記録なし"
 
+#: src/utils/pumpDrive.js
+msgid "NOT USED"
+msgstr ""
+
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotDetailsCard.jsx
 #: src/pages/ShotAnalyzer/shotAnalyzer/ActiveAnalysisView.jsx
 #: src/pages/ShotHistory/ShotNotesCard.jsx
@@ -3336,6 +3421,10 @@ msgstr "抽出中"
 msgctxt "pump mode"
 msgid "Off"
 msgstr "オフ"
+
+#: src/utils/pumpDrive.js
+msgid "OFF"
+msgstr ""
 
 #: src/pages/Home/cards/MachineLevelsCard.jsx
 #: src/utils/metricDefinitions.js
@@ -4000,6 +4089,34 @@ msgid "Puck Resistance (s·√bar/mL)"
 msgstr "パック抵抗 (s·√bar/mL)"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pulse the brew valve when the idle pressure is above this."
+msgstr ""
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Pump {number}"
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} drive is not answering on the CAN bus."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} motor too hot ({temperature} °C)."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} stalled: power on it, but it was not turning."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} VESC fault {fault}."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} was stopped."
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Assist Cutoff"
 msgstr "ポンプアシストのカットオフ"
 
@@ -4054,6 +4171,10 @@ msgstr "ポンプモード"
 msgid "Pump mode selection"
 msgstr "ポンプモードの選択"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Motor Temperature Limit"
+msgstr ""
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Pump off"
@@ -4065,9 +4186,16 @@ msgstr "ポンプのパラメーター"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
+#: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
+#: src/pages/ShotHistory/HistoryChart.jsx
 #: src/utils/metricDefinitions.js
 msgid "Pump Power"
 msgstr "ポンプ出力"
+
+#: src/pages/ShotAnalyzer/utils/columns.js
+#: src/pages/ShotAnalyzer/utils/constants.js
+msgid "Pump Power (%)"
+msgstr "ポンプ出力 (%)"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
@@ -4122,6 +4250,19 @@ msgstr "送水量で停止"
 #: src/pages/ShotAnalyzer/services/analyzer/exitReasons.js
 msgid "Pumped-water target"
 msgstr "送水量の目標"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+#: src/utils/panelDefinitions.js
+msgid "Pumps"
+msgstr ""
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Pumps stopped."
+msgstr ""
+
+#: src/pages/Home/useDashboardState.js
+msgid "Pumps stopped. {pumpStop} Wake the machine to carry on."
+msgstr ""
 
 #: src/pages/Statistics/utils/statisticsSearchDsl.js
 msgid "Query clause {clauseNumber}: {valueError}"
@@ -4233,9 +4374,21 @@ msgstr "基準ショット"
 msgid "Relative time: <0>h</0> (now), <1>h-7d</1> (7 days ago)"
 msgstr "相対時間: <0>h</0>（現在）、<1>h-7d</1>（7 日前）"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Above"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Interval"
+msgstr ""
+
 #: src/pages/Settings/PatchNotes.jsx
 msgid "Release notes"
 msgstr "リリースノート"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Pulse"
+msgstr ""
 
 #: src/components/MachineProfileControl.jsx
 msgid "Reload updated profile"
@@ -4404,6 +4557,10 @@ msgstr "フェーズ {phaseNumber} を確認"
 msgid "Review the stop reason for this phase. The algorithm was only able to identify it after several intermediate calculations."
 msgstr "このフェーズの停止理由を確認してください。アルゴリズムは複数の中間計算を経てようやくこれを特定できました。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "RPM"
+msgstr ""
+
 #: src/pages/Statistics/components/StatisticsSearchHelp.jsx
 msgid "Rules are separated with <0>;</0>. Visual filters and DSL are combined with AND."
 msgstr "ルールは <0>;</0> で区切ります。ビジュアルフィルターと DSL は AND で結合されます。"
@@ -4415,6 +4572,10 @@ msgstr "もう一度実行"
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "Run Setup Wizard"
 msgstr "セットアップウィザードを実行"
+
+#: src/utils/pumpDrive.js
+msgid "RUNNING"
+msgstr ""
 
 #: src/components/PumpFlowCalibration/Footer.jsx
 msgid "Running shot..."
@@ -4667,9 +4828,14 @@ msgstr "検索中"
 msgid "Searching for networks…"
 msgstr "ネットワークを検索中…"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Second Pump (CAN)"
+msgstr ""
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 #: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "seconds"
 msgstr "秒"
 
@@ -5131,6 +5297,10 @@ msgstr "均等に配置"
 msgctxt "update channel"
 msgid "Stable"
 msgstr "Stable"
+
+#: src/utils/pumpDrive.js
+msgid "STALL"
+msgstr ""
 
 #: src/pages/ShotAnalyzer/components/analysisTable/ColumnControls.jsx
 msgctxt "column preset"
@@ -5807,6 +5977,14 @@ msgstr "圧力または流量の目標値が 0 より大きい間、ポンプは
 msgid "The pump runs with the 3-way valve closed until pressure stops rising. Then the pump stops and the valve opens, which should release the pressure to about 0 bar."
 msgstr "三方弁を閉じた状態で、圧力が上がらなくなるまでポンプを動作させます。その後ポンプが停止してバルブが開き、圧力が約 0 bar まで解放されるはずです。"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The pumps run on a Flipsky dual VESC over CAN: pump 1 is VESC ID 18, pump 2 is VESC ID 19. Turn this on once pump 2 is wired and its side of the Flipsky has ID 19. Both pumps then get the same power, and either one stalling, overheating or faulting stops both."
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The pumps stop when a motor's sensor reads this or more (40 to 120). 0 turns the check off."
+msgstr ""
+
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "The scale was found, but the Bluetooth connection failed. Try again or restart the scale."
 msgstr "スケールは見つかりましたが、Bluetooth 接続に失敗しました。もう一度試すか、スケールを再起動してください。"
@@ -6395,6 +6573,10 @@ msgstr "コントローラーの設定を待機中…"
 msgid "Waiting for your controller to identify its board. Please keep the machine connected."
 msgstr "コントローラーがボードを識別するのを待っています。マシンを接続したままにしてください。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Wake the machine to carry on."
+msgstr ""
+
 #: src/utils/warnings.js
 msgctxt "warning level"
 msgid "Warn"
@@ -6455,6 +6637,10 @@ msgstr "送水量"
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgid "Water pumped in phase"
 msgstr "フェーズの送水量"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode."
+msgstr ""
 
 #: src/pages/Home/cards/MachineLevelsCard.jsx
 #: src/pages/Home/cards/WaterLevelCard.jsx
@@ -6648,43 +6834,3 @@ msgstr "スマートフォンをマシンと同じ Wi-Fi ネットワークに�
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "Your saved shots and profiles directly from the GaggiMate internal storage."
 msgstr "GaggiMate の内部ストレージに保存されたショットとプロファイルを直接表示します。"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "At most one pulse per this many seconds (minimum 5)."
-msgstr ""
-
-#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
-msgid "Avg. Pump Power"
-msgstr "平均ポンプ出力"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "How long the brew valve stays open per pulse (50 to 2000)."
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Idle Pressure Release"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Pulse the brew valve when the idle pressure is above this."
-msgstr ""
-
-#: src/pages/ShotAnalyzer/utils/columns.js src/pages/ShotAnalyzer/utils/constants.js
-msgid "Pump Power (%)"
-msgstr "ポンプ出力 (%)"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Above"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Interval"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Pulse"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode."
-msgstr ""

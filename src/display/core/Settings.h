@@ -346,6 +346,10 @@ class Settings {
     float getPressureReleaseBar() const { return pressureReleaseBar.get(); }
     int getPressureReleasePulseMs() const { return pressureReleasePulseMs.get(); }
     int getPressureReleaseIntervalS() const { return pressureReleaseIntervalS.get(); }
+    // Fork (meterlink.15): CAN pump drive (Flipsky dual VESC). Second pump wired, and the motor temperature at
+    // which the pumps are stopped (0 = no check).
+    bool isPumpDual() const { return pumpDual.get(); }
+    int getPumpMotorTempLimit() const { return pumpMotorTempLimit.get(); }
     int getThemeMode() const { return themeMode.get(); }
     int getStatusDisplayMode() const { return statusDisplayMode.get(); } // STATUS_DISPLAY_*
     int getHistoryIndex() const { return historyIndex.get(); }
@@ -470,6 +474,8 @@ class Settings {
     void setPressureReleaseBar(float bar);
     void setPressureReleasePulseMs(int ms);
     void setPressureReleaseIntervalS(int s);
+    void setPumpDual(bool dual);
+    void setPumpMotorTempLimit(int limitC);
     void setThemeMode(int theme_mode);
     void setStatusDisplayMode(int status_display_mode);
     void setHistoryIndex(int history_index);
@@ -602,6 +608,8 @@ class Settings {
     Property<float> pressureReleaseBar{registry, "prb", 3.0f};      // fork: release above this pressure (bar)
     Property<int> pressureReleasePulseMs{registry, "prp", 300};     // fork: brew valve open for this long (ms)
     Property<int> pressureReleaseIntervalS{registry, "pri", 60};    // fork: at most one pulse per this many s
+    Property<bool> pumpDual{registry, "p_dual", false};             // fork: second pump on the Flipsky (VESC ID 19)
+    Property<int> pumpMotorTempLimit{registry, "p_mtl", 80};        // fork: pump stop at this motor temperature, degC
     Property<int> historyIndex{registry, "hi", 0};
 
     Property<bool> heaterCoordinationEnabled{registry, "hco", true};

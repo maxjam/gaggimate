@@ -6,6 +6,7 @@ import { MetricsPanelWrapper } from '../pages/Home/cards/MetricsPanelWrapper.jsx
 import { MachineLevelsCard } from '../pages/Home/cards/MachineLevelsCard.jsx';
 import { WaterLevelCard } from '../pages/Home/cards/WaterLevelCard.jsx';
 import { ActionCard } from '../pages/Home/cards/ActionCard.jsx';
+import { PumpDriveCard } from '../pages/Home/cards/PumpDriveCard.jsx';
 import { msg } from '@lingui/core/macro';
 import { withTranslatedLabel } from './translatedLabel.js';
 
@@ -123,6 +124,15 @@ export const PANEL_DEFINITIONS = [
     props: ds => ({
       waterLevelPercent: ds.waterLevelPercent,
     }),
+  },
+  {
+    // Fork (meterlink.15): both pumps on the Flipsky dual VESC, live from the CAN bus.
+    id: 'pumps',
+    labelMsg: msg`Pumps`,
+    required: false,
+    available: ds => !!ds.pumpDrive,
+    component: PumpDriveCard,
+    props: ds => ({ pumpDrive: ds.pumpDrive }),
   },
   {
     id: 'action',

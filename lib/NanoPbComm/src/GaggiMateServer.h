@@ -31,6 +31,8 @@ class GaggiMateServer {
                                                     float idleFilterAlpha, float activeFilterAlpha)>;
     using LedCallback =
         std::function<void(uint8_t channel, uint8_t brightness, LedEffect effect, uint8_t minBrightness, uint16_t cycleTimeMs)>;
+    // Fork (meterlink.15): CAN pump drive settings from the display.
+    using VescSettingsCallback = std::function<void(bool dualPump, float motorTempLimit)>;
 
     GaggiMateServer();
 
@@ -58,6 +60,9 @@ class GaggiMateServer {
                                       bool cell2Valid = false);
     gm::Payload buildTofMeasurement(uint32_t distance);
     gm::Payload buildError(int code);
+    // Fork (meterlink.15)
+    gm::Payload buildPumpStop(int code, uint8_t pump, int32_t detail);
+    gm::Payload buildVescStatus(const VescStatusReport &report);
 
     // Responses (controller -> display)
     void sendSensorData(float temperature, float pressure, float puckFlow, float pumpFlow, float puckResistance,
@@ -69,6 +74,9 @@ class GaggiMateServer {
                               bool cell2Valid = false);
     void sendTofMeasurement(uint32_t distance);
     void sendError(int code);
+    // Fork (meterlink.15): a pump stop (ERROR_CODE_PUMP_*), delivered reliably; pump readings, fire-and-forget.
+    void sendPumpStop(int code, uint8_t pump, int32_t detail);
+    void sendVescStatus(const VescStatusReport &report);
 
     // Drop the active link; the ping watchdog uses this so the display sees a real disconnect, not an in-band error.
     void disconnect();
@@ -102,6 +110,7 @@ class GaggiMateServer {
     void onHardwareScaleTare(TareCallback cb) { _hardwareScaleTareCb = std::move(cb); }
     void onScaleFactors(ScaleFactorsCallback cb) { _scaleFactorsCb = std::move(cb); }
     void onLedControl(LedCallback cb) { _ledCb = std::move(cb); }
+    void onVescSettings(VescSettingsCallback cb) { _vescSettingsCb = std::move(cb); }
 
   private:
     BleServerTransport _ble;
@@ -132,6 +141,7 @@ class GaggiMateServer {
     TareCallback _hardwareScaleTareCb;
     ScaleFactorsCallback _scaleFactorsCb;
     LedCallback _ledCb;
+    VescSettingsCallback _vescSettingsCb;
 
     void registerHandlers();
     void pushSystemInfo();

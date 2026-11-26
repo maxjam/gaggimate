@@ -13,6 +13,9 @@
 
 constexpr uint32_t ADDON_GEARPUMP = 7;
 constexpr uint32_t ADDON_HW_SCALE = 8;
+// Fork (meterlink.15): the pump drive is a Flipsky dual VESC over CAN. Reported next to ADDON_GEARPUMP, so the
+// display keeps every gear pump setting and adds the pump panel and its two settings.
+constexpr uint32_t ADDON_VESC_CAN = 50;
 
 GaggiMateController::GaggiMateController(String version) : _version(std::move(version)) {
     configs.push_back(GM_STANDARD_REV_1X);
@@ -192,8 +195,11 @@ void GaggiMateController::setup() {
         capabilities.addons[capabilities.addons_count].type = type;
         capabilities.addons_count++;
     };
-    if (this->gearpumpAddon != nullptr) {
+    if (hasGearPump()) {
         addAddon(ADDON_GEARPUMP);
+    }
+    if (this->vescCan != nullptr) {
+        addAddon(ADDON_VESC_CAN);
     }
     if (this->hardwareScale != nullptr && this->hardwareScale->isAvailable()) {
         addAddon(ADDON_HW_SCALE);
@@ -233,6 +239,7 @@ void GaggiMateController::setup() {
         auto dimmedPump = static_cast<DimmedPump *>(pump.get());
         dimmedPump->setBinaryMode(true);
     }
+    setupVescCan();
     if (_config.capabilites.pressure || _config.capabilites.dualBoiler) {
         pressureSensor->setup();
         this->adc->setup();
@@ -398,7 +405,7 @@ void GaggiMateController::setup() {
                 dimmedPump->setPumpFlowPolyCoeffs(settings.a, settings.b, settings.c,
                                                   settings.d); // a, b, c, d are polynomial coefficients
             }
-            if (this->gearpumpAddon != nullptr) {
+            if (hasGearPump()) {
                 dimmedPump->setGains(settings.commutationGain, settings.convergenceGain, settings.integralGain);
                 // Slip model is only meaningful for the positive-displacement gear/rotary-vane pump.
                 dimmedPump->setPumpSlipPolyCoeffs(settings.slipA, settings.slipB, settings.slipC, settings.slipD);
@@ -408,6 +415,16 @@ void GaggiMateController::setup() {
         if (this->gearpumpAddon != nullptr) {
             gearpumpAddon->setMaxPower(settings.maxBLDCPower);
         }
+        if (this->vescCan != nullptr) {
+            vescCan->setMaxPower(settings.maxBLDCPower); // the duty sent at 100 % pump power
+        }
+    });
+    // Fork (meterlink.15): second pump on/off and the motor temperature limit of the CAN pump drive.
+    _comms.onVescSettings([this](bool dualPump, float motorTempLimit) {
+        if (this->vescCan == nullptr)
+            return;
+        vescCan->setDualPump(dualPump);
+        vescCan->setMotorTempLimit(motorTempLimit);
     });
     _comms.onPing([this]() { handlePing(); });
     // A new link gets a full ping window; a stale lastPingTime would trip the watchdog while the display is still
@@ -492,6 +509,7 @@ void GaggiMateController::loop() {
         updateDualBoilerOutputs(now);
     if (!_config.capabilites.dualBoiler || lastSensorSend == 0 || now - lastSensorSend >= 250) {
         sendSensorData();
+        sendVescStatus();
         lastSensorSend = now;
     }
     if (_config.capabilites.ledControls && ledController != nullptr && now - lastLedHealthCheck >= LED_HEALTH_CHECK_INTERVAL_MS) {
@@ -648,15 +666,69 @@ void GaggiMateController::updateDualBoilerOutputs(unsigned long now) {
         baristaLight->update(now, false, safe);
 }
 
+// Fork (meterlink.15): start the CAN pump drive (see VescCan.h). The pump controller keeps writing one pump
+// power; the CAN task turns it into a duty for one or two VESCs, as the adapter's task turns it into a voltage.
+void GaggiMateController::setupVescCan() {
+    if (this->vescCan == nullptr)
+        return;
+    this->vescCan->onTrip([this](vesc::Trip trip, uint8_t pumpNumber, int32_t detail) {
+        // Runs in the CAN task; the pumps are already at 0 A. The display ends the shot on this message.
+        const int code = ERROR_CODE_PUMP_STALL + (static_cast<int>(trip) - static_cast<int>(vesc::Trip::STALL));
+        if (isPumpStopCode(code) && _comms.isConnected())
+            _comms.sendPumpStop(code, pumpNumber, detail);
+    });
+    if (!this->vescCan->setup(this->pump->getPumpPowerPtr())) {
+        ESP_LOGE(LOG_TAG, "CAN pump drive did not start; the pump will not run until it does");
+    }
+    // Same as with the adapter: the pump controller's power goes to the drive, the mains output is on or off.
+    static_cast<DimmedPump *>(pump.get())->setBinaryMode(true);
+}
+
+// Fork (meterlink.15): pump readings for the display's web UI, with the sensor data four times a second.
+void GaggiMateController::sendVescStatus() {
+    if (this->vescCan == nullptr || !_comms.isConnected())
+        return;
+    const VescCan::Snapshot s = vescCan->snapshot();
+    VescStatusReport report;
+    report.pumpCount = vesc::MAX_PUMPS;
+    for (size_t i = 0; i < vesc::MAX_PUMPS; i++) {
+        const vesc::PumpReadings &p = s.pumps[i];
+        VescPumpReport &r = report.pumps[i];
+        r.state = static_cast<uint8_t>(s.states[i]);
+        r.erpm = p.erpm;
+        r.motorCurrent = p.motorCurrent;
+        r.duty = p.duty;
+        r.fetTemp = p.fetTemp;
+        r.motorTemp = p.motorTemp;
+        r.inputCurrent = p.inputCurrent;
+        r.inputVoltage = p.inputVoltage;
+        r.fault = p.fault;
+        r.hasSpeed = s.freshSpeed[i];
+        r.hasTemps = s.freshTemps[i];
+        r.hasVoltage = s.freshVoltage[i];
+        r.hasFault = s.freshFault[i];
+    }
+    report.commandDuty = s.commandDuty;
+    report.trip = static_cast<uint8_t>(s.trip);
+    report.tripPump = s.tripPump;
+    report.busState = s.busState;
+    report.txFailed = s.txFailed;
+    report.dualPump = s.dualPump;
+    report.motorTempLimit = s.motorTempLimit;
+    _comms.sendVescStatus(report);
+}
+
 void GaggiMateController::detectAddon() {
     const bool sharedAdcBus = (_config.capabilites.pressure || _config.capabilites.dualBoiler) &&
                               _config.ext3Pin == _config.pressureSda && _config.ext2Pin == _config.pressureScl;
     TwoWire &bus = sharedAdcBus ? Wire1 : Wire;
-    if (!bus.begin(_config.ext3Pin, _config.ext2Pin, ADC_I2C_CLOCK_HZ)) {
+    const bool busReady = bus.begin(_config.ext3Pin, _config.ext2Pin, ADC_I2C_CLOCK_HZ);
+    if (!busReady) {
         ESP_LOGE(LOG_TAG, "Could not initialize addon bus");
-        return;
+        if (!kVescCan)
+            return;
     }
-    for (uint8_t addr = XL9555_SLAVE_ADDRESS0; addr <= XL9555_SLAVE_ADDRESS7; ++addr) {
+    for (uint8_t addr = XL9555_SLAVE_ADDRESS0; busReady && addr <= XL9555_SLAVE_ADDRESS7; ++addr) {
         bus.beginTransmission(addr);
         if (bus.endTransmission() == 0) {
             ESP_LOGI(LOG_TAG, "Found an extension at address 0x%X", addr);
@@ -666,6 +738,24 @@ void GaggiMateController::detectAddon() {
                     std::make_unique<GearpumpAddon>(addr, _config.ext3Pin, _config.ext2Pin, _config.ext1Pin, bus, sharedAdcBus);
             }
         }
+    }
+    // Fork (meterlink.15): one missed answer must not flip a machine with the adapter over to CAN; ask twice more.
+    for (int attempt = 0; kVescCan && busReady && gearpumpAddon == nullptr && attempt < 2; attempt++) {
+        delay(30);
+        bus.beginTransmission(0x26);
+        if (bus.endTransmission() == 0) {
+            ESP_LOGI(LOG_TAG, "Identified addon as Gearpump Addon (retry %d)", attempt + 1);
+            gearpumpAddon =
+                std::make_unique<GearpumpAddon>(0x26, _config.ext3Pin, _config.ext2Pin, _config.ext1Pin, bus, sharedAdcBus);
+        }
+    }
+    // No Velofuso adapter on J6 means the pump hangs on the Flipsky; talk to it over CAN.
+    if (kVescCan && gearpumpAddon == nullptr && _config.capabilites.dimming) {
+        ESP_LOGI(LOG_TAG, "No Velofuso adapter on J6: pump drive is the Flipsky over CAN (TX gpio%u, RX gpio%u)", _config.ext5Pin,
+                 _config.ext4Pin);
+        vescCan = std::make_unique<VescCan>(_config.ext5Pin, _config.ext4Pin);
+    } else if (kVescCan && gearpumpAddon != nullptr) {
+        ESP_LOGI(LOG_TAG, "Velofuso adapter found on J6: analog pump output, CAN pump drive not started");
     }
 }
 
@@ -985,6 +1075,39 @@ void GaggiMateController::printStatus() {
         ESP_LOGI("Controller", "║  └─ Lines ok/bad: %lu/%lu, readings: %lu, tares not acknowledged: %lu",
                  static_cast<unsigned long>(scaleLink->goodLines()), static_cast<unsigned long>(scaleLink->badLines()),
                  static_cast<unsigned long>(scaleLink->readings()), static_cast<unsigned long>(scaleLink->taresLost()));
+        ESP_LOGI("Controller", "║");
+    }
+
+    if (vescCan != nullptr) {
+        static const char *const BUS[] = {"running", "bus-off / recovering", "not started"};
+        static const char *const STATE[] = {"OFF", "RUNNING", "STALL", "HOT", "FAULT", "NO DATA", "NOT USED"};
+        const VescCan::Snapshot v = vescCan->snapshot();
+        ESP_LOGI("Controller", "╠═ CAN pump drive (TX gpio%u, RX gpio%u, 500 kbit/s, own ID %u)", vescCan->txPin(),
+                 vescCan->rxPin(), VescCan::OWN_ID);
+        ESP_LOGI("Controller", "║  ├─ Bus: %s, frames in/out: %lu/%lu, not acknowledged: %lu, bus errors: %lu, bus-off: %lu",
+                 BUS[v.busState < 3 ? v.busState : 2], static_cast<unsigned long>(v.rxFrames),
+                 static_cast<unsigned long>(v.txFrames), static_cast<unsigned long>(v.txFailed),
+                 static_cast<unsigned long>(v.busErrors), static_cast<unsigned long>(v.busOffs));
+        ESP_LOGI("Controller", "║  ├─ Duty asked/sent: %.3f/%.3f (max pump power %.2f), second pump: %s, motor limit: %.0f C",
+                 v.requestedDuty, v.commandDuty, v.maxPower, v.dualPump ? "on" : "off", v.motorTempLimit);
+        for (size_t i = 0; i < vesc::MAX_PUMPS; i++) {
+            const vesc::PumpReadings &p = v.pumps[i];
+            const auto state = static_cast<size_t>(v.states[i]);
+            ESP_LOGI(
+                "Controller",
+                "║  ├─ Pump %u (VESC ID %u): %s, %ld ERPM, motor %.1f A, duty %.3f, motor %.1f C, FET %.1f C, in %.1f V %.1f A, "
+                "fault %u %s, frames %lu",
+                static_cast<unsigned>(i + 1), VescCan::PUMP_IDS[i], STATE[state < 7 ? state : 5], static_cast<long>(p.erpm),
+                p.motorCurrent, p.duty, p.motorTemp, p.fetTemp, p.inputVoltage, p.inputCurrent, p.fault,
+                v.freshFault[i] ? vesc::faultName(p.fault) : "(no answer)", static_cast<unsigned long>(p.frames));
+        }
+        if (v.lastTrip == vesc::Trip::NONE)
+            ESP_LOGI("Controller", "║  └─ Pump stops: none");
+        else
+            ESP_LOGI("Controller", "║  └─ Pump stops: %lu, last: pump %u %s (detail %ld) %lu s ago%s",
+                     static_cast<unsigned long>(v.tripCount), v.lastTripPump, vesc::tripName(v.lastTrip),
+                     static_cast<long>(v.lastTripDetail), static_cast<unsigned long>(v.lastTripAgoMs / 1000),
+                     v.trip != vesc::Trip::NONE ? ", still holding the pumps off" : "");
         ESP_LOGI("Controller", "║");
     }
 

@@ -49,6 +49,8 @@
 
 const String LOG_TAG = F("Controller");
 constexpr uint32_t ADDON_HW_SCALE = 8;
+constexpr uint32_t ADDON_VESC_CAN = 50; // fork (meterlink.15): pump drive is a Flipsky dual VESC over CAN
+constexpr unsigned long PUMP_DRIVE_STATUS_MAX_AGE_MS = 3000;
 constexpr double DISPLAY_NEGATIVE_WEIGHT_THRESHOLD = -0.1;
 
 float normalizeWeightForDisplay(double measurement) {
@@ -374,6 +376,14 @@ void Controller::setupBluetooth() {
             ESP_LOGE(LOG_TAG, "Received error %d", error);
         }
     });
+    // Fork (meterlink.15): CAN pump drive readings and pump stops.
+    comms.onVescStatus([this](const VescStatusReport &report) {
+        std::lock_guard<std::mutex> guard(pumpDriveMutex);
+        pumpDriveStatus = report;
+        pumpDriveStatusAt = millis();
+        pumpDriveSeen = true;
+    });
+    comms.onPumpStop([this](int code, uint8_t pump, int32_t detail) { onPumpStop(code, pump, detail); });
     comms.onAutotuneResult([this](float Kp, float Ki, float Kd, float Kf) {
         ESP_LOGI(LOG_TAG, "Received autotune values: Kp=%.3f, Ki=%.3f, Kd=%.3f, Kf=%.3f (combined)", Kp, Ki, Kd, Kf);
         // Guard: older controller firmware could emit zero/NaN gains (#672
@@ -440,6 +450,7 @@ void Controller::onSystemInfo(const char *hardware, const char *version, uint32_
                             .protocolVersion = protocolVersion,
                             .protocolMismatch = mismatch};
     systemInfo.capabilities.hwScale = systemInfo.capabilities.hasAddon(ADDON_HW_SCALE);
+    systemInfo.capabilities.pumpCan = systemInfo.capabilities.hasAddon(ADDON_VESC_CAN);
     ESP_LOGI(LOG_TAG, "System info: %s %s (proto=%u local=%u dm=%d ps=%d led=%d tof=%d, db=%d)", hardware, version,
              protocolVersion, gm_proto::PROTOCOL_VERSION, dimming, pressure, ledControl, tof, dualBoiler);
     if (mismatch) {
@@ -969,6 +980,76 @@ void Controller::setPumpModelCoeffs(void) {
                                gearpumpEnabled ? settings.getIntegralGain() : DEFAULT_INTEGRAL_GAIN, settings.getMaxPumpPower(),
                                slip[0], slip[1], slip[2], slip[3], gearpumpEnabled ? settings.getMinPumpPower() : 0.0f);
     }
+    // Fork (meterlink.15): second pump and motor temperature limit of the CAN pump drive.
+    if (systemInfo.capabilities.pumpCan)
+        comms.sendVescSettings(settings.isPumpDual(), static_cast<float>(settings.getPumpMotorTempLimit()));
+}
+
+// Fork (meterlink.15): the controller has switched the pumps off (see VescCan on the controller). End what is
+// running and go to standby, as for a controller fault, but without latching: the reason stays on the standby
+// screen and in the web UI until the machine is woken up again. Runs on the comms task, like onError.
+void Controller::onPumpStop(int code, uint8_t pump, int32_t detail) {
+    bool repeat;
+    {
+        std::lock_guard<std::mutex> guard(pumpDriveMutex);
+        // The controller repeats the message once a second for as long as pump power is still asked for.
+        repeat = pumpStop.pending && pumpStop.code == code && pumpStop.pump == pump;
+        pumpStop.code = code;
+        pumpStop.pump = pump;
+        pumpStop.detail = detail;
+        pumpStop.at = millis();
+        pumpStop.pending = true;
+    }
+    if (!repeat)
+        ESP_LOGE(LOG_TAG, "Pump stop from the controller: code %d, pump %u, detail %ld", code, pump, static_cast<long>(detail));
+    deactivate();
+    if (mode != MODE_STANDBY)
+        setMode(MODE_STANDBY);
+    {
+        // setMode() acknowledges a stop when the machine wakes up; this one is new, keep it on the screen.
+        std::lock_guard<std::mutex> guard(pumpDriveMutex);
+        pumpStop.pending = true;
+    }
+    if (!repeat)
+        pluginManager->trigger("controller:pump:stop", "value", code);
+}
+
+bool Controller::getPumpDriveStatus(VescStatusReport &out) const {
+    std::lock_guard<std::mutex> guard(pumpDriveMutex);
+    if (!pumpDriveSeen || millis() - pumpDriveStatusAt > PUMP_DRIVE_STATUS_MAX_AGE_MS)
+        return false;
+    out = pumpDriveStatus;
+    return true;
+}
+
+Controller::PumpStop Controller::getPumpStop() const {
+    std::lock_guard<std::mutex> guard(pumpDriveMutex);
+    return pumpStop;
+}
+
+void Controller::acknowledgePumpStop() {
+    std::lock_guard<std::mutex> guard(pumpDriveMutex);
+    pumpStop.pending = false;
+}
+
+// Short enough for the standby screen's label; the web UI has the long form.
+String Controller::getPumpStopMessage() const {
+    const PumpStop stop = getPumpStop();
+    if (stop.code == 0)
+        return "";
+    const String pump = "Pump " + String(stop.pump == 0 ? 1 : stop.pump);
+    switch (stop.code) {
+    case ERROR_CODE_PUMP_STALL:
+        return pump + " stalled";
+    case ERROR_CODE_PUMP_HOT:
+        return pump + " motor too hot (" + String(stop.detail) + " C)";
+    case ERROR_CODE_PUMP_FAULT:
+        return pump + " VESC fault " + String(stop.detail);
+    case ERROR_CODE_PUMP_NO_DATA:
+        return pump + " drive not answering";
+    default:
+        return pump + " stopped";
+    }
 }
 
 void Controller::setHeaterSettings() {
@@ -1416,6 +1497,8 @@ void Controller::setMode(int newMode) {
     Event modeEvent = pluginManager->trigger("controller:mode:change", "value", newMode);
     const int previousMode = mode;
     mode = modeEvent.getInt("value");
+    if (mode != MODE_STANDBY)
+        acknowledgePumpStop(); // fork (meterlink.15): leaving standby takes the pump stop notice off the screen
     if (systemInfo.capabilities.dualBoiler) {
         if (mode == MODE_STANDBY) {
             if (previousMode != MODE_STANDBY && settings.getDefaultSteamMode() == 2)

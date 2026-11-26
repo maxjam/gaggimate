@@ -37,6 +37,9 @@ using VolumetricMeasurement = gaggimate_VolumetricMeasurement;
 using ScaleMeasurement = gaggimate_ScaleMeasurement;
 using TofMeasurement = gaggimate_TofMeasurement;
 using Error = gaggimate_Error;
+using VescSettings = gaggimate_VescSettings; // fork (meterlink.15)
+using VescPump = gaggimate_VescPump;
+using VescStatus = gaggimate_VescStatus;
 
 using PumpMode = gaggimate_PumpMode;
 using BoilerMode = gaggimate_BoilerMode;

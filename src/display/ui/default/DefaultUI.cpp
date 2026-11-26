@@ -296,6 +296,11 @@ void DefaultUI::init() {
         rerender = true;
         changeScreen(SCREEN_ID_STANDBY_SCREEN);
     });
+    // Fork (meterlink.15): the CAN pump drive stopped the pumps; the reason is the standby screen's label.
+    pluginManager->on("controller:pump:stop", [this](Event const &) {
+        rerender = true;
+        changeScreen(SCREEN_ID_STANDBY_SCREEN);
+    });
     pluginManager->on("controller:protocol:mismatch", [this](Event const &) {
         // Incompatible firmware on the other end: control is inhibited (OTA only),
         // so surface it on the standby screen like a runaway error.
@@ -823,9 +828,12 @@ void DefaultUI::updateSystemStatus() {
     const auto &settings = controller->getSettings();
     systemStatus.bluetooth(controller->getClientController()->isConnected());
     systemStatus.wifi(!apActive && WiFi.status() == WL_CONNECTED);
-    const bool error = controller->getSystemState() != SYSTEM_READY;
+    // Fork (meterlink.15): a pump stop shows on the same label until the machine is woken up.
+    const bool systemError = controller->getSystemState() != SYSTEM_READY;
+    const bool pumpStop = !systemError && controller->isPumpStopPending();
+    const bool error = systemError || pumpStop;
     systemStatus.error(error);
-    const String errorLabel = error ? getErrorMessage() : "";
+    const String errorLabel = systemError ? getErrorMessage() : pumpStop ? controller->getPumpStopMessage() : "";
     if (stringChanged(systemStatus.error_label(), errorLabel.c_str()))
         systemStatus.error_label(errorLabel.c_str());
     systemStatus.volumetric_available(controller->isVolumetricAvailable());

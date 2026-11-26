@@ -13,6 +13,7 @@ struct SystemCapabilities {
     bool tof;
     bool dualBoiler;
     bool hwScale = false;
+    bool pumpCan = false; // fork (meterlink.15): the pump drive is a Flipsky dual VESC over CAN
     std::vector<uint32_t> addons;
 
     bool hasAddon(uint32_t addon) const { return std::find(addons.begin(), addons.end(), addon) != addons.end(); }

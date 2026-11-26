@@ -650,6 +650,10 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
                 settings->setPressureReleasePulseMs(request->arg("pressureReleasePulseMs").toInt());
             if (request->hasArg("pressureReleaseIntervalS"))
                 settings->setPressureReleaseIntervalS(request->arg("pressureReleaseIntervalS").toInt());
+            if (request->hasArg("pumpDual"))
+                settings->setPumpDual(parseBoolArg(request->arg("pumpDual")));
+            if (request->hasArg("pumpMotorTempLimit"))
+                settings->setPumpMotorTempLimit(request->arg("pumpMotorTempLimit").toInt());
             if (request->hasArg("themeMode"))
                 settings->setThemeMode(request->arg("themeMode").toInt());
             if (request->hasArg("statusDisplayMode"))
@@ -830,6 +834,8 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
     doc["pressureReleaseBar"] = settings.getPressureReleaseBar();
     doc["pressureReleasePulseMs"] = settings.getPressureReleasePulseMs();
     doc["pressureReleaseIntervalS"] = settings.getPressureReleaseIntervalS();
+    doc["pumpDual"] = settings.isPumpDual();
+    doc["pumpMotorTempLimit"] = settings.getPumpMotorTempLimit();
     doc["themeMode"] = settings.getThemeMode();
     doc["statusDisplayMode"] = settings.getStatusDisplayMode();
     doc["albaRefillInterlock"] = settings.getAlbaRefillInterlock();

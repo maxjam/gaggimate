@@ -176,6 +176,60 @@ Then meter page → Shot logs → *download all (one CSV)* and send `flowmeter_a
 
 **The fit** (`python3 scripts/fit_pump_model.py flowmeter_all.csv`): cuts every run into its steps, keeps the last 4 s of each step that has settled (pressure slope ≤ 0.05 bar/s, flow first half vs second half within 5 %, pump power spread ≤ 1.5 %), flow = pulses counted over those 4 s. It fits flow = power × G(P) − S(P) for every degree of G and S up to the firmware's cubic, and for G held constant (today's structure), and picks the simplest one that is within 5 % of the best **leave-one-run-out** error, i.e. how well it predicts a run it was not fitted on. Output: the two coefficient strings to paste, G at 0/3/6/9 bar, the convergence gain that keeps today's 9-bar loop gain, every point with the error of the new and the current coefficients (evaluated exactly like the firmware, with the rounded numbers), BOOKOO g/s vs meter ml/s per step (a check of the meter's pulses per litre), and the repeatability from the repeat run. No model gets below that last number.
 
+## CAN pump drive (meterlink.15)
+
+The Velofuso pumps run on a Flipsky Dual FSESC6.7 Plus (VESC firmware 7.00). Up to meterlink.14 the Pro told it how fast to turn with a voltage: Velofuso adapter on J6 → divider → Flipsky ADC1, ADC app. meterlink.15 can talk to the Flipsky over CAN instead: the Pro sets the duty directly, reads both sides back and stops the pumps when one of them stalls, runs hot, reports a fault or stops answering. Build `controller-meterlink-j5-scale-j4` has it (`-DVESC_CAN=1`); source `lib/GaggiMateController/src/peripherals/VescCan.{h,cpp}` (TWAI driver) and `VescCanLogic.h` (frames and stop rules, tested in `test/test_vesc_can`).
+
+**Which drive runs is decided at power-on.** The Pro looks for the Velofuso adapter on J6 (the XL9555 at I²C 0x26, asked three times). Adapter found: analog output through the adapter, exactly as meterlink.14, CAN not started. No adapter: CAN. So the same firmware can be flashed before the hardware swap. The controller's USB log says which one it picked (`No Velofuso adapter on J6: pump drive is the Flipsky over CAN` / `Velofuso adapter found on J6: analog pump output`).
+
+**Wiring** (adapter, divider and capacitor removed):
+
+| Pro J6 (1×10) | | SN65HVD230 module | | Flipsky CAN port |
+|---|---|---|---|---|
+| pin 3, +3.3 V | → | 3V3 | | |
+| pin 9, GND | → | GND | | |
+| pin 4, GPIO13 (CAN TX) | → | TX (CTX / D) | | |
+| pin 5, GPIO12 (CAN RX) | ← | RX (CRX / R) | | |
+| | | CANH | twisted pair | CANH |
+| | | CANL | twisted pair | CANL |
+| pin 10, GND | → | | | GND |
+
+TX to TX and RX to RX (the module's labels are the MCU side), not crossed. J6 pins 1–2 (+5 V) and the Flipsky's CAN 5 V pin stay unconnected. 120 Ω termination jumper on the module on. The Flipsky's CAN pin order is not printed; meter it before plugging in.
+
+**VESC Tool, both sides:** App to Use = *No App*. CAN baud rate 500K. Side 1 controller ID 18, side 2 ID 19. CAN status rate 1 = *Status 1* at 50 Hz; rate 2 = *Status 4 + 5* at 10 Hz. Timeout 1000 ms, timeout brake current 0 A. Minimum current 0.05 A. Fault Stop Time 1500 ms (so the 200 ms fault poll sees a fault before the VESC clears it).
+
+**What goes over the bus** (500 kbit/s, 29-bit identifier = packet number << 8 | VESC ID, big-endian; the Pro's own ID is 42):
+
+| Direction | Frame | When |
+|---|---|---|
+| Pro → VESC | `SET_DUTY` (packet 0, int32 duty × 100000), ID 0x012 / 0x013 | every 20 ms while pump power > 0; duty = pump power × *Maximum Pump Power* |
+| Pro → VESC | `SET_CURRENT` 0 A (packet 1, 4 bytes), ID 0x112 / 0x113 | pump off: at once, then every 100 ms. Below the VESC's minimum current the PWM is off, the motor is released |
+| VESC → Pro | `STATUS 1` (packet 9): ERPM, motor current, duty | 50 Hz |
+| VESC → Pro | `STATUS 4` (packet 16): FET and motor temperature, input current; `STATUS 5` (packet 27): input voltage | 10 Hz |
+| Pro → VESC | fault request (packet 8: `2A 00 32 00 00 80 00`), ID 0x812 / 0x813 | every 200 ms |
+| VESC → Pro | fault answer, ID 0x82A: `[VESC ID] 01 32 00 00 80 00 [fault code]` | on request |
+
+Frames are sent single-shot, so nothing old is repeated after a bus fault. Pump 2 (ID 19) gets `SET_CURRENT` 0 A whenever it is not in use. After a bus-off the driver recovers and restarts by itself.
+
+**Pump stops.** The pumps (both, always) go to 0 A and the display ends whatever is running when, on a pump in use:
+
+| Stop | Rule |
+|---|---|
+| stall | commanded duty ≥ 15 % and \|ERPM\| < 200 for 500 ms without a break; not judged in the first 2 s after the duty rises from 0 |
+| hot | motor temperature (STATUS 4) ≥ the limit, default 80 °C (the VESC's own cutback starts at 85 °C); a side whose motor sensor is *Disabled* reports 0 °C and never trips |
+| fault | fault code ≠ 0 in the fault poll |
+| no data | pump power asked for and no STATUS 1 for 500 ms (Flipsky off, cable out, status messages not set up) |
+
+The stop holds until the pump power has been 0 for one second; with the motor still over the limit, or the fault still there, the next start stops again at once. Missing STATUS 4 or missing fault answers stop nothing (those checks then have nothing to judge; a stall is still caught by STATUS 1). If the Pro itself hangs, each VESC releases its motor after its own 1000 ms timeout.
+
+On the display a pump stop is not a latched fault: the machine goes to standby with the reason on the standby screen (`Pump 1 stalled`, `Pump 1 motor too hot (82 C)`, `Pump 1 VESC fault 4`, `Pump 1 drive not answering`); tapping the screen (or changing mode in the web UI) wakes it as usual and clears the notice.
+
+**Web UI.** Dashboard panel *Pumps* (added once before the shot controls; Dashboard Settings moves or hides it): per pump the state (OFF, RUNNING, STALL, HOT, FAULT, NO DATA, NOT USED), RPM (ERPM / 7, 14 poles), motor current, motor and FET temperature, input voltage and current, fault code and name; the duty being sent; the last pump stop. Settings → Machine → BLDC Pump Settings: *Second Pump (CAN)* (off; with it on, ID 19 gets the same duty and is checked too — leave it off until pump 2 is wired, or the first shot stops with *no data* on pump 2) and *Pump Motor Temperature Limit* (80 °C, 40–120, 0 = no check).
+
+**USB console.** `S` has a block *CAN pump drive*: bus state, frames in/out, frames nobody acknowledged, duty asked/sent, per pump every reading and its frame count, and the last pump stop.
+
+**After the swap, re-check the pump numbers.** Pump power % is now the duty itself (× *Maximum Pump Power*). With the adapter the same % went through the divider and the ADC app's mapping first, so the lowest power that keeps the pump turning and the flow per % are different numbers: set the meter page's *dead zone %* and *Minimum Pump Power* again (step the power down on an open group and watch the RPM in the panel) and check the flow-loop gains on the needle-valve rig before the first real shot.
+
 ## Not in this version (deliberately)
 
 - **Alba on the meter board** (VL53L0X tank distance, PCA9634 lights, chime). The J4 controller build already forwards `$T` and `$L`; the meter side needs an I²C master + the bench check of the Alba's bus voltage from the plan. Until then: use the J5 build and leave the Alba on J4.
@@ -185,6 +239,7 @@ Then meter page → Shot logs → *download all (one CSV)* and send `flowmeter_a
 
 ## Changes
 
+- **meterlink.15** (Nov 26 2026): CAN pump drive, see *CAN pump drive (meterlink.15)*. The Pro drives the Flipsky dual VESC over CAN (TWAI on J6 GPIO13/12, 500 kbit/s) when the Velofuso adapter is not on J6, and keeps the analog output when it is. Pump stops for stall, motor temperature, VESC fault and a silent VESC; the display ends the shot and shows the reason on the standby screen. Web UI: dashboard panel *Pumps* and the settings *Second Pump (CAN)* and *Pump Motor Temperature Limit*. Protocol stays at version 16: two new messages (`VescSettings` 28, `VescStatus` 29), error codes 50–53 for pump stops with pump number and detail, add-on type 50. Flash Pro and display together. Nothing new upstream to merge (nightly still at `459b16f`); meter and scale boards unchanged.
 - **meterlink.14** (Nov 23 2026): merged upstream nightly with mdwasp's *Minimum Pump Power* (Machine tab, 0..1, default 0 = off; GM-307): while a pressure or flow target is above zero the pump never drops below it, so a VESC/FOC drive keeps spinning instead of re-aligning mid-shot. In the fork the floor never overrides the latched 12.5 bar cutoff. It is a floor (max), not added to the fork's pump dead zone. Display and controller both need meterlink.14; meter and scale boards unchanged.
 - **meterlink.13 + scale board v1.1.0** (Nov 19 2026): merged upstream nightly (70 commits: hardware settings, setup wizard, Smart Dose, PwmLight, LED effects, bonding switch, wired display link). The wired display link is off in the fork builds because Serial1 is the meter link on J5; the display stays on Bluetooth. Upstream no longer zeroes the hardware scale when a shot is saved (#985), so the Pro sends the scale board a new `$E,<id>` (pump-volume reset, no zeroing, 3× 100 ms apart) on every display tare; scale board v1.1.0 closes a finished shot on it. Flash scale board v1.1.0 together with meterlink.13 (v1.0.x still works, but a shot stays open until the 60 s tail).
 - **meterlink.8** (Oct 28 2026, display only): idle pressure release through the brew valve, four settings on the Machine tab (on, 3 bar, 300 ms, 60 s). Controller stays at meterlink.7, meter at v1.7.7.

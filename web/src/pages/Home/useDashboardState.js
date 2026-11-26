@@ -6,6 +6,7 @@ import { ApiServiceContext, machine } from '../../services/ApiService.js';
 import { MODES } from './utils.js';
 import { t } from '@lingui/core/macro';
 import { computeWaterLevel } from '../../utils/waterLevel.js';
+import { pumpStopText } from '../../utils/pumpDrive.js';
 
 const status = computed(() => machine.value.status);
 const capabilities = computed(() => machine.value.capabilities);
@@ -22,10 +23,12 @@ export function useDashboardState() {
   // Anything but a ready controller locks the dashboard into standby, exactly like the touch UI.
   const systemReady = connected.value && (!s.system || s.system.state === 'ready');
   // Only a not-ready state carries a message; ready leaves the default standby text in place.
+  // Fork (meterlink.15): a pump stop puts the machine in standby; its reason takes the standby line until wake-up.
+  const pumpStop = s.pumpDrive?.stop?.pending ? pumpStopText(s.pumpDrive.stop) : '';
   const systemMessage = !connected.value
     ? t`Connecting to the machine...`
     : systemReady
-      ? ''
+      ? pumpStop && t`Pumps stopped. ${pumpStop} Wake the machine to carry on.`
       : s.system.message || s.system.state;
   const mode = systemReady ? s.mode : 0;
 
@@ -167,6 +170,7 @@ export function useDashboardState() {
     processInfo: p,
     tofDistance: s.tofDistance,
     warnings: s.warnings ?? [],
+    pumpDrive: s.pumpDrive ?? null,
     dualBoiler: caps.dualBoiler,
     // derived
     isActive,

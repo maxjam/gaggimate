@@ -1,4 +1,5 @@
 #include "GaggiMateServer.h"
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <esp_log.h>
@@ -202,6 +203,48 @@ void GaggiMateServer::sendTofMeasurement(uint32_t distance) { _endpoint.sendUnre
 
 void GaggiMateServer::sendError(int code) { _endpoint.send(buildError(code)); }
 
+// Fork (meterlink.15)
+gm::Payload GaggiMateServer::buildPumpStop(int code, uint8_t pump, int32_t detail) {
+    gm::Payload p = buildError(code);
+    p.content.error.pump = pump;
+    p.content.error.detail = detail;
+    return p;
+}
+
+gm::Payload GaggiMateServer::buildVescStatus(const VescStatusReport &report) {
+    gm::Payload p = gaggimate_Payload_init_zero;
+    p.which_content = gaggimate_Payload_vesc_status_tag;
+    gm::VescStatus &s = p.content.vesc_status;
+    const size_t maxPumps = sizeof(s.pumps) / sizeof(s.pumps[0]);
+    s.pumps_count = static_cast<pb_size_t>(report.pumpCount < maxPumps ? report.pumpCount : maxPumps);
+    for (pb_size_t i = 0; i < s.pumps_count; i++) {
+        const VescPumpReport &r = report.pumps[i];
+        gm::VescPump &m = s.pumps[i];
+        m.state = r.state;
+        m.erpm = r.erpm;
+        m.motor_current_da = static_cast<int32_t>(lroundf(r.motorCurrent * 10.0f));
+        m.duty_pm = static_cast<int32_t>(lroundf(r.duty * 1000.0f));
+        m.fet_temp_dc = static_cast<int32_t>(lroundf(r.fetTemp * 10.0f));
+        m.motor_temp_dc = static_cast<int32_t>(lroundf(r.motorTemp * 10.0f));
+        m.input_current_da = static_cast<int32_t>(lroundf(r.inputCurrent * 10.0f));
+        m.input_voltage_dv = r.inputVoltage > 0.0f ? static_cast<uint32_t>(lroundf(r.inputVoltage * 10.0f)) : 0;
+        m.fault = r.fault;
+        m.flags = (r.hasSpeed ? 1u : 0u) | (r.hasTemps ? 2u : 0u) | (r.hasVoltage ? 4u : 0u) | (r.hasFault ? 8u : 0u);
+    }
+    s.command_duty_pm = report.commandDuty > 0.0f ? static_cast<uint32_t>(lroundf(report.commandDuty * 1000.0f)) : 0;
+    s.trip = report.trip;
+    s.trip_pump = report.tripPump;
+    s.bus_state = report.busState;
+    s.tx_failed = report.txFailed;
+    s.dual_pump = report.dualPump;
+    s.motor_temp_limit = report.motorTempLimit;
+    return p;
+}
+
+void GaggiMateServer::sendPumpStop(int code, uint8_t pump, int32_t detail) { _endpoint.send(buildPumpStop(code, pump, detail)); }
+
+void GaggiMateServer::sendVescStatus(const VescStatusReport &report) { _endpoint.sendUnreliable(buildVescStatus(report)); }
+
 void GaggiMateServer::registerHandlers() {
     _endpoint.on(gaggimate_Payload_ping_tag, [this](const gm::Payload &) {
         // The connect-time SystemInfo can beat the display's receive path; a ping proves the link, so resend it once.
@@ -259,6 +302,10 @@ void GaggiMateServer::registerHandlers() {
             _scaleFactorsCb(p.content.scale_factors.scale_factor1, p.content.scale_factors.scale_factor2,
                             static_cast<uint16_t>(p.content.scale_factors.sample_rate_sps),
                             p.content.scale_factors.idle_filter_alpha, p.content.scale_factors.active_filter_alpha);
+    });
+    _endpoint.on(gaggimate_Payload_vesc_settings_tag, [this](const gm::Payload &p) {
+        if (_vescSettingsCb)
+            _vescSettingsCb(p.content.vesc_settings.dual_pump, p.content.vesc_settings.motor_temp_limit);
     });
     _endpoint.on(gaggimate_Payload_led_tag, [this](const gm::Payload &p) {
         if (!_ledCb)

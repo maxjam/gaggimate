@@ -19,6 +19,7 @@ export const CHECKBOX_KEYS = [
   'autowakeupEnabled',
   'smartGrindToggle',
   'pressureRelease', // fork: idle pressure release
+  'pumpDual', // fork: second pump on the Flipsky (CAN pump drive)
 ];
 
 export function splitPidString(pidString) {

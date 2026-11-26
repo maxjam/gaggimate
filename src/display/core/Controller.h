@@ -107,6 +107,25 @@ class Controller {
     SystemState getSystemState() const;
     String getSystemStateMessage() const;
 
+    // Fork (meterlink.15): pumps on a Flipsky dual VESC over CAN. The controller sends the readings four times a
+    // second and a pump stop (stall, motor too hot, VESC fault, VESC silent) when it has switched the pumps off.
+    // A pump stop ends whatever is running and puts the machine in standby with the reason on the screen; waking
+    // the machine acknowledges it. It never latches like a controller fault.
+    struct PumpStop {
+        int code = 0;       // ERROR_CODE_PUMP_*, 0 = none yet
+        uint8_t pump = 0;   // 1 or 2
+        int32_t detail = 0; // VESC fault code, motor temperature in degC, or ERPM
+        unsigned long at = 0;
+        bool pending = false; // not acknowledged yet
+    };
+    bool hasPumpDrive() const { return systemInfo.capabilities.pumpCan; }
+    // Latest readings; false when none arrived in the last 3 s.
+    bool getPumpDriveStatus(VescStatusReport &out) const;
+    PumpStop getPumpStop() const;
+    bool isPumpStopPending() const { return getPumpStop().pending; }
+    String getPumpStopMessage() const;
+    void acknowledgePumpStop();
+
     // Event callback methods
     void updateLastAction();
     unsigned long getLastActionAt() const { return lastAction; }
@@ -358,6 +377,14 @@ class Controller {
     unsigned long steamRefillClearedAt = 0;
     bool steamRefillPostClear = false;
     int error = 0;
+
+    // Fork (meterlink.15): CAN pump drive, written from the comms task
+    void onPumpStop(int code, uint8_t pump, int32_t detail);
+    mutable std::mutex pumpDriveMutex;
+    VescStatusReport pumpDriveStatus;
+    unsigned long pumpDriveStatusAt = 0;
+    bool pumpDriveSeen = false;
+    PumpStop pumpStop;
 
     // Bluetooth scale connection monitoring
     VolumetricMeasurementSource currentVolumetricSource = VolumetricMeasurementSource::INACTIVE;

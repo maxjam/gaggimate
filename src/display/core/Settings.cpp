@@ -377,6 +377,9 @@ void Settings::setPressureRelease(bool on) { pressureRelease.set(on); }
 void Settings::setPressureReleaseBar(float bar) { pressureReleaseBar.set(bar); }
 void Settings::setPressureReleasePulseMs(int ms) { pressureReleasePulseMs.set(ms); }
 void Settings::setPressureReleaseIntervalS(int s) { pressureReleaseIntervalS.set(s); }
+void Settings::setPumpDual(bool dual) { pumpDual.set(dual); }
+// 0 switches the check off; otherwise 40..120 C, the range the controller accepts.
+void Settings::setPumpMotorTempLimit(int limitC) { pumpMotorTempLimit.set(limitC <= 0 ? 0 : std::clamp(limitC, 40, 120)); }
 
 void Settings::setThemeMode(int theme_mode) { themeMode.set(theme_mode); }
 

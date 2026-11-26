@@ -21,6 +21,7 @@ import { CleaningSection } from './CleaningSection.jsx';
 import { validateTankCalibration } from '../../../utils/waterLevel.js';
 
 const gearpumpAddon = computed(() => machine.value.capabilities.gearpumpAddon);
+const pumpCan = computed(() => machine.value.capabilities.pumpCan); // fork (meterlink.15)
 const ledControl = computed(() => machine.value.capabilities.ledControl);
 const pressureAvailable = computed(() => machine.value.capabilities.pressure);
 const tofDistance = computed(() => machine.value.status.tofDistance);
@@ -965,6 +966,39 @@ export function MachineTab({ formData, onChange, setField, profiles = [] }) {
                 </Trans>
               </span>
             </div>
+            {pumpCan.value && (
+              <div className='border-base-content/10 grid grid-cols-1 gap-4 border-t pt-4 md:grid-cols-2'>
+                <div className='md:col-span-2'>
+                  <ToggleField
+                    label={t`Second Pump (CAN)`}
+                    htmlFor='pumpDual'
+                    checked={!!formData.pumpDual}
+                    onChange={onChange('pumpDual')}
+                    helpText={t`The pumps run on a Flipsky dual VESC over CAN: pump 1 is VESC ID 18, pump 2 is VESC ID 19. Turn this on once pump 2 is wired and its side of the Flipsky has ID 19. Both pumps then get the same power, and either one stalling, overheating or faulting stops both.`}
+                  />
+                </div>
+                <InputGroupField
+                  label={t`Pump Motor Temperature Limit`}
+                  htmlFor='pumpMotorTempLimit'
+                  unit='°C'
+                  helpText={t`The pumps stop when a motor's sensor reads this or more (40 to 120). 0 turns the check off.`}
+                  noMargin
+                >
+                  <input
+                    id='pumpMotorTempLimit'
+                    name='pumpMotorTempLimit'
+                    type='number'
+                    step='1'
+                    min='0'
+                    max='120'
+                    className='grow'
+                    placeholder='80'
+                    value={formData.pumpMotorTempLimit}
+                    onChange={onChange('pumpMotorTempLimit')}
+                  />
+                </InputGroupField>
+              </div>
+            )}
             <div className='form-control'>
               <label htmlFor='pumpSlipCoeffs' className='mb-2 block text-sm font-medium'>
                 <Trans>Pump Slip Coefficients</Trans>

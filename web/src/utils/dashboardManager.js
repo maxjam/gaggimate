@@ -104,8 +104,9 @@ export const setMetricOrder = ids => {
 
 const DASHBOARD_PANELS_KEY = 'dashboardPanels';
 const DOSE_PANEL_INITIALIZED_KEY = 'smartDosePanelInitialized';
+const PUMPS_PANEL_INITIALIZED_KEY = 'pumpsPanelInitialized'; // fork (meterlink.15)
 
-const DEFAULT_PANEL_ORDER = ['mode', 'profile', 'metrics', 'dose', 'watertank', 'action'];
+const DEFAULT_PANEL_ORDER = ['mode', 'profile', 'metrics', 'dose', 'watertank', 'pumps', 'action'];
 
 export const getPanelOrder = () => {
   if (!globalThis.window?.localStorage) {
@@ -122,6 +123,15 @@ export const getPanelOrder = () => {
       }
       if (stored) localStorage.setItem(DASHBOARD_PANELS_KEY, JSON.stringify(ids));
       localStorage.setItem(DOSE_PANEL_INITIALIZED_KEY, 'true');
+    }
+    // Fork (meterlink.15): same for the pump panel (it only renders with the CAN pump drive).
+    if (!localStorage.getItem(PUMPS_PANEL_INITIALIZED_KEY)) {
+      if (!ids.includes('pumps')) {
+        const actionIndex = ids.indexOf('action');
+        ids.splice(actionIndex < 0 ? ids.length : actionIndex, 0, 'pumps');
+      }
+      if (stored) localStorage.setItem(DASHBOARD_PANELS_KEY, JSON.stringify(ids));
+      localStorage.setItem(PUMPS_PANEL_INITIALIZED_KEY, 'true');
     }
     return ids;
   } catch {

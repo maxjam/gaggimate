@@ -25,3 +25,6 @@ gaggimate.LedChannel.brightness int_size:IS_8
 gaggimate.LedChannel.effect int_size:IS_8
 gaggimate.LedChannel.min_brightness int_size:IS_8
 gaggimate.LedChannel.cycle_time_ms int_size:IS_16
+
+# Fork (meterlink.15): pump 1 and pump 2 on the Flipsky dual VESC.
+gaggimate.VescStatus.pumps max_count:2

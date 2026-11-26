@@ -88,6 +88,10 @@ msgstr "{historyCount, plural, other {将永久删除设备上的全部 # 条萃
 msgid "{host} isn't answering. Make sure the machine is on and your phone is on the same Wi-Fi network."
 msgstr "{host} 没有响应。请确认咖啡机已开机，并且手机与咖啡机处于同一 Wi-Fi 网络。"
 
+#: src/utils/pumpDrive.js
+msgid "{hours} h ago"
+msgstr ""
+
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "{label} severity"
 msgstr "{label} 严重程度"
@@ -104,6 +108,10 @@ msgstr "已保存 {machineCount} 台"
 msgid "{metricsColumns, plural, one {# column} other {# columns}}"
 msgstr "{metricsColumns, plural, other {# 列}}"
 
+#: src/utils/pumpDrive.js
+msgid "{minutes} min ago"
+msgstr ""
+
 #: src/app/AppSettings.jsx
 msgid "{pending} installs the next time you leave the app"
 msgstr "{pending} 将在你下次离开应用时安装"
@@ -115,6 +123,10 @@ msgstr "{recentShotCount, plural, other {# 次萃取}}"
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "{scaleName} disconnected"
 msgstr "{scaleName} 已断开"
+
+#: src/utils/pumpDrive.js
+msgid "{seconds} s ago"
+msgstr ""
 
 #: src/pages/Settings/PatchNotes.jsx
 msgid "{total, plural, one {# commit} other {# commits}}"
@@ -388,6 +400,10 @@ msgstr "确定要删除“{itemName}”吗？"
 msgid "At how many bars should the pump assist stop. This makes it so the pump will only run when steam is flowing."
 msgstr "泵辅助在多少 bar 时停止。这样泵只会在蒸汽流出时运行。"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "At most one pulse per this many seconds (minimum 5)."
+msgstr ""
+
 #: src/services/VisualizerService.js
 msgid "Authentication failed - please check your username and password"
 msgstr "认证失败 - 请检查用户名和密码"
@@ -536,6 +552,10 @@ msgstr "平均粉饼阻力"
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotMetricCards.jsx
 msgid "Avg. Pump Flow"
 msgstr "平均泵流量"
+
+#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
+msgid "Avg. Pump Power"
+msgstr "平均泵功率"
 
 #: src/pages/Statistics/components/MetricsTable.jsx
 msgid "Avg. Target Temperature"
@@ -762,6 +782,10 @@ msgstr "校准已取消。"
 #: src/utils/pumpFlowCalibration.js
 msgid "Calibration factor for tp={targetPressure} bar is out of plausible range ({shownFactor}). Did pressure actually reach {targetPressure} bar during the Measure phase?"
 msgstr "tp={targetPressure} bar 的校准系数超出合理范围（{shownFactor}）。Measure 阶段压力是否真的达到了 {targetPressure} bar？"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "CAN bus is down (bus-off). Check the wiring and the 500K bit rate."
+msgstr ""
 
 #: src/app/ConnectionGate.jsx
 msgid "Can't reach {name}"
@@ -1652,6 +1676,10 @@ msgstr "时长：{duration}s"
 msgid "During the shot, adjust the valve so pressure reaches 1 bar, then 9 bar. Keep it stable during the <0>Measure</0> phases (10 s each)."
 msgstr "萃取过程中，调节阀门使压力先达到 1 bar，再达到 9 bar。在 <0>Measure</0> 阶段（每次 10 秒）保持稳定。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Duty {dutyText}"
+msgstr ""
+
 #: src/app/appSettings.js
 msgid "E.g. water tank low, scale battery low."
 msgstr "例如水箱水位低、秤电量低。"
@@ -1996,9 +2024,21 @@ msgstr "加载用于筛选的萃取/曲线失败。"
 msgid "Failed to load statistics. Please try again."
 msgstr "加载统计数据失败，请重试。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Fault"
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "FAULT"
+msgstr ""
+
 #: src/pages/ProfileList/index.jsx
 msgid "Favorite"
 msgstr "收藏"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "FET °C"
+msgstr ""
 
 #: src/pages/Statistics/components/StatisticsSearchHelp.jsx
 msgid "Fields"
@@ -2416,6 +2456,14 @@ msgstr "HomeKit 设置代码"
 msgid "Hostname"
 msgstr "主机名"
 
+#: src/utils/pumpDrive.js
+msgid "HOT"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "How long the brew valve stays open per pulse (50 to 2000)."
+msgstr ""
+
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "How many ml/s to pump into the boiler during steaming"
 msgstr "打蒸汽时向锅炉泵入的流量 (ml/s)"
@@ -2439,6 +2487,10 @@ msgstr "空闲颜色"
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Idle Filter Alpha"
 msgstr "空闲滤波 Alpha"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Idle Pressure Release"
+msgstr ""
 
 #: src/pages/SetupWizard/index.jsx
 msgid "If it can't connect, GaggiMate opens its own network again so you can correct the password in the settings."
@@ -2515,6 +2567,10 @@ msgstr "未完成"
 msgid "Infusion"
 msgstr "浸润"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Input"
+msgstr ""
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgctxt "ramp style"
 msgid "Instant"
@@ -2576,6 +2632,10 @@ msgstr "{field} 的值无效：{valueError}"
 msgid "iOS only lets GaggiMate stay connected to your machines while the app is open. Notifications stop a few seconds after you switch to another app or lock your phone."
 msgstr "iOS 仅允许 GaggiMate 在应用打开时与咖啡机保持连接。切换到其他应用或锁屏几秒后，通知将停止。"
 
+#: src/utils/pumpDrive.js
+msgid "just now"
+msgstr ""
+
 #: src/pages/Settings/PluginCard.jsx
 msgid "Keep selected profile"
 msgstr "保持所选曲线"
@@ -2599,6 +2659,10 @@ msgstr "alpha 越大响应越快、平滑越少；alpha 越小越平滑但响应
 #: src/pages/DashboardSettings/index.jsx
 msgid "Last Row Fill"
 msgstr "末行填充"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Last stop:"
+msgstr ""
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
 msgid "Last used profile"
@@ -2952,6 +3016,7 @@ msgid "millimeter"
 msgstr "毫米"
 
 #: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "milliseconds"
 msgstr "毫秒"
 
@@ -3004,6 +3069,14 @@ msgstr "更多操作"
 #: src/pages/Settings/index.jsx
 msgid "More options"
 msgstr "更多选项"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Motor °C"
+msgstr ""
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Motor A"
+msgstr ""
 
 #: src/pages/ProfileList/index.jsx
 msgid "Move {label} to bottom"
@@ -3142,6 +3215,10 @@ msgstr "每夜版会最先获得新功能，与每夜版固件使用相同的代
 msgid "no answer (timed out)"
 msgstr "无应答（超时）"
 
+#: src/utils/pumpDrive.js
+msgid "NO DATA"
+msgstr ""
+
 #: src/pages/Statistics/components/statisticsView/helpers.js
 #: src/pages/Statistics/components/toolbar/helpers.js
 msgid "No date"
@@ -3208,6 +3285,10 @@ msgstr "未测得压力。请检查水箱是否已加满，为泵注水排气，
 #: src/pages/ShotAnalyzer/components/library/libraryDisplay.js
 msgid "No Profile Loaded"
 msgstr "未加载曲线"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "No pump readings from the controller."
+msgstr ""
 
 #: src/pages/ShotAnalyzer/services/analyzer/shotAnalysis.js
 msgid "No sample data available for analysis."
@@ -3301,6 +3382,10 @@ msgstr "未评分"
 msgid "Not recorded"
 msgstr "未记录"
 
+#: src/utils/pumpDrive.js
+msgid "NOT USED"
+msgstr ""
+
 #: src/pages/ShotAnalyzer/components/shotDetails/ShotDetailsCard.jsx
 #: src/pages/ShotAnalyzer/shotAnalyzer/ActiveAnalysisView.jsx
 #: src/pages/ShotHistory/ShotNotesCard.jsx
@@ -3336,6 +3421,10 @@ msgstr "正在冲煮"
 msgctxt "pump mode"
 msgid "Off"
 msgstr "关闭"
+
+#: src/utils/pumpDrive.js
+msgid "OFF"
+msgstr ""
 
 #: src/pages/Home/cards/MachineLevelsCard.jsx
 #: src/utils/metricDefinitions.js
@@ -4000,6 +4089,34 @@ msgid "Puck Resistance (s·√bar/mL)"
 msgstr "粉饼阻力 (s·√bar/mL)"
 
 #: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pulse the brew valve when the idle pressure is above this."
+msgstr ""
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Pump {number}"
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} drive is not answering on the CAN bus."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} motor too hot ({temperature} °C)."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} stalled: power on it, but it was not turning."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} VESC fault {fault}."
+msgstr ""
+
+#: src/utils/pumpDrive.js
+msgid "Pump {pump} was stopped."
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Assist Cutoff"
 msgstr "泵辅助截止压力"
 
@@ -4054,6 +4171,10 @@ msgstr "泵模式"
 msgid "Pump mode selection"
 msgstr "泵模式选择"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Motor Temperature Limit"
+msgstr ""
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 msgid "Pump off"
@@ -4065,9 +4186,16 @@ msgstr "泵参数"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
+#: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
+#: src/pages/ShotHistory/HistoryChart.jsx
 #: src/utils/metricDefinitions.js
 msgid "Pump Power"
 msgstr "泵功率"
+
+#: src/pages/ShotAnalyzer/utils/columns.js
+#: src/pages/ShotAnalyzer/utils/constants.js
+msgid "Pump Power (%)"
+msgstr "泵功率 (%)"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
@@ -4122,6 +4250,19 @@ msgstr "泵水量停止"
 #: src/pages/ShotAnalyzer/services/analyzer/exitReasons.js
 msgid "Pumped-water target"
 msgstr "泵水量目标"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+#: src/utils/panelDefinitions.js
+msgid "Pumps"
+msgstr ""
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Pumps stopped."
+msgstr ""
+
+#: src/pages/Home/useDashboardState.js
+msgid "Pumps stopped. {pumpStop} Wake the machine to carry on."
+msgstr ""
 
 #: src/pages/Statistics/utils/statisticsSearchDsl.js
 msgid "Query clause {clauseNumber}: {valueError}"
@@ -4233,9 +4374,21 @@ msgstr "参考萃取"
 msgid "Relative time: <0>h</0> (now), <1>h-7d</1> (7 days ago)"
 msgstr "相对时间：<0>h</0>（现在），<1>h-7d</1>（7 天前）"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Above"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Interval"
+msgstr ""
+
 #: src/pages/Settings/PatchNotes.jsx
 msgid "Release notes"
 msgstr "发行说明"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Release Pulse"
+msgstr ""
 
 #: src/components/MachineProfileControl.jsx
 msgid "Reload updated profile"
@@ -4404,6 +4557,10 @@ msgstr "检查阶段 {phaseNumber}"
 msgid "Review the stop reason for this phase. The algorithm was only able to identify it after several intermediate calculations."
 msgstr "请检查此阶段的停止原因。算法经过多次中间计算后才得以识别。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "RPM"
+msgstr ""
+
 #: src/pages/Statistics/components/StatisticsSearchHelp.jsx
 msgid "Rules are separated with <0>;</0>. Visual filters and DSL are combined with AND."
 msgstr "规则之间用 <0>;</0> 分隔。可视化筛选与 DSL 以 AND 组合。"
@@ -4415,6 +4572,10 @@ msgstr "再次运行"
 #: src/pages/Settings/tabs/SystemTab.jsx
 msgid "Run Setup Wizard"
 msgstr "运行设置向导"
+
+#: src/utils/pumpDrive.js
+msgid "RUNNING"
+msgstr ""
 
 #: src/components/PumpFlowCalibration/Footer.jsx
 msgid "Running shot..."
@@ -4667,9 +4828,14 @@ msgstr "搜索中"
 msgid "Searching for networks…"
 msgstr "正在搜索网络…"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Second Pump (CAN)"
+msgstr ""
+
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/ProfileEdit/StandardProfileForm.jsx
 #: src/pages/Settings/tabs/GeneralTab.jsx
+#: src/pages/Settings/tabs/MachineTab.jsx
 msgid "seconds"
 msgstr "秒"
 
@@ -5131,6 +5297,10 @@ msgstr "均匀分布"
 msgctxt "update channel"
 msgid "Stable"
 msgstr "稳定版"
+
+#: src/utils/pumpDrive.js
+msgid "STALL"
+msgstr ""
 
 #: src/pages/ShotAnalyzer/components/analysisTable/ColumnControls.jsx
 msgctxt "column preset"
@@ -5807,6 +5977,14 @@ msgstr "只要泵的压力或流量目标大于零，泵就不会低于此值，
 msgid "The pump runs with the 3-way valve closed until pressure stops rising. Then the pump stops and the valve opens, which should release the pressure to about 0 bar."
 msgstr "泵将在三通阀关闭的状态下运行，直到压力不再上升。随后泵停止、阀门打开，压力应释放至约 0 bar。"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The pumps run on a Flipsky dual VESC over CAN: pump 1 is VESC ID 18, pump 2 is VESC ID 19. Turn this on once pump 2 is wired and its side of the Flipsky has ID 19. Both pumps then get the same power, and either one stalling, overheating or faulting stops both."
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "The pumps stop when a motor's sensor reads this or more (40 to 120). 0 turns the check off."
+msgstr ""
+
 #: src/pages/Settings/tabs/BluetoothTab.jsx
 msgid "The scale was found, but the Bluetooth connection failed. Try again or restart the scale."
 msgstr "已找到秤，但蓝牙连接失败。请重试或重启秤。"
@@ -6395,6 +6573,10 @@ msgstr "正在等待控制器配置…"
 msgid "Waiting for your controller to identify its board. Please keep the machine connected."
 msgstr "正在等待控制器识别其主板。请保持咖啡机连接。"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Wake the machine to carry on."
+msgstr ""
+
 #: src/utils/warnings.js
 msgctxt "warning level"
 msgid "Warn"
@@ -6455,6 +6637,10 @@ msgstr "已泵水量"
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgid "Water pumped in phase"
 msgstr "阶段内泵水量"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode."
+msgstr ""
 
 #: src/pages/Home/cards/MachineLevelsCard.jsx
 #: src/pages/Home/cards/WaterLevelCard.jsx
@@ -6648,43 +6834,3 @@ msgstr "手机需要与咖啡机处于同一 Wi-Fi 网络。"
 #: src/pages/ShotAnalyzer/components/EmptyState.jsx
 msgid "Your saved shots and profiles directly from the GaggiMate internal storage."
 msgstr "直接来自 GaggiMate 内部存储的已保存萃取和曲线。"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "At most one pulse per this many seconds (minimum 5)."
-msgstr ""
-
-#: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
-msgid "Avg. Pump Power"
-msgstr "平均泵功率"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "How long the brew valve stays open per pulse (50 to 2000)."
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Idle Pressure Release"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Pulse the brew valve when the idle pressure is above this."
-msgstr ""
-
-#: src/pages/ShotAnalyzer/utils/columns.js src/pages/ShotAnalyzer/utils/constants.js
-msgid "Pump Power (%)"
-msgstr "泵功率 (%)"
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Above"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Interval"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Release Pulse"
-msgstr ""
-
-#: src/pages/Settings/tabs/MachineTab.jsx
-msgid "Water sealed between the pump's check valve and the brew valve expands as the boiler heats and holds the circuit at the safety valve's pressure. With this on, the brew valve opens for a short pulse whenever the machine is idle in a brew-temperature mode and the pressure is above the threshold; the group drains to the drip tray when it closes. Never during a shot or in steam mode."
-msgstr ""

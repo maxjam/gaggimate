@@ -48,6 +48,7 @@ message Payload {
         LedControl led = 11;
         ScaleFactors scale_factors = 12;
         HeaterSettings heater = 13;
+        VescSettings vesc_settings = 28; // fork (meterlink.15)
 
         // Responses: controller -> display
         MachineHardwareStatus machine_hardware_status = 30;
@@ -59,6 +60,7 @@ message Payload {
         TofMeasurement tof = 25;
         Error error = 26;
         ScaleMeasurement scale = 27;
+        VescStatus vesc_status = 29; // fork (meterlink.15)
     }
 }
 
@@ -299,8 +301,53 @@ enum ErrorCode {
     ERROR_CODE_RUNAWAY = 4;
     ERROR_CODE_TIMEOUT = 5;
     ERROR_CODE_AUTOTUNE_TIMEOUT = 6;
+    // Fork (meterlink.15): the CAN pump drive stopped the pumps. Not a latched controller fault: the display ends
+    // the shot, shows the reason and carries on. Numbers kept clear of upstream's.
+    ERROR_CODE_PUMP_STALL = 50;
+    ERROR_CODE_PUMP_HOT = 51;
+    ERROR_CODE_PUMP_FAULT = 52;
+    ERROR_CODE_PUMP_NO_DATA = 53;
 }
 
 message Error {
     ErrorCode code = 1;
+    // Fork (meterlink.15), pump stops only.
+    uint32 pump = 20;   // 1 or 2
+    sint32 detail = 21; // VESC fault code, motor temperature in degC, or ERPM
+}
+
+// ---------------------------------------------------------------------------
+// Fork (meterlink.15): pumps on a Flipsky dual VESC over CAN
+// ---------------------------------------------------------------------------
+
+// Display -> controller.
+message VescSettings {
+    bool dual_pump = 1;         // a second pump (VESC ID 19) is wired: command and check it too
+    float motor_temp_limit = 2; // degC; the pumps stop when a motor reads this or more (0 = no check)
+}
+
+// One VESC, values as they come off the bus (STATUS 1 / 4 / 5 and the fault poll).
+message VescPump {
+    uint32 state = 1;            // 0 off, 1 running, 2 stall, 3 hot, 4 fault, 5 no data, 6 not used
+    sint32 erpm = 2;
+    sint32 motor_current_da = 3; // 0.1 A
+    sint32 duty_pm = 4;          // 0.001, measured
+    sint32 fet_temp_dc = 5;      // 0.1 degC
+    sint32 motor_temp_dc = 6;    // 0.1 degC
+    sint32 input_current_da = 7; // 0.1 A
+    uint32 input_voltage_dv = 8; // 0.1 V
+    uint32 fault = 9;            // mc_fault_code
+    uint32 flags = 10;           // bit 0 STATUS 1 fresh, bit 1 STATUS 4 fresh, bit 2 STATUS 5 fresh, bit 3 fault poll answered
+}
+
+// Controller -> display, four times a second.
+message VescStatus {
+    repeated VescPump pumps = 1; // [0] = pump 1 (VESC ID 18), [1] = pump 2 (VESC ID 19)
+    uint32 command_duty_pm = 2;  // duty being sent, 0.001
+    uint32 trip = 3;             // latched stop: 0 none, 1 stall, 2 hot, 3 fault, 4 no data
+    uint32 trip_pump = 4;        // 1 or 2
+    uint32 bus_state = 5;        // 0 running, 1 bus-off or recovering, 2 driver not started
+    uint32 tx_failed = 6;        // frames nobody acknowledged, since boot
+    bool dual_pump = 7;          // the settings in use
+    float motor_temp_limit = 8;
 }

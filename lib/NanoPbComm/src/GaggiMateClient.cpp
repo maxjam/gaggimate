@@ -268,6 +268,19 @@ void GaggiMateClient::sendAutotune(uint32_t testTime, uint32_t samples, uint32_t
     _endpoint.send(buildAutotune(testTime, samples, heaterWattage));
 }
 
+// Fork (meterlink.15)
+gm::Payload GaggiMateClient::buildVescSettings(bool dualPump, float motorTempLimit) {
+    gm::Payload p = gaggimate_Payload_init_zero;
+    p.which_content = gaggimate_Payload_vesc_settings_tag;
+    p.content.vesc_settings.dual_pump = dualPump;
+    p.content.vesc_settings.motor_temp_limit = motorTempLimit;
+    return p;
+}
+
+void GaggiMateClient::sendVescSettings(bool dualPump, float motorTempLimit) {
+    _endpoint.send(buildVescSettings(dualPump, motorTempLimit));
+}
+
 void GaggiMateClient::sendPressureScale(float scale) { _endpoint.send(buildPressureScale(scale)); }
 
 void GaggiMateClient::tare() { _endpoint.send(buildTare()); }
@@ -342,7 +355,46 @@ void GaggiMateClient::registerHandlers() {
             _tofCb(p.content.tof.distance);
     });
     _endpoint.on(gaggimate_Payload_error_tag, [this](const gm::Payload &p) {
+        const int code = static_cast<int>(p.content.error.code);
+        // Fork (meterlink.15): pump stops have their own path, so they never latch the display's fault state.
+        if (isPumpStopCode(code) && _pumpStopCb) {
+            _pumpStopCb(code, static_cast<uint8_t>(p.content.error.pump), p.content.error.detail);
+            return;
+        }
         if (_errorCb)
-            _errorCb(static_cast<int>(p.content.error.code));
+            _errorCb(code);
+    });
+    _endpoint.on(gaggimate_Payload_vesc_status_tag, [this](const gm::Payload &p) {
+        if (!_vescStatusCb)
+            return;
+        const gm::VescStatus &s = p.content.vesc_status;
+        VescStatusReport report;
+        const size_t maxPumps = sizeof(report.pumps) / sizeof(report.pumps[0]);
+        report.pumpCount = static_cast<uint8_t>(s.pumps_count < maxPumps ? s.pumps_count : maxPumps);
+        for (uint8_t i = 0; i < report.pumpCount; i++) {
+            const gm::VescPump &m = s.pumps[i];
+            VescPumpReport &r = report.pumps[i];
+            r.state = static_cast<uint8_t>(m.state);
+            r.erpm = m.erpm;
+            r.motorCurrent = static_cast<float>(m.motor_current_da) / 10.0f;
+            r.duty = static_cast<float>(m.duty_pm) / 1000.0f;
+            r.fetTemp = static_cast<float>(m.fet_temp_dc) / 10.0f;
+            r.motorTemp = static_cast<float>(m.motor_temp_dc) / 10.0f;
+            r.inputCurrent = static_cast<float>(m.input_current_da) / 10.0f;
+            r.inputVoltage = static_cast<float>(m.input_voltage_dv) / 10.0f;
+            r.fault = static_cast<uint8_t>(m.fault);
+            r.hasSpeed = (m.flags & 1u) != 0;
+            r.hasTemps = (m.flags & 2u) != 0;
+            r.hasVoltage = (m.flags & 4u) != 0;
+            r.hasFault = (m.flags & 8u) != 0;
+        }
+        report.commandDuty = static_cast<float>(s.command_duty_pm) / 1000.0f;
+        report.trip = static_cast<uint8_t>(s.trip);
+        report.tripPump = static_cast<uint8_t>(s.trip_pump);
+        report.busState = static_cast<uint8_t>(s.bus_state);
+        report.txFailed = s.tx_failed;
+        report.dualPump = s.dual_pump;
+        report.motorTempLimit = s.motor_temp_limit;
+        _vescStatusCb(report);
     });
 }

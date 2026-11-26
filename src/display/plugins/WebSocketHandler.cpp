@@ -423,6 +423,7 @@ void WebSocketHandler::publishState(unsigned long now) {
     doc["cp"] = caps.pressure;
     doc["cd"] = caps.dimming;
     doc["gp"] = caps.hasAddon(7);
+    doc["pcan"] = caps.pumpCan; // fork (meterlink.15): pump drive over CAN, the web UI shows the pump panel
     doc["hs"] = caps.hwScale;
     doc["scaleSource"] = controller->getActiveScaleSourceName();
     doc["led"] = caps.ledControl;
@@ -509,6 +510,66 @@ void WebSocketHandler::publishTelemetry() {
     statusDoc["cw"] = this->currentActiveWeight;
     for (auto &provider : statusProviders)
         provider(statusDoc);
+    // Fork (meterlink.15): both pumps on the Flipsky as the controller reads them from the CAN bus, and the last
+    // pump stop. Readings the controller has no fresh frame for go out as null.
+    if (controller->hasPumpDrive()) {
+        JsonObject pd = statusDoc["pd"].to<JsonObject>();
+        VescStatusReport report;
+        const bool fresh = controller->getPumpDriveStatus(report);
+        pd["ok"] = fresh;
+        if (fresh) {
+            pd["bus"] = report.busState;
+            pd["txf"] = report.txFailed;
+            pd["cd"] = round_to(report.commandDuty, 3);
+            pd["dual"] = report.dualPump;
+            pd["lim"] = report.motorTempLimit;
+            pd["trip"] = report.trip;
+            pd["tp"] = report.tripPump;
+            JsonArray pumps = pd["p"].to<JsonArray>();
+            for (uint8_t i = 0; i < report.pumpCount; i++) {
+                const VescPumpReport &r = report.pumps[i];
+                JsonObject o = pumps.add<JsonObject>();
+                o["s"] = r.state;
+                if (r.hasSpeed) {
+                    o["e"] = r.erpm;
+                    o["a"] = round_to(r.motorCurrent, 1);
+                    o["d"] = round_to(r.duty, 3);
+                } else {
+                    o["e"] = nullptr;
+                    o["a"] = nullptr;
+                    o["d"] = nullptr;
+                }
+                if (r.hasTemps) {
+                    o["mt"] = round_to(r.motorTemp, 1);
+                    o["ft"] = round_to(r.fetTemp, 1);
+                    o["ia"] = round_to(r.inputCurrent, 1);
+                } else {
+                    o["mt"] = nullptr;
+                    o["ft"] = nullptr;
+                    o["ia"] = nullptr;
+                }
+                if (r.hasVoltage)
+                    o["v"] = round_to(r.inputVoltage, 1);
+                else
+                    o["v"] = nullptr;
+                if (r.hasFault)
+                    o["f"] = r.fault;
+                else
+                    o["f"] = nullptr;
+            }
+        }
+        const Controller::PumpStop stop = controller->getPumpStop();
+        if (stop.code != 0) {
+            JsonObject st = pd["stop"].to<JsonObject>();
+            st["c"] = stop.code;
+            st["p"] = stop.pump;
+            st["d"] = stop.detail;
+            st["ago"] = (millis() - stop.at) / 1000;
+            st["pending"] = stop.pending;
+        } else {
+            pd["stop"] = nullptr;
+        }
+    }
     // Explicit null/zero so merging clients drop a finished process instead of keeping the last one.
     statusDoc["process"] = nullptr;
     statusDoc["pkr"] = 0;
