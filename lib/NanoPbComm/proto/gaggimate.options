@@ -26,5 +26,5 @@ gaggimate.LedChannel.effect int_size:IS_8
 gaggimate.LedChannel.min_brightness int_size:IS_8
 gaggimate.LedChannel.cycle_time_ms int_size:IS_16
 
-# Fork (maxjam.15): pump 1 and pump 2 on the Flipsky dual VESC.
+# Fork (maxa4turbo.15): pump 1 and pump 2 on the Flipsky dual VESC.
 gaggimate.VescStatus.pumps max_count:2

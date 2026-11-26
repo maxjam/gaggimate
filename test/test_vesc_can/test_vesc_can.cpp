@@ -1,4 +1,4 @@
-// Unit tests: VESC CAN frames and the pump stop rules of the fork's CAN pump drive (maxjam.15).
+// Unit tests: VESC CAN frames and the pump stop rules of the fork's CAN pump drive (maxa4turbo.15).
 // Host-side, STL only — pio test -e native -f test_vesc_can.
 // The expected bytes are written out by hand from the VESC firmware 7.00 source (comm/comm_can.c, comm/commands.c):
 // identifier = packet number << 8 | VESC ID, values big-endian.

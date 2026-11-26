@@ -21,7 +21,7 @@ import { CleaningSection } from './CleaningSection.jsx';
 import { validateTankCalibration } from '../../../utils/waterLevel.js';
 
 const gearpumpAddon = computed(() => machine.value.capabilities.gearpumpAddon);
-const pumpCan = computed(() => machine.value.capabilities.pumpCan); // fork (maxjam.15)
+const pumpCan = computed(() => machine.value.capabilities.pumpCan); // fork (maxa4turbo.15)
 const ledControl = computed(() => machine.value.capabilities.ledControl);
 const pressureAvailable = computed(() => machine.value.capabilities.pressure);
 const tofDistance = computed(() => machine.value.status.tofDistance);

@@ -49,7 +49,7 @@
 
 const String LOG_TAG = F("Controller");
 constexpr uint32_t ADDON_HW_SCALE = 8;
-constexpr uint32_t ADDON_VESC_CAN = 50; // fork (maxjam.15): pump drive is a Flipsky dual VESC over CAN
+constexpr uint32_t ADDON_VESC_CAN = 50; // fork (maxa4turbo.15): pump drive is a Flipsky dual VESC over CAN
 constexpr unsigned long PUMP_DRIVE_STATUS_MAX_AGE_MS = 3000;
 constexpr double DISPLAY_NEGATIVE_WEIGHT_THRESHOLD = -0.1;
 
@@ -376,7 +376,7 @@ void Controller::setupBluetooth() {
             ESP_LOGE(LOG_TAG, "Received error %d", error);
         }
     });
-    // Fork (maxjam.15): CAN pump drive readings and pump stops.
+    // Fork (maxa4turbo.15): CAN pump drive readings and pump stops.
     comms.onVescStatus([this](const VescStatusReport &report) {
         std::lock_guard<std::mutex> guard(pumpDriveMutex);
         pumpDriveStatus = report;
@@ -980,12 +980,12 @@ void Controller::setPumpModelCoeffs(void) {
                                gearpumpEnabled ? settings.getIntegralGain() : DEFAULT_INTEGRAL_GAIN, settings.getMaxPumpPower(),
                                slip[0], slip[1], slip[2], slip[3], gearpumpEnabled ? settings.getMinPumpPower() : 0.0f);
     }
-    // Fork (maxjam.15): second pump and motor temperature limit of the CAN pump drive.
+    // Fork (maxa4turbo.15): second pump and motor temperature limit of the CAN pump drive.
     if (systemInfo.capabilities.pumpCan)
         comms.sendVescSettings(settings.isPumpDual(), static_cast<float>(settings.getPumpMotorTempLimit()));
 }
 
-// Fork (maxjam.15): the controller has switched the pumps off (see VescCan on the controller). End what is
+// Fork (maxa4turbo.15): the controller has switched the pumps off (see VescCan on the controller). End what is
 // running and go to standby, as for a controller fault, but without latching: the reason stays on the standby
 // screen and in the web UI until the machine is woken up again. Runs on the comms task, like onError.
 void Controller::onPumpStop(int code, uint8_t pump, int32_t detail) {
@@ -1498,7 +1498,7 @@ void Controller::setMode(int newMode) {
     const int previousMode = mode;
     mode = modeEvent.getInt("value");
     if (mode != MODE_STANDBY)
-        acknowledgePumpStop(); // fork (maxjam.15): leaving standby takes the pump stop notice off the screen
+        acknowledgePumpStop(); // fork (maxa4turbo.15): leaving standby takes the pump stop notice off the screen
     if (systemInfo.capabilities.dualBoiler) {
         if (mode == MODE_STANDBY) {
             if (previousMode != MODE_STANDBY && settings.getDefaultSteamMode() == 2)

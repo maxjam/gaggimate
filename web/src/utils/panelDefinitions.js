@@ -126,7 +126,7 @@ export const PANEL_DEFINITIONS = [
     }),
   },
   {
-    // Fork (maxjam.15): both pumps on the Flipsky dual VESC, live from the CAN bus.
+    // Fork (maxa4turbo.15): both pumps on the Flipsky dual VESC, live from the CAN bus.
     id: 'pumps',
     labelMsg: msg`Pumps`,
     required: false,

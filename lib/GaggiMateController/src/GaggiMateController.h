@@ -74,7 +74,7 @@ constexpr bool kDisplayUartLink = false;
 constexpr bool kDisplayUartLink = true;
 #endif
 
-// Fork (maxjam.15): VESC_CAN=1 drives the pump(s) through a Flipsky dual VESC over CAN on J6
+// Fork (maxa4turbo.15): VESC_CAN=1 drives the pump(s) through a Flipsky dual VESC over CAN on J6
 // (ext5 = TX gpio13, ext4 = RX gpio12, SN65HVD230 transceiver) whenever the Velofuso adapter is not found on J6.
 // With the adapter plugged in the build works like meterlink.14 (analog output through the adapter), so the same
 // firmware covers both sides of the hardware swap. The wired display link would use the same two pins; it is
@@ -165,7 +165,7 @@ class GaggiMateController {
     std::unique_ptr<ScaleLink> scaleLink;
 
     std::unique_ptr<GearpumpAddon> gearpumpAddon;
-    std::unique_ptr<VescCan> vescCan; // fork (maxjam.15): set when the pump drive is the Flipsky over CAN
+    std::unique_ptr<VescCan> vescCan; // fork (maxa4turbo.15): set when the pump drive is the Flipsky over CAN
 
     std::array<char, 128> albaSwTxBuffer{};
     std::array<char, 128> albaSwRxBuffer{};

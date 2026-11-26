@@ -11,7 +11,7 @@ import {
   pumpStopText,
 } from '../../../utils/pumpDrive.js';
 
-// Fork (maxjam.15): both pumps on the Flipsky dual VESC, live from the CAN bus (STATUS 1 / 4 / 5 and the
+// Fork (maxa4turbo.15): both pumps on the Flipsky dual VESC, live from the CAN bus (STATUS 1 / 4 / 5 and the
 // fault poll), plus the last pump stop. One column per pump so two pumps in series can be compared line by line.
 // The state is always written out; colour only repeats it.
 const TONE_CLASS = {

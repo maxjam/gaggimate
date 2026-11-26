@@ -1,4 +1,4 @@
-// Fork (maxjam.15): the pumps on the Flipsky dual VESC, as the controller reads them from the CAN bus.
+// Fork (maxa4turbo.15): the pumps on the Flipsky dual VESC, as the controller reads them from the CAN bus.
 // The display sends them in evt:status as `pd`; ApiService stores that object as status.pumpDrive.
 import { msg } from '@lingui/core/macro';
 import { i18n } from '../i18n.js';

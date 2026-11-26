@@ -76,7 +76,7 @@ inline uint8_t defaultPriority(pb_size_t which) {
     case gaggimate_Payload_volumetric_tag:
     case gaggimate_Payload_scale_tag:
     case gaggimate_Payload_tof_tag:
-    case gaggimate_Payload_vesc_status_tag: // fork (maxjam.15)
+    case gaggimate_Payload_vesc_status_tag: // fork (maxa4turbo.15)
         return PRIO_LOW;
     default:
         return PRIO_NORMAL;

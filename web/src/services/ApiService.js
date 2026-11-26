@@ -251,7 +251,7 @@ export default class ApiService {
     map('up', 'update', v => !!v);
     map('warn', 'warnings', parseWarningStates);
     map('sys', 'system', v => ({ state: v?.s ?? 'ready', message: v?.m ?? '', code: v?.c ?? 0 }));
-    map('pd', 'pumpDrive', v => v ?? null); // fork (maxjam.15): pumps on the Flipsky over CAN
+    map('pd', 'pumpDrive', v => v ?? null); // fork (maxa4turbo.15): pumps on the Flipsky over CAN
     if (has('pcan') && !message.pcan) status.pumpDrive = null;
     status.activeTargetWeight = (status.process?.a && status.targetWeight) || 0;
     status.timestamp = new Date();
@@ -262,7 +262,7 @@ export default class ApiService {
     if (has('led')) capabilities.ledControl = message.led;
     if (has('tofc')) capabilities.tof = message.tofc;
     if (has('gp')) capabilities.gearpumpAddon = !!message.gp;
-    if (has('pcan')) capabilities.pumpCan = !!message.pcan; // fork (maxjam.15)
+    if (has('pcan')) capabilities.pumpCan = !!message.pcan; // fork (maxa4turbo.15)
     if (has('db')) capabilities.dualBoiler = message.db;
     if (has('hs')) capabilities.hardwareScale = !!message.hs;
     if (has('sd')) capabilities.sdCard = !!message.sd;

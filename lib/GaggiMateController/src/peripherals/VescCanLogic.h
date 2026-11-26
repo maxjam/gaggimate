@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
-// Fork (maxjam.15): the Velofuso pumps on a Flipsky dual VESC, driven over CAN instead of the analog adapter.
+// Fork (maxa4turbo.15): the Velofuso pumps on a Flipsky dual VESC, driven over CAN instead of the analog adapter.
 // This header is the part without hardware: frame layouts and the stop rules. STL only, covered by
 // test/test_vesc_can. The TWAI driver around it is VescCan.{h,cpp}.
 //

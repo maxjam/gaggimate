@@ -37,7 +37,7 @@ using VolumetricMeasurement = gaggimate_VolumetricMeasurement;
 using ScaleMeasurement = gaggimate_ScaleMeasurement;
 using TofMeasurement = gaggimate_TofMeasurement;
 using Error = gaggimate_Error;
-using VescSettings = gaggimate_VescSettings; // fork (maxjam.15)
+using VescSettings = gaggimate_VescSettings; // fork (maxa4turbo.15)
 using VescPump = gaggimate_VescPump;
 using VescStatus = gaggimate_VescStatus;
 

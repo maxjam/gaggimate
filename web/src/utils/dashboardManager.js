@@ -104,7 +104,7 @@ export const setMetricOrder = ids => {
 
 const DASHBOARD_PANELS_KEY = 'dashboardPanels';
 const DOSE_PANEL_INITIALIZED_KEY = 'smartDosePanelInitialized';
-const PUMPS_PANEL_INITIALIZED_KEY = 'pumpsPanelInitialized'; // fork (maxjam.15)
+const PUMPS_PANEL_INITIALIZED_KEY = 'pumpsPanelInitialized'; // fork (maxa4turbo.15)
 
 const DEFAULT_PANEL_ORDER = ['mode', 'profile', 'metrics', 'dose', 'watertank', 'pumps', 'action'];
 
@@ -124,7 +124,7 @@ export const getPanelOrder = () => {
       if (stored) localStorage.setItem(DASHBOARD_PANELS_KEY, JSON.stringify(ids));
       localStorage.setItem(DOSE_PANEL_INITIALIZED_KEY, 'true');
     }
-    // Fork (maxjam.15): same for the pump panel (it only renders with the CAN pump drive).
+    // Fork (maxa4turbo.15): same for the pump panel (it only renders with the CAN pump drive).
     if (!localStorage.getItem(PUMPS_PANEL_INITIALIZED_KEY)) {
       if (!ids.includes('pumps')) {
         const actionIndex = ids.indexOf('action');
