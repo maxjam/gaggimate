@@ -107,7 +107,7 @@ class Controller {
     SystemState getSystemState() const;
     String getSystemStateMessage() const;
 
-    // Fork (meterlink.15): pumps on a Flipsky dual VESC over CAN. The controller sends the readings four times a
+    // Fork (maxjam.15): pumps on a Flipsky dual VESC over CAN. The controller sends the readings four times a
     // second and a pump stop (stall, motor too hot, VESC fault, VESC silent) when it has switched the pumps off.
     // A pump stop ends whatever is running and puts the machine in standby with the reason on the screen; waking
     // the machine acknowledges it. It never latches like a controller fault.
@@ -378,7 +378,7 @@ class Controller {
     bool steamRefillPostClear = false;
     int error = 0;
 
-    // Fork (meterlink.15): CAN pump drive, written from the comms task
+    // Fork (maxjam.15): CAN pump drive, written from the comms task
     void onPumpStop(int code, uint8_t pump, int32_t detail);
     mutable std::mutex pumpDriveMutex;
     VescStatusReport pumpDriveStatus;

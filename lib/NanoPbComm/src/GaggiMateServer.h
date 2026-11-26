@@ -31,7 +31,7 @@ class GaggiMateServer {
                                                     float idleFilterAlpha, float activeFilterAlpha)>;
     using LedCallback =
         std::function<void(uint8_t channel, uint8_t brightness, LedEffect effect, uint8_t minBrightness, uint16_t cycleTimeMs)>;
-    // Fork (meterlink.15): CAN pump drive settings from the display.
+    // Fork (maxjam.15): CAN pump drive settings from the display.
     using VescSettingsCallback = std::function<void(bool dualPump, float motorTempLimit)>;
 
     GaggiMateServer();
@@ -60,7 +60,7 @@ class GaggiMateServer {
                                       bool cell2Valid = false);
     gm::Payload buildTofMeasurement(uint32_t distance);
     gm::Payload buildError(int code);
-    // Fork (meterlink.15)
+    // Fork (maxjam.15)
     gm::Payload buildPumpStop(int code, uint8_t pump, int32_t detail);
     gm::Payload buildVescStatus(const VescStatusReport &report);
 
@@ -74,7 +74,7 @@ class GaggiMateServer {
                               bool cell2Valid = false);
     void sendTofMeasurement(uint32_t distance);
     void sendError(int code);
-    // Fork (meterlink.15): a pump stop (ERROR_CODE_PUMP_*), delivered reliably; pump readings, fire-and-forget.
+    // Fork (maxjam.15): a pump stop (ERROR_CODE_PUMP_*), delivered reliably; pump readings, fire-and-forget.
     void sendPumpStop(int code, uint8_t pump, int32_t detail);
     void sendVescStatus(const VescStatusReport &report);
 

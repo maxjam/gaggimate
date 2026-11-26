@@ -268,7 +268,7 @@ void GaggiMateClient::sendAutotune(uint32_t testTime, uint32_t samples, uint32_t
     _endpoint.send(buildAutotune(testTime, samples, heaterWattage));
 }
 
-// Fork (meterlink.15)
+// Fork (maxjam.15)
 gm::Payload GaggiMateClient::buildVescSettings(bool dualPump, float motorTempLimit) {
     gm::Payload p = gaggimate_Payload_init_zero;
     p.which_content = gaggimate_Payload_vesc_settings_tag;
@@ -356,7 +356,7 @@ void GaggiMateClient::registerHandlers() {
     });
     _endpoint.on(gaggimate_Payload_error_tag, [this](const gm::Payload &p) {
         const int code = static_cast<int>(p.content.error.code);
-        // Fork (meterlink.15): pump stops have their own path, so they never latch the display's fault state.
+        // Fork (maxjam.15): pump stops have their own path, so they never latch the display's fault state.
         if (isPumpStopCode(code) && _pumpStopCb) {
             _pumpStopCb(code, static_cast<uint8_t>(p.content.error.pump), p.content.error.detail);
             return;

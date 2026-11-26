@@ -423,7 +423,7 @@ void WebSocketHandler::publishState(unsigned long now) {
     doc["cp"] = caps.pressure;
     doc["cd"] = caps.dimming;
     doc["gp"] = caps.hasAddon(7);
-    doc["pcan"] = caps.pumpCan; // fork (meterlink.15): pump drive over CAN, the web UI shows the pump panel
+    doc["pcan"] = caps.pumpCan; // fork (maxjam.15): pump drive over CAN, the web UI shows the pump panel
     doc["hs"] = caps.hwScale;
     doc["scaleSource"] = controller->getActiveScaleSourceName();
     doc["led"] = caps.ledControl;
@@ -510,7 +510,7 @@ void WebSocketHandler::publishTelemetry() {
     statusDoc["cw"] = this->currentActiveWeight;
     for (auto &provider : statusProviders)
         provider(statusDoc);
-    // Fork (meterlink.15): both pumps on the Flipsky as the controller reads them from the CAN bus, and the last
+    // Fork (maxjam.15): both pumps on the Flipsky as the controller reads them from the CAN bus, and the last
     // pump stop. Readings the controller has no fresh frame for go out as null.
     if (controller->hasPumpDrive()) {
         JsonObject pd = statusDoc["pd"].to<JsonObject>();

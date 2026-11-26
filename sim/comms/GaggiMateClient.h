@@ -122,7 +122,7 @@ class GaggiMateClient {
     }
     void sendPumpSettings(float a, float b, float c, float d, float commutationGain, float convergenceGain, float integralGain,
                           float maxPower, float slipA, float slipB, float slipC, float slipD, float minPower = 0.0f);
-    void sendVescSettings(bool, float) {} // fork (meterlink.15): no CAN pump drive in the mock
+    void sendVescSettings(bool, float) {} // fork (maxjam.15): no CAN pump drive in the mock
     void sendAutotune(uint32_t testTime, uint32_t samples, uint32_t heaterWattage);
     void sendPressureScale(float scale);
     void sendScaleFactors(float, float, uint16_t = 10, float = 0.80f, float = 0.80f) {} // no hardware scale in the mock
@@ -152,7 +152,7 @@ class GaggiMateClient {
     void onTankLevel(TankLevelCallback cb) { _tankLevelCb = std::move(cb); }
     void onMachineHardware(MachineHardwareCallback cb) { _machineHardwareCb = std::move(cb); }
     void onError(ErrorCallback cb) { _errorCb = std::move(cb); }
-    void onVescStatus(std::function<void(const VescStatusReport &)>) {} // fork (meterlink.15)
+    void onVescStatus(std::function<void(const VescStatusReport &)>) {} // fork (maxjam.15)
     void onPumpStop(std::function<void(int, uint8_t, int32_t)>) {}
 
   private:

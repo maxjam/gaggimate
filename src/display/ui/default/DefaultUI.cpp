@@ -296,7 +296,7 @@ void DefaultUI::init() {
         rerender = true;
         changeScreen(SCREEN_ID_STANDBY_SCREEN);
     });
-    // Fork (meterlink.15): the CAN pump drive stopped the pumps; the reason is the standby screen's label.
+    // Fork (maxjam.15): the CAN pump drive stopped the pumps; the reason is the standby screen's label.
     pluginManager->on("controller:pump:stop", [this](Event const &) {
         rerender = true;
         changeScreen(SCREEN_ID_STANDBY_SCREEN);
@@ -828,7 +828,7 @@ void DefaultUI::updateSystemStatus() {
     const auto &settings = controller->getSettings();
     systemStatus.bluetooth(controller->getClientController()->isConnected());
     systemStatus.wifi(!apActive && WiFi.status() == WL_CONNECTED);
-    // Fork (meterlink.15): a pump stop shows on the same label until the machine is woken up.
+    // Fork (maxjam.15): a pump stop shows on the same label until the machine is woken up.
     const bool systemError = controller->getSystemState() != SYSTEM_READY;
     const bool pumpStop = !systemError && controller->isPumpStopPending();
     const bool error = systemError || pumpStop;

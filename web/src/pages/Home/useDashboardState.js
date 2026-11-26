@@ -23,7 +23,7 @@ export function useDashboardState() {
   // Anything but a ready controller locks the dashboard into standby, exactly like the touch UI.
   const systemReady = connected.value && (!s.system || s.system.state === 'ready');
   // Only a not-ready state carries a message; ready leaves the default standby text in place.
-  // Fork (meterlink.15): a pump stop puts the machine in standby; its reason takes the standby line until wake-up.
+  // Fork (maxjam.15): a pump stop puts the machine in standby; its reason takes the standby line until wake-up.
   const pumpStop = s.pumpDrive?.stop?.pending ? pumpStopText(s.pumpDrive.stop) : '';
   const systemMessage = !connected.value
     ? t`Connecting to the machine...`

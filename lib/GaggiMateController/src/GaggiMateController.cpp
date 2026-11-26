@@ -13,7 +13,7 @@
 
 constexpr uint32_t ADDON_GEARPUMP = 7;
 constexpr uint32_t ADDON_HW_SCALE = 8;
-// Fork (meterlink.15): the pump drive is a Flipsky dual VESC over CAN. Reported next to ADDON_GEARPUMP, so the
+// Fork (maxjam.15): the pump drive is a Flipsky dual VESC over CAN. Reported next to ADDON_GEARPUMP, so the
 // display keeps every gear pump setting and adds the pump panel and its two settings.
 constexpr uint32_t ADDON_VESC_CAN = 50;
 
@@ -419,7 +419,7 @@ void GaggiMateController::setup() {
             vescCan->setMaxPower(settings.maxBLDCPower); // the duty sent at 100 % pump power
         }
     });
-    // Fork (meterlink.15): second pump on/off and the motor temperature limit of the CAN pump drive.
+    // Fork (maxjam.15): second pump on/off and the motor temperature limit of the CAN pump drive.
     _comms.onVescSettings([this](bool dualPump, float motorTempLimit) {
         if (this->vescCan == nullptr)
             return;
@@ -666,7 +666,7 @@ void GaggiMateController::updateDualBoilerOutputs(unsigned long now) {
         baristaLight->update(now, false, safe);
 }
 
-// Fork (meterlink.15): start the CAN pump drive (see VescCan.h). The pump controller keeps writing one pump
+// Fork (maxjam.15): start the CAN pump drive (see VescCan.h). The pump controller keeps writing one pump
 // power; the CAN task turns it into a duty for one or two VESCs, as the adapter's task turns it into a voltage.
 void GaggiMateController::setupVescCan() {
     if (this->vescCan == nullptr)
@@ -684,7 +684,7 @@ void GaggiMateController::setupVescCan() {
     static_cast<DimmedPump *>(pump.get())->setBinaryMode(true);
 }
 
-// Fork (meterlink.15): pump readings for the display's web UI, with the sensor data four times a second.
+// Fork (maxjam.15): pump readings for the display's web UI, with the sensor data four times a second.
 void GaggiMateController::sendVescStatus() {
     if (this->vescCan == nullptr || !_comms.isConnected())
         return;
@@ -739,7 +739,7 @@ void GaggiMateController::detectAddon() {
             }
         }
     }
-    // Fork (meterlink.15): one missed answer must not flip a machine with the adapter over to CAN; ask twice more.
+    // Fork (maxjam.15): one missed answer must not flip a machine with the adapter over to CAN; ask twice more.
     for (int attempt = 0; kVescCan && busReady && gearpumpAddon == nullptr && attempt < 2; attempt++) {
         delay(30);
         bus.beginTransmission(0x26);

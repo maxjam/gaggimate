@@ -75,7 +75,7 @@ constexpr int ERROR_CODE_TIMEOUT = 5;
 // Autotune saw no reaction within its test window (distinct from TIMEOUT): no PID persist, no watchdog-disconnect UX.
 constexpr int ERROR_CODE_AUTOTUNE_TIMEOUT = 6;
 
-// Fork (meterlink.15): the CAN pump drive stopped the pumps (stall, motor too hot, VESC fault, VESC silent).
+// Fork (maxjam.15): the CAN pump drive stopped the pumps (stall, motor too hot, VESC fault, VESC silent).
 // The display ends the shot and shows the reason; unlike the codes above it is not a latched controller fault.
 constexpr int ERROR_CODE_PUMP_STALL = 50;
 constexpr int ERROR_CODE_PUMP_HOT = 51;
@@ -83,7 +83,7 @@ constexpr int ERROR_CODE_PUMP_FAULT = 52;
 constexpr int ERROR_CODE_PUMP_NO_DATA = 53;
 constexpr bool isPumpStopCode(int code) { return code >= ERROR_CODE_PUMP_STALL && code <= ERROR_CODE_PUMP_NO_DATA; }
 
-// Fork (meterlink.15): one pump on the Flipsky dual VESC, as the controller reads it from the CAN bus.
+// Fork (maxjam.15): one pump on the Flipsky dual VESC, as the controller reads it from the CAN bus.
 // state: 0 off, 1 running, 2 stall, 3 hot, 4 fault, 5 no data, 6 not used.
 constexpr uint8_t VESC_PUMP_OFF = 0;
 constexpr uint8_t VESC_PUMP_RUNNING = 1;

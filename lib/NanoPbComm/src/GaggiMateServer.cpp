@@ -203,7 +203,7 @@ void GaggiMateServer::sendTofMeasurement(uint32_t distance) { _endpoint.sendUnre
 
 void GaggiMateServer::sendError(int code) { _endpoint.send(buildError(code)); }
 
-// Fork (meterlink.15)
+// Fork (maxjam.15)
 gm::Payload GaggiMateServer::buildPumpStop(int code, uint8_t pump, int32_t detail) {
     gm::Payload p = buildError(code);
     p.content.error.pump = pump;

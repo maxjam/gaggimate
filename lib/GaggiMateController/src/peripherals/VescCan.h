@@ -9,7 +9,7 @@
 #include <freertos/task.h>
 #include <functional>
 
-// Fork (meterlink.15): drives the Velofuso pumps through a Flipsky dual VESC over CAN (ESP32-S3 TWAI + SN65HVD230
+// Fork (maxjam.15): drives the Velofuso pumps through a Flipsky dual VESC over CAN (ESP32-S3 TWAI + SN65HVD230
 // on J6: ext5 = TX, ext4 = RX), in place of the analog Velofuso adapter.
 //
 //  - Every 20 ms while pumping: SET_DUTY = pump power x max pump power to VESC ID 18 (and 19 with a second pump).

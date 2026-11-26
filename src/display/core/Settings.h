@@ -346,7 +346,7 @@ class Settings {
     float getPressureReleaseBar() const { return pressureReleaseBar.get(); }
     int getPressureReleasePulseMs() const { return pressureReleasePulseMs.get(); }
     int getPressureReleaseIntervalS() const { return pressureReleaseIntervalS.get(); }
-    // Fork (meterlink.15): CAN pump drive (Flipsky dual VESC). Second pump wired, and the motor temperature at
+    // Fork (maxjam.15): CAN pump drive (Flipsky dual VESC). Second pump wired, and the motor temperature at
     // which the pumps are stopped (0 = no check).
     bool isPumpDual() const { return pumpDual.get(); }
     int getPumpMotorTempLimit() const { return pumpMotorTempLimit.get(); }

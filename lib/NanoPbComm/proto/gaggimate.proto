@@ -48,7 +48,7 @@ message Payload {
         LedControl led = 11;
         ScaleFactors scale_factors = 12;
         HeaterSettings heater = 13;
-        VescSettings vesc_settings = 28; // fork (meterlink.15)
+        VescSettings vesc_settings = 28; // fork (maxjam.15)
 
         // Responses: controller -> display
         MachineHardwareStatus machine_hardware_status = 30;
@@ -60,7 +60,7 @@ message Payload {
         TofMeasurement tof = 25;
         Error error = 26;
         ScaleMeasurement scale = 27;
-        VescStatus vesc_status = 29; // fork (meterlink.15)
+        VescStatus vesc_status = 29; // fork (maxjam.15)
     }
 }
 
@@ -301,7 +301,7 @@ enum ErrorCode {
     ERROR_CODE_RUNAWAY = 4;
     ERROR_CODE_TIMEOUT = 5;
     ERROR_CODE_AUTOTUNE_TIMEOUT = 6;
-    // Fork (meterlink.15): the CAN pump drive stopped the pumps. Not a latched controller fault: the display ends
+    // Fork (maxjam.15): the CAN pump drive stopped the pumps. Not a latched controller fault: the display ends
     // the shot, shows the reason and carries on. Numbers kept clear of upstream's.
     ERROR_CODE_PUMP_STALL = 50;
     ERROR_CODE_PUMP_HOT = 51;
@@ -311,13 +311,13 @@ enum ErrorCode {
 
 message Error {
     ErrorCode code = 1;
-    // Fork (meterlink.15), pump stops only.
+    // Fork (maxjam.15), pump stops only.
     uint32 pump = 20;   // 1 or 2
     sint32 detail = 21; // VESC fault code, motor temperature in degC, or ERPM
 }
 
 // ---------------------------------------------------------------------------
-// Fork (meterlink.15): pumps on a Flipsky dual VESC over CAN
+// Fork (maxjam.15): pumps on a Flipsky dual VESC over CAN
 // ---------------------------------------------------------------------------
 
 // Display -> controller.
