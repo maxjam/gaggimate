@@ -12,15 +12,17 @@
 // Fork (maxa4turbo.15): drives the Velofuso pumps through a Flipsky dual VESC over CAN (ESP32-S3 TWAI + SN65HVD230
 // on J6: ext5 = TX, ext4 = RX), in place of the analog Velofuso adapter.
 //
-//  - Every 20 ms while pumping: SET_DUTY = pump power x max pump power to VESC ID 18 (and 19 with a second pump).
-//    With the pump off: SET_CURRENT 0 A, which releases the motor.
+//  - Every 20 ms while pumping, to VESC ID 18 (and 19 with a second pump): SET_RPM = pump power x max pump power x
+//    max ERPM (maxa4turbo.16, speed control: the VESC's field weakening only runs there), or SET_DUTY = pump power x
+//    max pump power with speed control switched off. With the pump off, or a speed under 1,000 ERPM asked for:
+//    SET_CURRENT 0 A, which releases the motor.
 //  - Reads STATUS 1 / 4 / 5 from both VESCs and asks each for its fault code every 200 ms.
 //  - Stops every pump (0 A) and reports it when a pump stalls, runs hot, reports a fault or goes silent
 //    (rules in VescCanLogic.h). The stop holds until the pump power has been 0 for a second.
 //  - If this ESP32 hangs, each VESC releases its motor by itself after its 1000 ms command timeout.
 //
-// VESC Tool, both sides: App = No App, CAN 500K, CAN status rate 1 = STATUS 1 at 50 Hz, rate 2 = STATUS 4 + 5 at
-// 10 Hz, Timeout 1000 ms with brake current 0 A.
+// VESC Tool, both sides: App = No App, CAN 500K, Can Status Rate 1 = 50 Hz with Status 1, Can Status Rate 2 = 10 Hz
+// with Status 4 + 5, Timeout 1000 ms with brake current 0 A.
 class VescCan {
   public:
     static constexpr uint8_t OWN_ID = 42;
@@ -37,8 +39,13 @@ class VescCan {
         bool freshTemps[vesc::MAX_PUMPS] = {false, false};   // STATUS 4: temperatures, input current
         bool freshVoltage[vesc::MAX_PUMPS] = {false, false}; // STATUS 5: input voltage
         bool freshFault[vesc::MAX_PUMPS] = {false, false};   // fault poll answered
-        float requestedDuty = 0.0f;                          // what the profile asks for
-        float commandDuty = 0.0f;                            // what is being sent (0 while stopped)
+        float requestedPower = 0.0f;                         // pump power x max pump power the profile asks for, 0..1
+        bool speedMode = true;                               // SET_RPM (true) or SET_DUTY in use
+        int32_t maxErpm = vesc::MAX_ERPM_DEFAULT;            // speed control: ERPM at 100 %
+        int32_t requestedErpm = 0;                           // speed control: what the profile asks for
+        int32_t commandErpm = 0;                             // speed control: what is being sent (0 = released)
+        float commandDuty = 0.0f;                            // duty control: what is being sent (0 = released)
+        bool outputOn = false;                               // a drive command is going out
         vesc::Trip trip = vesc::Trip::NONE;
         uint8_t tripPump = 0;
         vesc::Trip lastTrip = vesc::Trip::NONE;
@@ -67,6 +74,10 @@ class VescCan {
     // power: the pump power 0..100 the pump controller writes (same pointer the analog adapter reads).
     bool setup(float *power);
     void setMaxPower(float maxPower);
+    // Speed control on: pump power sets the speed (SET_RPM). Off: pump power is the duty (SET_DUTY), as in
+    // maxa4turbo.15. A change waits until the pump is off.
+    void setSpeedMode(bool speedMode) { _speedModeSetting = speedMode; }
+    void setMaxErpm(int32_t maxErpm) { _maxErpm = vesc::clampMaxErpm(maxErpm); }
     void setDualPump(bool dualPump) { _dualPump = dualPump; }
     void setMotorTempLimit(float limitC);
     void onTrip(TripCallback cb) { _tripCb = std::move(cb); }
@@ -94,6 +105,8 @@ class VescCan {
     uint8_t _rxPin;
     float *_power = nullptr;
     std::atomic<float> _maxPower{1.0f};
+    std::atomic<bool> _speedModeSetting{true};
+    std::atomic<int32_t> _maxErpm{vesc::MAX_ERPM_DEFAULT};
     std::atomic<bool> _dualPump{false};
     std::atomic<float> _motorTempLimit{80.0f};
     TripCallback _tripCb;
@@ -102,8 +115,12 @@ class VescCan {
     vesc::PumpReadings _pumps[vesc::MAX_PUMPS];
     vesc::Guard _guard;
     bool _enabled[vesc::MAX_PUMPS] = {true, false};
-    float _requestedDuty = 0.0f;
+    float _requestedPower = 0.0f;
+    bool _speedMode = true;
+    int32_t _requestedErpm = 0;
+    int32_t _commandErpm = 0;
     float _commandDuty = 0.0f;
+    bool _outputOn = false;
     uint8_t _busState = BUS_NOT_STARTED;
     uint32_t _txFailed = 0;
     uint32_t _busErrors = 0;
@@ -113,6 +130,7 @@ class VescCan {
 
     bool _started = false;
     bool _wasOn = false;
+    bool _speedOn = false; // speed control: the asked speed is in the range the pump is driven in
     uint32_t _lastCommand = 0;
     uint32_t _lastFaultPoll = 0;
     uint32_t _lastBusCheck = 0;

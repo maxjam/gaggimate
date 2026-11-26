@@ -269,16 +269,18 @@ void GaggiMateClient::sendAutotune(uint32_t testTime, uint32_t samples, uint32_t
 }
 
 // Fork (maxa4turbo.15)
-gm::Payload GaggiMateClient::buildVescSettings(bool dualPump, float motorTempLimit) {
+gm::Payload GaggiMateClient::buildVescSettings(bool dualPump, float motorTempLimit, uint32_t maxErpm, bool dutyMode) {
     gm::Payload p = gaggimate_Payload_init_zero;
     p.which_content = gaggimate_Payload_vesc_settings_tag;
     p.content.vesc_settings.dual_pump = dualPump;
     p.content.vesc_settings.motor_temp_limit = motorTempLimit;
+    p.content.vesc_settings.max_erpm = maxErpm;
+    p.content.vesc_settings.duty_mode = dutyMode;
     return p;
 }
 
-void GaggiMateClient::sendVescSettings(bool dualPump, float motorTempLimit) {
-    _endpoint.send(buildVescSettings(dualPump, motorTempLimit));
+void GaggiMateClient::sendVescSettings(bool dualPump, float motorTempLimit, uint32_t maxErpm, bool dutyMode) {
+    _endpoint.send(buildVescSettings(dualPump, motorTempLimit, maxErpm, dutyMode));
 }
 
 void GaggiMateClient::sendPressureScale(float scale) { _endpoint.send(buildPressureScale(scale)); }
@@ -395,6 +397,9 @@ void GaggiMateClient::registerHandlers() {
         report.txFailed = s.tx_failed;
         report.dualPump = s.dual_pump;
         report.motorTempLimit = s.motor_temp_limit;
+        report.commandErpm = s.command_erpm;
+        report.speedMode = s.speed_mode;
+        report.maxErpm = s.max_erpm;
         _vescStatusCb(report);
     });
 }

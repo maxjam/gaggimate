@@ -20,6 +20,8 @@ export const CHECKBOX_KEYS = [
   'smartGrindToggle',
   'pressureRelease', // fork: idle pressure release
   'pumpDual', // fork: second pump on the Flipsky (CAN pump drive)
+  'pumpSpeedControl', // fork: CAN pump drive in speed control (off = duty
+  // control)
 ];
 
 export function splitPidString(pidString) {

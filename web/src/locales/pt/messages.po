@@ -1688,6 +1688,10 @@ msgstr "Durante a extração, ajuste a válvula para que a pressão chegue a 1 b
 msgid "Duty {dutyText}"
 msgstr ""
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Duty %"
+msgstr ""
+
 #: src/app/appSettings.js
 msgid "E.g. water tank low, scale battery low."
 msgstr "Por exemplo: reservatório de água baixo, bateria da balança fraca."
@@ -3459,6 +3463,10 @@ msgstr "Ao desativar o vapor (s)"
 msgid "On this network"
 msgstr "Nesta rede"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "On: pump power sets the pump speed (SET_RPM), the only mode in which the VESC's field weakening works. Off: pump power sets the duty (SET_DUTY), as before maxa4turbo.16. A change takes effect while the pump is off."
+msgstr ""
+
 #: src/pages/ShotAnalyzer/components/library/libraryImport.js
 msgid "Only profile files can be imported in the profile field."
 msgstr "Somente arquivos de perfil podem ser importados no campo de perfil."
@@ -4226,6 +4234,14 @@ msgstr "Modo de pressão da bomba (recurso PRO)"
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Slip Coefficients"
 msgstr "Coeficientes de escorregamento da bomba"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Speed at 100 %"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Speed Control (CAN)"
+msgstr ""
 
 #: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
 #: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
@@ -5299,6 +5315,10 @@ msgstr "Azedo"
 msgid "Space evenly"
 msgstr "Espaçar uniformemente"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Speed control: the speed full pump power asks for, in ERPM as VESC Tool shows it (RPM × 7), 10,000 to 75,000. It is {pumpMaxRpmText} RPM. Maximum Pump Power scales it."
+msgstr ""
+
 #: src/app/AppSettings.jsx
 #: src/pages/Settings/PatchNotes.jsx
 #: src/pages/Settings/tabs/SystemTab.jsx
@@ -5682,6 +5702,10 @@ msgstr "Alvo"
 #: src/pages/Statistics/components/PhaseStatistics.jsx
 msgid "Target (Delta)"
 msgstr "Alvo (delta)"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Target {targetRpmText} RPM"
+msgstr ""
 
 #: src/pages/ShotAnalyzer/components/shotChart/tooltip/StaticTooltipContent.jsx
 msgid "Target {targetText}"

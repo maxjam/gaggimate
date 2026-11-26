@@ -100,6 +100,12 @@ export function MachineTab({ formData, onChange, setField, profiles = [] }) {
   const apiService = useContext(ApiServiceContext);
   const [steamPumpDraft, setSteamPumpDraft] = useState(null);
   const [calibrationWeight, setCalibrationWeight] = useState('');
+  // Fork (maxa4turbo.16): the pump speed setting is in ERPM, as VESC Tool shows it; RPM = ERPM / 7 on the Velofuso.
+  const pumpMaxErpmNumber = Number(formData.pumpMaxErpm);
+  const pumpMaxRpmText =
+    Number.isFinite(pumpMaxErpmNumber) && pumpMaxErpmNumber > 0
+      ? Math.round(pumpMaxErpmNumber / 7).toLocaleString()
+      : '—';
 
   const tareScale = useCallback(() => {
     apiService.send({ tp: 'req:scale:tare' });
@@ -997,6 +1003,35 @@ export function MachineTab({ formData, onChange, setField, profiles = [] }) {
                     onChange={onChange('pumpMotorTempLimit')}
                   />
                 </InputGroupField>
+                <InputGroupField
+                  label={t`Pump Speed at 100 %`}
+                  htmlFor='pumpMaxErpm'
+                  unit='ERPM'
+                  helpText={t`Speed control: the speed full pump power asks for, in ERPM as VESC Tool shows it (RPM × 7), 10,000 to 75,000. It is ${pumpMaxRpmText} RPM. Maximum Pump Power scales it.`}
+                  noMargin
+                >
+                  <input
+                    id='pumpMaxErpm'
+                    name='pumpMaxErpm'
+                    type='number'
+                    step='500'
+                    min='10000'
+                    max='75000'
+                    className='grow'
+                    placeholder='67000'
+                    value={formData.pumpMaxErpm}
+                    onChange={onChange('pumpMaxErpm')}
+                  />
+                </InputGroupField>
+                <div className='md:col-span-2'>
+                  <ToggleField
+                    label={t`Pump Speed Control (CAN)`}
+                    htmlFor='pumpSpeedControl'
+                    checked={formData.pumpSpeedControl !== false}
+                    onChange={onChange('pumpSpeedControl')}
+                    helpText={t`On: pump power sets the pump speed (SET_RPM), the only mode in which the VESC's field weakening works. Off: pump power sets the duty (SET_DUTY), as before maxa4turbo.16. A change takes effect while the pump is off.`}
+                  />
+                </div>
               </div>
             )}
             <div className='form-control'>

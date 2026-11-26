@@ -32,7 +32,7 @@ class GaggiMateServer {
     using LedCallback =
         std::function<void(uint8_t channel, uint8_t brightness, LedEffect effect, uint8_t minBrightness, uint16_t cycleTimeMs)>;
     // Fork (maxa4turbo.15): CAN pump drive settings from the display.
-    using VescSettingsCallback = std::function<void(bool dualPump, float motorTempLimit)>;
+    using VescSettingsCallback = std::function<void(bool dualPump, float motorTempLimit, uint32_t maxErpm, bool dutyMode)>;
 
     GaggiMateServer();
 

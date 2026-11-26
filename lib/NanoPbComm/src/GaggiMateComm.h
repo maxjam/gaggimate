@@ -110,7 +110,10 @@ struct VescPumpReport {
 struct VescStatusReport {
     VescPumpReport pumps[2];
     uint8_t pumpCount = 0;
-    float commandDuty = 0.0f; // 0..1, being sent now
+    float commandDuty = 0.0f; // duty control: 0..1, being sent now
+    int32_t commandErpm = 0;  // speed control (maxa4turbo.16): ERPM being sent now, 0 = released
+    bool speedMode = false;   // the controller drives with SET_RPM (false: SET_DUTY, also a maxa4turbo.15 controller)
+    uint32_t maxErpm = 0;     // ERPM at 100 % pump power
     uint8_t trip = 0;         // latched stop: 0 none, 1 stall, 2 hot, 3 fault, 4 no data
     uint8_t tripPump = 0;     // 1 or 2
     uint8_t busState = 0;     // 0 running, 1 bus-off or recovering, 2 driver not started

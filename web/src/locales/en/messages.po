@@ -1680,6 +1680,10 @@ msgstr "During the shot, adjust the valve so pressure reaches 1 bar, then 9 bar.
 msgid "Duty {dutyText}"
 msgstr "Duty {dutyText}"
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Duty %"
+msgstr "Duty %"
+
 #: src/app/appSettings.js
 msgid "E.g. water tank low, scale battery low."
 msgstr "E.g. water tank low, scale battery low."
@@ -3451,6 +3455,10 @@ msgstr "On steam deactivate (s)"
 msgid "On this network"
 msgstr "On this network"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "On: pump power sets the pump speed (SET_RPM), the only mode in which the VESC's field weakening works. Off: pump power sets the duty (SET_DUTY), as before maxa4turbo.16. A change takes effect while the pump is off."
+msgstr "On: pump power sets the pump speed (SET_RPM), the only mode in which the VESC's field weakening works. Off: pump power sets the duty (SET_DUTY), as before maxa4turbo.16. A change takes effect while the pump is off."
+
 #: src/pages/ShotAnalyzer/components/library/libraryImport.js
 msgid "Only profile files can be imported in the profile field."
 msgstr "Only profile files can be imported in the profile field."
@@ -4218,6 +4226,14 @@ msgstr "Pump pressure mode (PRO feature)"
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Slip Coefficients"
 msgstr "Pump Slip Coefficients"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Speed at 100 %"
+msgstr "Pump Speed at 100 %"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Speed Control (CAN)"
+msgstr "Pump Speed Control (CAN)"
 
 #: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
 #: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
@@ -5291,6 +5307,10 @@ msgstr "Sour"
 msgid "Space evenly"
 msgstr "Space evenly"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Speed control: the speed full pump power asks for, in ERPM as VESC Tool shows it (RPM × 7), 10,000 to 75,000. It is {pumpMaxRpmText} RPM. Maximum Pump Power scales it."
+msgstr "Speed control: the speed full pump power asks for, in ERPM as VESC Tool shows it (RPM × 7), 10,000 to 75,000. It is {pumpMaxRpmText} RPM. Maximum Pump Power scales it."
+
 #: src/app/AppSettings.jsx
 #: src/pages/Settings/PatchNotes.jsx
 #: src/pages/Settings/tabs/SystemTab.jsx
@@ -5674,6 +5694,10 @@ msgstr "Target"
 #: src/pages/Statistics/components/PhaseStatistics.jsx
 msgid "Target (Delta)"
 msgstr "Target (Delta)"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Target {targetRpmText} RPM"
+msgstr "Target {targetRpmText} RPM"
 
 #: src/pages/ShotAnalyzer/components/shotChart/tooltip/StaticTooltipContent.jsx
 msgid "Target {targetText}"

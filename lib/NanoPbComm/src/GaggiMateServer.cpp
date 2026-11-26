@@ -238,6 +238,9 @@ gm::Payload GaggiMateServer::buildVescStatus(const VescStatusReport &report) {
     s.tx_failed = report.txFailed;
     s.dual_pump = report.dualPump;
     s.motor_temp_limit = report.motorTempLimit;
+    s.command_erpm = report.commandErpm;
+    s.speed_mode = report.speedMode;
+    s.max_erpm = report.maxErpm;
     return p;
 }
 
@@ -305,7 +308,8 @@ void GaggiMateServer::registerHandlers() {
     });
     _endpoint.on(gaggimate_Payload_vesc_settings_tag, [this](const gm::Payload &p) {
         if (_vescSettingsCb)
-            _vescSettingsCb(p.content.vesc_settings.dual_pump, p.content.vesc_settings.motor_temp_limit);
+            _vescSettingsCb(p.content.vesc_settings.dual_pump, p.content.vesc_settings.motor_temp_limit,
+                            p.content.vesc_settings.max_erpm, p.content.vesc_settings.duty_mode);
     });
     _endpoint.on(gaggimate_Payload_led_tag, [this](const gm::Payload &p) {
         if (!_ledCb)

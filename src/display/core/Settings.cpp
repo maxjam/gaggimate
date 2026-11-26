@@ -380,6 +380,9 @@ void Settings::setPressureReleaseIntervalS(int s) { pressureReleaseIntervalS.set
 void Settings::setPumpDual(bool dual) { pumpDual.set(dual); }
 // 0 switches the check off; otherwise 40..120 C, the range the controller accepts.
 void Settings::setPumpMotorTempLimit(int limitC) { pumpMotorTempLimit.set(limitC <= 0 ? 0 : std::clamp(limitC, 40, 120)); }
+void Settings::setPumpSpeedControl(bool speedControl) { pumpSpeedControl.set(speedControl); }
+// 10,000..75,000 ERPM (1,429..10,714 RPM). The upper end keeps the motor's back-EMF under the 12 V supply.
+void Settings::setPumpMaxErpm(int erpm) { pumpMaxErpm.set(std::clamp(erpm, 10000, 75000)); }
 
 void Settings::setThemeMode(int theme_mode) { themeMode.set(theme_mode); }
 

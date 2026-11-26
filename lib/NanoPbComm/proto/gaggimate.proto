@@ -324,6 +324,10 @@ message Error {
 message VescSettings {
     bool dual_pump = 1;         // a second pump (VESC ID 19) is wired: command and check it too
     float motor_temp_limit = 2; // degC; the pumps stop when a motor reads this or more (0 = no check)
+    // maxa4turbo.16: speed control. A display that does not know these sends 0 / false: speed control with the
+    // controller's default max ERPM.
+    uint32 max_erpm = 3; // ERPM asked for at 100 % pump power (0 = keep the controller's value)
+    bool duty_mode = 4;  // true = pump power is the duty (SET_DUTY, as maxa4turbo.15), not the speed (SET_RPM)
 }
 
 // One VESC, values as they come off the bus (STATUS 1 / 4 / 5 and the fault poll).
@@ -343,11 +347,14 @@ message VescPump {
 // Controller -> display, four times a second.
 message VescStatus {
     repeated VescPump pumps = 1; // [0] = pump 1 (VESC ID 18), [1] = pump 2 (VESC ID 19)
-    uint32 command_duty_pm = 2;  // duty being sent, 0.001
+    uint32 command_duty_pm = 2;  // duty control: duty being sent, 0.001
     uint32 trip = 3;             // latched stop: 0 none, 1 stall, 2 hot, 3 fault, 4 no data
     uint32 trip_pump = 4;        // 1 or 2
     uint32 bus_state = 5;        // 0 running, 1 bus-off or recovering, 2 driver not started
     uint32 tx_failed = 6;        // frames nobody acknowledged, since boot
     bool dual_pump = 7;          // the settings in use
     float motor_temp_limit = 8;
+    sint32 command_erpm = 9;     // maxa4turbo.16, speed control: ERPM being sent (0 = released)
+    bool speed_mode = 10;        // SET_RPM in use (false = SET_DUTY)
+    uint32 max_erpm = 11;        // ERPM at 100 % pump power
 }

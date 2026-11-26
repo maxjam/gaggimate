@@ -59,6 +59,41 @@ void test_set_current_zero_is_four_bytes() {
     assertBytes(setCurrent(18, NAN), 0x112, {0x00, 0x00, 0x00, 0x00});
 }
 
+void test_set_rpm_frames() {
+    // CAN_PACKET_SET_RPM = 3: identifier 0x3xx, int32 ERPM, not scaled (comm_can.c: buffer_get_float32(data8, 1e0)).
+    assertBytes(setRpm(18, 67000), 0x312, {0x00, 0x01, 0x05, 0xB8});
+    assertBytes(setRpm(19, 67000), 0x313, {0x00, 0x01, 0x05, 0xB8});
+    assertBytes(setRpm(18, 33500), 0x312, {0x00, 0x00, 0x82, 0xDC});
+    assertBytes(setRpm(18, 1000), 0x312, {0x00, 0x00, 0x03, 0xE8});
+    assertBytes(setRpm(18, -500), 0x312, {0x00, 0x00, 0x00, 0x00}); // never backwards
+}
+
+void test_pump_power_to_erpm() {
+    TEST_ASSERT_EQUAL_INT32(67000, powerToErpm(1.0f, 67000));
+    TEST_ASSERT_EQUAL_INT32(33500, powerToErpm(0.5f, 67000));
+    TEST_ASSERT_EQUAL_INT32(6700, powerToErpm(0.1f, 67000));
+    TEST_ASSERT_EQUAL_INT32(0, powerToErpm(0.0f, 67000));
+    TEST_ASSERT_EQUAL_INT32(0, powerToErpm(-0.2f, 67000));
+    TEST_ASSERT_EQUAL_INT32(0, powerToErpm(NAN, 67000));
+    TEST_ASSERT_EQUAL_INT32(67000, powerToErpm(1.4f, 67000));
+    // The setting is held inside 5,000..75,000: above that the motor's back-EMF passes the 12 V supply.
+    TEST_ASSERT_EQUAL_INT32(75000, powerToErpm(1.0f, 120000));
+    TEST_ASSERT_EQUAL_INT32(5000, powerToErpm(1.0f, 0));
+    TEST_ASSERT_EQUAL_INT32(MAX_ERPM_DEFAULT, clampMaxErpm(67000));
+}
+
+void test_speed_drive_switches_at_1000_erpm_with_a_gap() {
+    // Under the VESC's own minimum (900) a speed command shorts the phases, so nothing under 950 is ever sent.
+    TEST_ASSERT_TRUE(SPEED_OFF_ERPM > 900);
+    TEST_ASSERT_FALSE(speedDriveOn(0, false));
+    TEST_ASSERT_FALSE(speedDriveOn(999, false));
+    TEST_ASSERT_TRUE(speedDriveOn(1000, false));
+    TEST_ASSERT_TRUE(speedDriveOn(960, true)); // already running: stays on
+    TEST_ASSERT_TRUE(speedDriveOn(950, true));
+    TEST_ASSERT_FALSE(speedDriveOn(949, true));
+    TEST_ASSERT_FALSE(speedDriveOn(960, false)); // released: needs 1,000 again
+}
+
 void test_fault_request_frame() {
     // From ID 42, send flag 0, COMM_GET_VALUES_SELECTIVE (50), mask bit 15.
     assertBytes(faultRequest(18, OWN), 0x812, {0x2A, 0x00, 0x32, 0x00, 0x00, 0x80, 0x00});
@@ -165,38 +200,63 @@ struct Bench {
     bool latched = false;
     uint32_t latchedAfterMs = 0;
 
-    // Runs `ms` of cycles at one duty. Returns true when a stop latched in this run; latchedAfterMs then holds
-    // how far into the run that was.
+    // Speed control, as VescCan::loop() feeds the guard
+    bool speedOn = false;
+    int32_t askedErpm = 0;
+
+    void frames() {
+        now += 10;
+        cycle++;
+        for (size_t i = 0; i < MAX_PUMPS; i++) {
+            if (status1[i] && cycle % 2 == 0) { // 50 a second
+                pumps[i].erpm = erpm[i];
+                pumps[i].hasStatus1 = true;
+                pumps[i].status1At = now;
+            }
+            if (status4[i] && cycle % 10 == 0) { // 10 a second
+                pumps[i].motorTemp = motorTemp[i];
+                pumps[i].hasStatus4 = true;
+                pumps[i].status4At = now;
+            }
+            if (faultPoll[i] && cycle % 20 == 0) { // 5 a second
+                pumps[i].fault = fault[i];
+                pumps[i].hasFault = true;
+                pumps[i].faultAt = now;
+            }
+        }
+    }
+
+    void count(bool latchedNow, uint32_t t) {
+        if (!latchedNow)
+            return;
+        latches++;
+        if (!latched) {
+            latched = true;
+            latchedAfterMs = t;
+        }
+    }
+
+    // Runs `ms` of cycles at one duty (duty control). Returns true when a stop latched in this run; latchedAfterMs
+    // then holds how far into the run that was.
     bool run(uint32_t ms, float duty) {
         latched = false;
         latchedAfterMs = 0;
         for (uint32_t t = 10; t <= ms; t += 10) {
-            now += 10;
-            cycle++;
-            for (size_t i = 0; i < MAX_PUMPS; i++) {
-                if (status1[i] && cycle % 2 == 0) { // 50 a second
-                    pumps[i].erpm = erpm[i];
-                    pumps[i].hasStatus1 = true;
-                    pumps[i].status1At = now;
-                }
-                if (status4[i] && cycle % 10 == 0) { // 10 a second
-                    pumps[i].motorTemp = motorTemp[i];
-                    pumps[i].hasStatus4 = true;
-                    pumps[i].status4At = now;
-                }
-                if (faultPoll[i] && cycle % 20 == 0) { // 5 a second
-                    pumps[i].fault = fault[i];
-                    pumps[i].hasFault = true;
-                    pumps[i].faultAt = now;
-                }
-            }
-            if (guard.update(now, duty, pumps, enabled, MAX_PUMPS)) {
-                latches++;
-                if (!latched) {
-                    latched = true;
-                    latchedAfterMs = t;
-                }
-            }
+            frames();
+            count(guard.update(now, duty, pumps, enabled, MAX_PUMPS), t);
+        }
+        return latched;
+    }
+
+    // The same in speed control: pump power 0..1 becomes an ERPM, driven from 1,000 ERPM up.
+    bool runSpeed(uint32_t ms, float power, int32_t maxErpm = MAX_ERPM_DEFAULT) {
+        latched = false;
+        latchedAfterMs = 0;
+        for (uint32_t t = 10; t <= ms; t += 10) {
+            frames();
+            askedErpm = powerToErpm(power, maxErpm);
+            speedOn = speedDriveOn(askedErpm, speedOn);
+            count(guard.update(now, guard.speedDemand(power > 0.0f, speedOn, askedErpm), pumps, enabled, MAX_PUMPS), t);
         }
         return latched;
     }
@@ -424,6 +484,105 @@ void test_stop_holds_until_power_has_been_zero_for_a_second() {
     TEST_ASSERT_FALSE(b.run(10000, 0.5f));
 }
 
+// ---------------------------------------------------------------- speed control (maxa4turbo.16)
+
+void test_speed_healthy_shot_into_field_weakening() {
+    Bench b;
+    b.runSpeed(3000, 0.0f);
+    b.erpm[0] = 33500;
+    TEST_ASSERT_FALSE(b.runSpeed(20000, 0.5f));
+    b.erpm[0] = 67000; // past the 58,400 ERPM that full duty gives: field weakening
+    TEST_ASSERT_FALSE(b.runSpeed(20000, 1.0f));
+    TEST_ASSERT_EQUAL_INT32(67000, b.askedErpm);
+    b.erpm[0] = 0;
+    TEST_ASSERT_FALSE(b.runSpeed(5000, 0.0f));
+    TEST_ASSERT_EQUAL_INT(0, b.latches);
+}
+
+void test_speed_stall_judged_from_10000_erpm() {
+    Bench b;
+    b.runSpeed(1000, 0.0f);
+    b.erpm[0] = 0;
+    // 14.9 % of 67,000 = 9,983 ERPM asked: a pump holding still is not called a stall yet
+    TEST_ASSERT_FALSE(b.runSpeed(20000, 0.149f));
+    TEST_ASSERT_TRUE(b.askedErpm < 10000);
+    // 15 % = 10,050 ERPM: it has to turn. The drive was on all along, so the 2 s grace is long over.
+    TEST_ASSERT_TRUE(b.runSpeed(5000, 0.15f));
+    TEST_ASSERT_UINT32_WITHIN(40, 500, b.latchedAfterMs);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Trip::STALL), static_cast<uint8_t>(b.guard.trip()));
+}
+
+void test_speed_stall_after_grace_from_a_start() {
+    Bench b;
+    b.runSpeed(1000, 0.0f);
+    b.erpm[0] = 0; // never starts turning
+    TEST_ASSERT_TRUE(b.runSpeed(5000, 1.0f));
+    TEST_ASSERT_UINT32_WITHIN(30, 2500, b.latchedAfterMs);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Trip::STALL), static_cast<uint8_t>(b.guard.trip()));
+}
+
+void test_speed_under_1000_erpm_is_released_and_not_judged() {
+    Bench b;
+    b.runSpeed(1000, 0.0f);
+    b.status1[0] = false; // a silent VESC
+    // 1 % of 67,000 = 670 ERPM: under 1,000 the pump is released, so there is nothing to check
+    TEST_ASSERT_FALSE(b.runSpeed(5000, 0.01f));
+    TEST_ASSERT_FALSE(b.speedOn);
+    // 2 % = 1,340 ERPM: driven, and now the silent VESC is "no data" after its 500 ms
+    TEST_ASSERT_TRUE(b.runSpeed(3000, 0.02f));
+    TEST_ASSERT_TRUE(b.speedOn);
+    TEST_ASSERT_UINT32_WITHIN(30, 500, b.latchedAfterMs);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Trip::NO_DATA), static_cast<uint8_t>(b.guard.trip()));
+}
+
+void test_speed_grace_starts_when_the_drive_switches_on() {
+    Bench b;
+    b.runSpeed(1000, 0.0f);
+    b.erpm[0] = 0;
+    b.runSpeed(10000, 0.01f); // pump power above 0 for 10 s, but released (670 ERPM asked)
+    TEST_ASSERT_FALSE(b.guard.tripped());
+    // Now a real speed is asked: the stall count starts with its 2 s grace here, not 10 s ago
+    TEST_ASSERT_FALSE(b.runSpeed(2400, 0.5f));
+    TEST_ASSERT_TRUE(b.runSpeed(1000, 0.5f));
+}
+
+void test_speed_stop_holds_until_power_has_been_zero_for_a_second() {
+    Bench b;
+    b.runSpeed(1000, 0.0f);
+    b.erpm[0] = 0;
+    TEST_ASSERT_TRUE(b.runSpeed(5000, 1.0f));
+    b.erpm[0] = 30000; // (the pump would turn again)
+    b.runSpeed(5000, 1.0f);
+    TEST_ASSERT_TRUE(b.guard.tripped()); // still asking for power: stays stopped
+    // Power above 0 but under 1,000 ERPM is still the profile asking: no release
+    b.runSpeed(3000, 0.01f);
+    TEST_ASSERT_TRUE(b.guard.tripped());
+    b.runSpeed(900, 0.0f);
+    TEST_ASSERT_TRUE(b.guard.tripped());
+    b.runSpeed(200, 0.0f);
+    TEST_ASSERT_FALSE(b.guard.tripped());
+    TEST_ASSERT_FALSE(b.runSpeed(10000, 0.5f)); // and the next shot runs
+}
+
+void test_speed_demand_flags() {
+    Guard g;
+    Demand d = g.speedDemand(true, true, 12000);
+    TEST_ASSERT_TRUE(d.requested && d.driving && d.stallArmed);
+    d = g.speedDemand(true, true, 5000);
+    TEST_ASSERT_TRUE(d.requested && d.driving);
+    TEST_ASSERT_FALSE(d.stallArmed);
+    d = g.speedDemand(true, false, 700);
+    TEST_ASSERT_TRUE(d.requested);
+    TEST_ASSERT_FALSE(d.driving || d.stallArmed);
+    d = g.speedDemand(false, true, 20000); // no pump power: nothing is driven whatever the rest says
+    TEST_ASSERT_FALSE(d.requested || d.driving || d.stallArmed);
+    d = g.dutyDemand(0.5f);
+    TEST_ASSERT_TRUE(d.requested && d.driving && d.stallArmed);
+    d = g.dutyDemand(0.1f);
+    TEST_ASSERT_TRUE(d.requested && d.driving);
+    TEST_ASSERT_FALSE(d.stallArmed);
+}
+
 void test_millis_wraparound() {
     Bench b;
     b.now = 0xFFFFFFFF - 5000; // about 5 s before the 49.7 day wrap
@@ -489,6 +648,9 @@ int main(int, char **) {
     RUN_TEST(test_set_duty_frames);
     RUN_TEST(test_set_duty_is_clamped);
     RUN_TEST(test_set_current_zero_is_four_bytes);
+    RUN_TEST(test_set_rpm_frames);
+    RUN_TEST(test_pump_power_to_erpm);
+    RUN_TEST(test_speed_drive_switches_at_1000_erpm_with_a_gap);
     RUN_TEST(test_fault_request_frame);
     RUN_TEST(test_status1_parsed);
     RUN_TEST(test_status4_and_5_parsed);
@@ -513,6 +675,13 @@ int main(int, char **) {
     RUN_TEST(test_second_pump_ignored_until_enabled);
     RUN_TEST(test_either_pump_stalling_stops);
     RUN_TEST(test_stop_holds_until_power_has_been_zero_for_a_second);
+    RUN_TEST(test_speed_healthy_shot_into_field_weakening);
+    RUN_TEST(test_speed_stall_judged_from_10000_erpm);
+    RUN_TEST(test_speed_stall_after_grace_from_a_start);
+    RUN_TEST(test_speed_under_1000_erpm_is_released_and_not_judged);
+    RUN_TEST(test_speed_grace_starts_when_the_drive_switches_on);
+    RUN_TEST(test_speed_stop_holds_until_power_has_been_zero_for_a_second);
+    RUN_TEST(test_speed_demand_flags);
     RUN_TEST(test_millis_wraparound);
     RUN_TEST(test_pump_state_for_the_web_ui);
     RUN_TEST(test_fault_names_match_the_firmware_list);

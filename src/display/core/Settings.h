@@ -350,6 +350,10 @@ class Settings {
     // which the pumps are stopped (0 = no check).
     bool isPumpDual() const { return pumpDual.get(); }
     int getPumpMotorTempLimit() const { return pumpMotorTempLimit.get(); }
+    // maxa4turbo.16: pump power sets the pump speed (SET_RPM) or, switched off, the duty (SET_DUTY); and the ERPM
+    // asked for at 100 % pump power in speed control.
+    bool isPumpSpeedControl() const { return pumpSpeedControl.get(); }
+    int getPumpMaxErpm() const { return pumpMaxErpm.get(); }
     int getThemeMode() const { return themeMode.get(); }
     int getStatusDisplayMode() const { return statusDisplayMode.get(); } // STATUS_DISPLAY_*
     int getHistoryIndex() const { return historyIndex.get(); }
@@ -476,6 +480,8 @@ class Settings {
     void setPressureReleaseIntervalS(int s);
     void setPumpDual(bool dual);
     void setPumpMotorTempLimit(int limitC);
+    void setPumpSpeedControl(bool speedControl);
+    void setPumpMaxErpm(int erpm);
     void setThemeMode(int theme_mode);
     void setStatusDisplayMode(int status_display_mode);
     void setHistoryIndex(int history_index);
@@ -610,6 +616,8 @@ class Settings {
     Property<int> pressureReleaseIntervalS{registry, "pri", 60};    // fork: at most one pulse per this many s
     Property<bool> pumpDual{registry, "p_dual", false};             // fork: second pump on the Flipsky (VESC ID 19)
     Property<int> pumpMotorTempLimit{registry, "p_mtl", 80};        // fork: pump stop at this motor temperature, degC
+    Property<bool> pumpSpeedControl{registry, "p_spd", true};       // fork: CAN pump drive in speed control (SET_RPM)
+    Property<int> pumpMaxErpm{registry, "p_merpm", 67000};          // fork: ERPM at 100 % pump power in speed control
     Property<int> historyIndex{registry, "hi", 0};
 
     Property<bool> heaterCoordinationEnabled{registry, "hco", true};

@@ -7,6 +7,7 @@
 #include <peripherals/DimmedPump.h>
 #include <peripherals/SimplePump.h>
 
+#include <algorithm>
 #include <memory>
 #include <peripherals/NtcThermistor.h>
 #include <utility>
@@ -416,15 +417,19 @@ void GaggiMateController::setup() {
             gearpumpAddon->setMaxPower(settings.maxBLDCPower);
         }
         if (this->vescCan != nullptr) {
-            vescCan->setMaxPower(settings.maxBLDCPower); // the duty sent at 100 % pump power
+            vescCan->setMaxPower(settings.maxBLDCPower); // scales the pump power before it becomes a speed or duty
         }
     });
     // Fork (maxa4turbo.15): second pump on/off and the motor temperature limit of the CAN pump drive.
-    _comms.onVescSettings([this](bool dualPump, float motorTempLimit) {
+    // maxa4turbo.16: speed or duty control and the ERPM at 100 % (0 = a display that does not send it: keep ours).
+    _comms.onVescSettings([this](bool dualPump, float motorTempLimit, uint32_t maxErpm, bool dutyMode) {
         if (this->vescCan == nullptr)
             return;
         vescCan->setDualPump(dualPump);
         vescCan->setMotorTempLimit(motorTempLimit);
+        if (maxErpm > 0)
+            vescCan->setMaxErpm(static_cast<int32_t>(std::min<uint32_t>(maxErpm, vesc::MAX_ERPM_HIGHEST)));
+        vescCan->setSpeedMode(!dutyMode);
     });
     _comms.onPing([this]() { handlePing(); });
     // A new link gets a full ping window; a stale lastPingTime would trip the watchdog while the display is still
@@ -667,7 +672,8 @@ void GaggiMateController::updateDualBoilerOutputs(unsigned long now) {
 }
 
 // Fork (maxa4turbo.15): start the CAN pump drive (see VescCan.h). The pump controller keeps writing one pump
-// power; the CAN task turns it into a duty for one or two VESCs, as the adapter's task turns it into a voltage.
+// power; the CAN task turns it into a speed (maxa4turbo.16) or a duty for one or two VESCs, as the adapter's task
+// turns it into a voltage.
 void GaggiMateController::setupVescCan() {
     if (this->vescCan == nullptr)
         return;
@@ -709,6 +715,9 @@ void GaggiMateController::sendVescStatus() {
         r.hasFault = s.freshFault[i];
     }
     report.commandDuty = s.commandDuty;
+    report.commandErpm = s.commandErpm;
+    report.speedMode = s.speedMode;
+    report.maxErpm = static_cast<uint32_t>(s.maxErpm);
     report.trip = static_cast<uint8_t>(s.trip);
     report.tripPump = s.tripPump;
     report.busState = s.busState;
@@ -1088,8 +1097,16 @@ void GaggiMateController::printStatus() {
                  BUS[v.busState < 3 ? v.busState : 2], static_cast<unsigned long>(v.rxFrames),
                  static_cast<unsigned long>(v.txFrames), static_cast<unsigned long>(v.txFailed),
                  static_cast<unsigned long>(v.busErrors), static_cast<unsigned long>(v.busOffs));
-        ESP_LOGI("Controller", "║  ├─ Duty asked/sent: %.3f/%.3f (max pump power %.2f), second pump: %s, motor limit: %.0f C",
-                 v.requestedDuty, v.commandDuty, v.maxPower, v.dualPump ? "on" : "off", v.motorTempLimit);
+        if (v.speedMode)
+            ESP_LOGI("Controller",
+                     "║  ├─ Speed control: ERPM asked/sent %ld/%ld (100 %% = %ld ERPM, max pump power %.2f; under %ld ERPM "
+                     "the pump is released)",
+                     static_cast<long>(v.requestedErpm), static_cast<long>(v.commandErpm), static_cast<long>(v.maxErpm),
+                     v.maxPower, static_cast<long>(vesc::SPEED_ON_ERPM));
+        else
+            ESP_LOGI("Controller", "║  ├─ Duty control: duty asked/sent %.3f/%.3f (max pump power %.2f)", v.requestedPower,
+                     v.commandDuty, v.maxPower);
+        ESP_LOGI("Controller", "║  ├─ Second pump: %s, motor limit: %.0f C", v.dualPump ? "on" : "off", v.motorTempLimit);
         for (size_t i = 0; i < vesc::MAX_PUMPS; i++) {
             const vesc::PumpReadings &p = v.pumps[i];
             const auto state = static_cast<size_t>(v.states[i]);

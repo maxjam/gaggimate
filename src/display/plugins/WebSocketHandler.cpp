@@ -521,6 +521,9 @@ void WebSocketHandler::publishTelemetry() {
             pd["bus"] = report.busState;
             pd["txf"] = report.txFailed;
             pd["cd"] = round_to(report.commandDuty, 3);
+            pd["sm"] = report.speedMode;   // maxa4turbo.16: speed control in use
+            pd["ce"] = report.commandErpm; // ERPM being sent (0 = released)
+            pd["me"] = report.maxErpm;     // ERPM at 100 % pump power
             pd["dual"] = report.dualPump;
             pd["lim"] = report.motorTempLimit;
             pd["trip"] = report.trip;

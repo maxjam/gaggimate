@@ -980,9 +980,11 @@ void Controller::setPumpModelCoeffs(void) {
                                gearpumpEnabled ? settings.getIntegralGain() : DEFAULT_INTEGRAL_GAIN, settings.getMaxPumpPower(),
                                slip[0], slip[1], slip[2], slip[3], gearpumpEnabled ? settings.getMinPumpPower() : 0.0f);
     }
-    // Fork (maxa4turbo.15): second pump and motor temperature limit of the CAN pump drive.
+    // Fork (maxa4turbo.15): second pump and motor temperature limit of the CAN pump drive; maxa4turbo.16: speed or
+    // duty control and the ERPM at 100 % pump power.
     if (systemInfo.capabilities.pumpCan)
-        comms.sendVescSettings(settings.isPumpDual(), static_cast<float>(settings.getPumpMotorTempLimit()));
+        comms.sendVescSettings(settings.isPumpDual(), static_cast<float>(settings.getPumpMotorTempLimit()),
+                               static_cast<uint32_t>(settings.getPumpMaxErpm()), !settings.isPumpSpeedControl());
 }
 
 // Fork (maxa4turbo.15): the controller has switched the pumps off (see VescCan on the controller). End what is

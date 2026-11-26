@@ -86,7 +86,8 @@ class GaggiMateClient {
     gm::Payload buildPumpSettings(float a, float b, float c, float d, float commutationGain, float convergenceGain,
                                   float integralGain, float maxPower, float slipA, float slipB, float slipC, float slipD,
                                   float minPower = 0.0f);
-    gm::Payload buildVescSettings(bool dualPump, float motorTempLimit); // fork (maxa4turbo.15)
+    // fork (maxa4turbo.15; max ERPM and duty mode since maxa4turbo.16)
+    gm::Payload buildVescSettings(bool dualPump, float motorTempLimit, uint32_t maxErpm, bool dutyMode);
     gm::Payload buildAutotune(uint32_t testTime, uint32_t samples, uint32_t heaterWattage);
     gm::Payload buildPressureScale(float scale);
     gm::Payload buildTare();
@@ -115,7 +116,7 @@ class GaggiMateClient {
                             float steamKp, float steamKi, float steamKd);
     void sendPumpSettings(float a, float b, float c, float d, float commutationGain, float convergenceGain, float integralGain,
                           float maxPower, float slipA, float slipB, float slipC, float slipD, float minPower = 0.0f);
-    void sendVescSettings(bool dualPump, float motorTempLimit); // fork (maxa4turbo.15)
+    void sendVescSettings(bool dualPump, float motorTempLimit, uint32_t maxErpm, bool dutyMode); // fork
     void sendAutotune(uint32_t testTime, uint32_t samples, uint32_t heaterWattage);
     void sendPressureScale(float scale);
     void sendScaleFactors(float scaleFactor1, float scaleFactor2, uint16_t sampleRateSps = 10, float idleFilterAlpha = 0.80f,

@@ -1680,6 +1680,10 @@ msgstr "Pendant le shot, réglez la vanne pour que la pression atteigne 1 bar, p
 msgid "Duty {dutyText}"
 msgstr ""
 
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Duty %"
+msgstr ""
+
 #: src/app/appSettings.js
 msgid "E.g. water tank low, scale battery low."
 msgstr "P. ex. réservoir d'eau bas, batterie de la balance faible."
@@ -3451,6 +3455,10 @@ msgstr "À la désactivation de la vapeur (s)"
 msgid "On this network"
 msgstr "Sur ce réseau"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "On: pump power sets the pump speed (SET_RPM), the only mode in which the VESC's field weakening works. Off: pump power sets the duty (SET_DUTY), as before maxa4turbo.16. A change takes effect while the pump is off."
+msgstr ""
+
 #: src/pages/ShotAnalyzer/components/library/libraryImport.js
 msgid "Only profile files can be imported in the profile field."
 msgstr "Seuls les fichiers de profil peuvent être importés dans le champ profil."
@@ -4218,6 +4226,14 @@ msgstr "Mode pression de la pompe (fonction PRO)"
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "Pump Slip Coefficients"
 msgstr "Coefficients de glissement de la pompe"
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Speed at 100 %"
+msgstr ""
+
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Pump Speed Control (CAN)"
+msgstr ""
 
 #: src/pages/ShotAnalyzer/components/shotChart/compare/CompareMetricContent.jsx
 #: src/pages/ShotAnalyzer/components/shotChart/labelVisuals.js
@@ -5291,6 +5307,10 @@ msgstr "Acide"
 msgid "Space evenly"
 msgstr "Espacer uniformément"
 
+#: src/pages/Settings/tabs/MachineTab.jsx
+msgid "Speed control: the speed full pump power asks for, in ERPM as VESC Tool shows it (RPM × 7), 10,000 to 75,000. It is {pumpMaxRpmText} RPM. Maximum Pump Power scales it."
+msgstr ""
+
 #: src/app/AppSettings.jsx
 #: src/pages/Settings/PatchNotes.jsx
 #: src/pages/Settings/tabs/SystemTab.jsx
@@ -5674,6 +5694,10 @@ msgstr "Cible"
 #: src/pages/Statistics/components/PhaseStatistics.jsx
 msgid "Target (Delta)"
 msgstr "Cible (delta)"
+
+#: src/pages/Home/cards/PumpDriveCard.jsx
+msgid "Target {targetRpmText} RPM"
+msgstr ""
 
 #: src/pages/ShotAnalyzer/components/shotChart/tooltip/StaticTooltipContent.jsx
 msgid "Target {targetText}"

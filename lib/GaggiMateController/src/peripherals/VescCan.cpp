@@ -148,34 +148,59 @@ void VescCan::loop() {
         }
     }
 
-    float duty = _power != nullptr ? *_power / 100.0f * _maxPower.load() : 0.0f;
-    if (!std::isfinite(duty) || duty < 0.0f)
-        duty = 0.0f;
-    if (duty > 1.0f)
-        duty = 1.0f;
+    // Pump power x maximum pump power, 0..1: the duty in duty control, the share of the max ERPM in speed control.
+    float power = _power != nullptr ? *_power / 100.0f * _maxPower.load() : 0.0f;
+    if (!std::isfinite(power) || power < 0.0f)
+        power = 0.0f;
+    if (power > 1.0f)
+        power = 1.0f;
+
+    const int32_t maxErpm = _maxErpm.load();
+    int32_t erpm = 0;
 
     xSemaphoreTake(_mutex, portMAX_DELAY);
+    // A change of the drive mode waits for the pump to be off, so a running pump never jumps between a duty and a
+    // speed command.
+    if (!_wasOn)
+        _speedMode = _speedModeSetting.load();
+    const bool speedMode = _speedMode;
     _enabled[0] = true;
     _enabled[1] = _dualPump.load();
     _guard.config.motorTempLimit = _motorTempLimit.load();
-    const bool latched = _guard.update(now, duty, _pumps, _enabled, vesc::MAX_PUMPS);
+    vesc::Demand demand;
+    if (speedMode) {
+        erpm = vesc::powerToErpm(power, maxErpm);
+        _speedOn = vesc::speedDriveOn(erpm, _speedOn);
+        demand = _guard.speedDemand(power > 0.0f, _speedOn, erpm);
+    } else {
+        _speedOn = false;
+        demand = _guard.dutyDemand(power);
+    }
+    const bool latched = _guard.update(now, demand, _pumps, _enabled, vesc::MAX_PUMPS);
     const bool tripped = _guard.tripped();
     const vesc::Trip trip = _guard.lastTrip();
     const uint8_t tripPump = _guard.lastTripPump();
     const int32_t tripDetail = _guard.lastTripDetail();
     const bool enabled1 = _enabled[1];
-    const float out = tripped ? 0.0f : duty;
-    _requestedDuty = duty;
-    _commandDuty = out;
+    const bool on = demand.driving && !tripped;
+    _requestedPower = power;
+    _requestedErpm = erpm;
+    _commandErpm = on && speedMode ? erpm : 0;
+    _commandDuty = on && !speedMode ? power : 0.0f;
+    _outputOn = on;
     xSemaphoreGive(_mutex);
 
     if (latched) {
-        ESP_LOGE(LOG_TAG, "PUMP STOP: pump %u %s (detail %ld) at duty %.3f -> 0 A to every pump", tripPump, vesc::tripName(trip),
-                 static_cast<long>(tripDetail), duty);
+        if (speedMode)
+            ESP_LOGE(LOG_TAG, "PUMP STOP: pump %u %s (detail %ld) at %ld ERPM asked -> 0 A to every pump", tripPump,
+                     vesc::tripName(trip), static_cast<long>(tripDetail), static_cast<long>(erpm));
+        else
+            ESP_LOGE(LOG_TAG, "PUMP STOP: pump %u %s (detail %ld) at duty %.3f -> 0 A to every pump", tripPump,
+                     vesc::tripName(trip), static_cast<long>(tripDetail), power);
         _lastTripReport = now;
         if (_tripCb)
             _tripCb(trip, tripPump, tripDetail);
-    } else if (tripped && duty > 0.0f && now - _lastTripReport >= TRIP_REPEAT_MS) {
+    } else if (tripped && power > 0.0f && now - _lastTripReport >= TRIP_REPEAT_MS) {
         // The display still asks for pump power: tell it again that the pumps are stopped.
         _lastTripReport = now;
         if (_tripCb)
@@ -183,14 +208,20 @@ void VescCan::loop() {
     }
 
     // A change between on and off goes out at once; otherwise every 20 ms running, every 100 ms idle.
-    const bool on = out > 0.0f;
     const uint32_t interval = on ? COMMAND_INTERVAL_MS : IDLE_COMMAND_INTERVAL_MS;
     if (on != _wasOn || now - _lastCommand >= interval) {
         _wasOn = on;
         _lastCommand = now;
         // Pump 2 gets 0 A whenever it is not in use, so a VESC with ID 19 on the bus never keeps an old command.
-        transmit(on ? vesc::setDuty(PUMP_IDS[0], out) : vesc::setCurrent(PUMP_IDS[0], 0.0f));
-        transmit(on && enabled1 ? vesc::setDuty(PUMP_IDS[1], out) : vesc::setCurrent(PUMP_IDS[1], 0.0f));
+        for (size_t i = 0; i < vesc::MAX_PUMPS; i++) {
+            const bool drive = on && (i == 0 || enabled1);
+            if (!drive)
+                transmit(vesc::setCurrent(PUMP_IDS[i], 0.0f));
+            else if (speedMode)
+                transmit(vesc::setRpm(PUMP_IDS[i], erpm));
+            else
+                transmit(vesc::setDuty(PUMP_IDS[i], power));
+        }
     }
     if (now - _lastFaultPoll >= FAULT_POLL_INTERVAL_MS) {
         _lastFaultPoll = now;
@@ -209,14 +240,18 @@ VescCan::Snapshot VescCan::snapshot() {
         const vesc::PumpReadings &p = _pumps[i];
         s.pumps[i] = p;
         s.enabled[i] = _enabled[i];
-        s.states[i] = vesc::pumpState(i, _enabled[i], p, _guard, _commandDuty > 0.0f, s.now);
+        s.states[i] = vesc::pumpState(i, _enabled[i], p, _guard, _outputOn, s.now);
         s.freshSpeed[i] = vesc::fresh(p.hasStatus1, p.status1At, s.now, _guard.config.dataTimeoutMs);
         s.freshTemps[i] = vesc::fresh(p.hasStatus4, p.status4At, s.now, _guard.config.readingMaxAgeMs);
         s.freshVoltage[i] = vesc::fresh(p.hasStatus5, p.status5At, s.now, _guard.config.readingMaxAgeMs);
         s.freshFault[i] = vesc::fresh(p.hasFault, p.faultAt, s.now, _guard.config.readingMaxAgeMs);
     }
-    s.requestedDuty = _requestedDuty;
+    s.requestedPower = _requestedPower;
+    s.speedMode = _speedMode;
+    s.requestedErpm = _requestedErpm;
+    s.commandErpm = _commandErpm;
     s.commandDuty = _commandDuty;
+    s.outputOn = _outputOn;
     s.trip = _guard.trip();
     s.tripPump = _guard.tripped() ? _guard.tripPump() : 0;
     s.lastTrip = _guard.lastTrip();
@@ -234,6 +269,7 @@ VescCan::Snapshot VescCan::snapshot() {
     s.dualPump = _dualPump.load();
     s.motorTempLimit = _motorTempLimit.load();
     s.maxPower = _maxPower.load();
+    s.maxErpm = _maxErpm.load();
     return s;
 }
 

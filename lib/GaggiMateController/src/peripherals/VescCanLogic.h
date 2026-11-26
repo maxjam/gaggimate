@@ -9,12 +9,18 @@
 // This header is the part without hardware: frame layouts and the stop rules. STL only, covered by
 // test/test_vesc_can. The TWAI driver around it is VescCan.{h,cpp}.
 //
+// maxa4turbo.16: the pumps are driven with SET_RPM (the VESC's speed controller) instead of SET_DUTY. Firmware 7.00
+// runs field weakening in current and speed control only (motor/foc_math.c, foc_run_fw), so with duty commands the
+// pump stopped at the speed 95 % duty gives on 12 V (58,400 ERPM, 3.4 bar on the open group). Duty is kept as a
+// setting.
+//
 // Frame layouts follow the VESC firmware 7.00 source (comm/comm_can.c, comm/commands.c, datatypes.h):
 // 29-bit identifier = packet number << 8 | VESC ID, every value big-endian.
 namespace vesc {
 
 constexpr uint8_t PACKET_SET_DUTY = 0;             // int32 duty x 100000
 constexpr uint8_t PACKET_SET_CURRENT = 1;          // int32 amps x 1000 (6+ bytes would put an off-delay in front)
+constexpr uint8_t PACKET_SET_RPM = 3;              // int32 ERPM
 constexpr uint8_t PACKET_PROCESS_SHORT_BUFFER = 8; // [sender ID][send flag][command ...]
 constexpr uint8_t PACKET_STATUS_1 = 9;             // int32 ERPM, int16 motor A x 10, int16 duty x 1000
 constexpr uint8_t PACKET_STATUS_4 = 16;            // int16 FET C x 10, int16 motor C x 10, int16 input A x 10, int16 pid pos x 50
@@ -62,6 +68,20 @@ inline Frame setDuty(uint8_t vescId, float duty) {
     return f;
 }
 
+// Speed control: the VESC's speed controller holds this ERPM (electrical RPM = RPM x 7 on the 14-pole Velofuso
+// motor). Restarts the 1000 ms command timeout like every other command. Under its own minimum (Speed Controller ->
+// Minimum ERPM, 900) the VESC does not release the motor but holds duty 0, which shorts the phases: the driver
+// never sends a speed under SPEED_OFF_ERPM, it sends 0 A instead.
+inline Frame setRpm(uint8_t vescId, int32_t erpm) {
+    if (erpm < 0)
+        erpm = 0;
+    Frame f;
+    f.id = frameId(PACKET_SET_RPM, vescId);
+    f.len = 4;
+    putInt32(f.data, erpm);
+    return f;
+}
+
 // 0 A is below the VESC's minimum current, which switches the PWM off: the motor is released, no hum.
 inline Frame setCurrent(uint8_t vescId, float amps) {
     if (!std::isfinite(amps))
@@ -87,6 +107,38 @@ inline Frame faultRequest(uint8_t vescId, uint8_t ownId) {
     f.data[6] = static_cast<uint8_t>(VALUES_MASK_FAULT);
     return f;
 }
+
+// Speed control: what 100 % pump power asks for. 67,000 ERPM = 9,571 RPM is the 58,400 ERPM the pump reaches at
+// full duty, times sqrt(4.5 / 3.4) for the 4.5 bar the kit controller gave on the open group. The upper bound keeps
+// the motor's back-EMF under the 12 V supply (0.884 mWb flux linkage: line-to-line peak = supply at ~74,800 ERPM),
+// so a drive that drops out at full speed cannot push current back into the supply; it is also the VESC's own
+// Max ERPM on this machine.
+constexpr int32_t MAX_ERPM_DEFAULT = 67000;
+constexpr int32_t MAX_ERPM_LOWEST = 5000;
+constexpr int32_t MAX_ERPM_HIGHEST = 75000;
+// The pump is driven from this commanded speed up and released again under the second one (the gap keeps a
+// command sitting on the edge from starting and stopping the motor every cycle). Both above the VESC's 900.
+constexpr int32_t SPEED_ON_ERPM = 1000;
+constexpr int32_t SPEED_OFF_ERPM = 950;
+
+inline int32_t clampMaxErpm(int32_t maxErpm) {
+    if (maxErpm < MAX_ERPM_LOWEST)
+        return MAX_ERPM_LOWEST;
+    if (maxErpm > MAX_ERPM_HIGHEST)
+        return MAX_ERPM_HIGHEST;
+    return maxErpm;
+}
+
+// power: pump power x maximum pump power, 0..1.
+inline int32_t powerToErpm(float power, int32_t maxErpm) {
+    if (!std::isfinite(power) || power <= 0.0f)
+        return 0;
+    if (power > 1.0f)
+        power = 1.0f;
+    return static_cast<int32_t>(std::lround(power * static_cast<float>(clampMaxErpm(maxErpm))));
+}
+
+inline bool speedDriveOn(int32_t erpm, bool wasOn) { return erpm >= (wasOn ? SPEED_OFF_ERPM : SPEED_ON_ERPM); }
 
 // Latest values from one VESC, with the time each kind of frame last arrived.
 struct PumpReadings {
@@ -178,44 +230,72 @@ enum class Trip : uint8_t {
 };
 
 struct GuardConfig {
-    float stallMinDuty = 0.15f;      // stall is only judged from this commanded duty up
+    float stallMinDuty = 0.15f;      // duty control: stall is only judged from this commanded duty up
+    int32_t stallMinErpm = 10000;    // speed control: ... from this commanded ERPM up (15 % of 67,000)
     int32_t stallMaxErpm = 200;      // |ERPM| under this counts as not turning
     uint32_t stallTimeMs = 500;      // for this long without a break
-    uint32_t startGraceMs = 2000;    // no stall check for this long after the duty rises from 0
+    uint32_t startGraceMs = 2000;    // no stall check for this long after the drive switches on
     float motorTempLimit = 80.0f;    // C, 0 = no check (the VESC's own cutback starts at 85 C)
     uint32_t dataTimeoutMs = 500;    // STATUS 1 (50 a second) older than this = no data
     uint32_t readingMaxAgeMs = 1000; // STATUS 4 (10 a second) and fault answers (5 a second) older than this are not used
-    uint32_t releaseMs = 1000;       // a stop is released after the commanded duty has been 0 for this long
+    uint32_t releaseMs = 1000;       // a stop is released after the pump power has been 0 for this long
+};
+
+// What the profile asks of the drive in one control cycle.
+struct Demand {
+    bool requested = false;  // pump power above 0
+    bool driving = false;    // a drive command goes out (speed control: not under SPEED_ON_ERPM)
+    bool stallArmed = false; // enough is asked for that a pump standing still is a stall
 };
 
 inline bool fresh(bool has, uint32_t at, uint32_t now, uint32_t maxAgeMs) { return has && (now - at) <= maxAgeMs; }
 
-// The stop rules. Fed once per control cycle with the duty the profile asks for and the latest readings; while
+// The stop rules. Fed once per control cycle with what the profile asks for and the latest readings; while
 // tripped() the driver sends 0 A to every pump whatever the profile asks for.
 class Guard {
   public:
     GuardConfig config;
 
-    // Returns true in the cycle a stop latches.
+    Demand dutyDemand(float duty) const {
+        Demand d;
+        d.requested = d.driving = std::isfinite(duty) && duty > 0.0f;
+        d.stallArmed = d.driving && duty >= config.stallMinDuty;
+        return d;
+    }
+
+    Demand speedDemand(bool requested, bool driving, int32_t erpm) const {
+        Demand d;
+        d.requested = requested;
+        d.driving = requested && driving;
+        d.stallArmed = d.driving && erpm >= config.stallMinErpm;
+        return d;
+    }
+
+    // Duty control. Returns true in the cycle a stop latches.
     bool update(uint32_t now, float duty, const PumpReadings *pumps, const bool *enabled, size_t count) {
-        const bool commanding = std::isfinite(duty) && duty > 0.0f;
-        if (commanding && !_commanding) {
+        return update(now, dutyDemand(duty), pumps, enabled, count);
+    }
+
+    // Returns true in the cycle a stop latches.
+    bool update(uint32_t now, const Demand &demand, const PumpReadings *pumps, const bool *enabled, size_t count) {
+        if (demand.driving && !_driving) {
             _runStart = now;
             for (size_t i = 0; i < MAX_PUMPS; i++)
                 _stalling[i] = false;
         }
-        if (!commanding && (_commanding || !_idleKnown)) {
+        if (!demand.requested && (_requested || !_idleKnown)) {
             _idleSince = now;
             _idleKnown = true;
         }
-        _commanding = commanding;
+        _driving = demand.driving;
+        _requested = demand.requested;
 
         if (_trip != Trip::NONE) {
-            if (!commanding && (now - _idleSince) >= config.releaseMs)
+            if (!demand.requested && (now - _idleSince) >= config.releaseMs)
                 _trip = Trip::NONE;
             return false;
         }
-        if (!commanding)
+        if (!demand.driving)
             return false;
 
         if (count > MAX_PUMPS)
@@ -236,7 +316,7 @@ class Guard {
                 continue;
             }
             const int32_t speed = p.erpm < 0 ? -p.erpm : p.erpm;
-            if ((now - _runStart) >= config.startGraceMs && duty >= config.stallMinDuty && speed < config.stallMaxErpm) {
+            if ((now - _runStart) >= config.startGraceMs && demand.stallArmed && speed < config.stallMaxErpm) {
                 if (!_stalling[i]) {
                     _stalling[i] = true;
                     _stallSince[i] = now;
@@ -272,7 +352,8 @@ class Guard {
         return true;
     }
 
-    bool _commanding = false;
+    bool _driving = false;
+    bool _requested = false;
     bool _idleKnown = false;
     uint32_t _runStart = 0;
     uint32_t _idleSince = 0;

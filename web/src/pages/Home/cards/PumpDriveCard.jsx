@@ -14,6 +14,8 @@ import {
 // Fork (maxa4turbo.15): both pumps on the Flipsky dual VESC, live from the CAN bus (STATUS 1 / 4 / 5 and the
 // fault poll), plus the last pump stop. One column per pump so two pumps in series can be compared line by line.
 // The state is always written out; colour only repeats it.
+// maxa4turbo.16: in speed control the header shows the speed being asked for; the duty each VESC reports has its
+// own row (95 % with the RPM still rising = field weakening at work).
 const TONE_CLASS = {
   good: 'bg-success text-success-content',
   bad: 'bg-error text-error-content',
@@ -61,6 +63,7 @@ export function PumpDriveCard({ pumpDrive, inCard = false }) {
     .filter(({ pump, index }) => index === 0 || pump.s !== PUMP_STATE.NOT_USED || !missing(pump.e));
   const stop = pumpDrive.stop;
   const dutyText = `${formatNumber((pumpDrive.cd ?? 0) * 100, 1)} %`;
+  const targetRpmText = formatNumber(erpmToRpm(pumpDrive.ce ?? 0));
   const cells = fn => shown.map(({ pump }) => fn(pump));
 
   return (
@@ -75,7 +78,11 @@ export function PumpDriveCard({ pumpDrive, inCard = false }) {
         </div>
         {pumpDrive.ok && (
           <div className='text-base-content/60 text-xs tabular-nums'>
-            <Trans>Duty {dutyText}</Trans>
+            {pumpDrive.sm ? (
+              <Trans>Target {targetRpmText} RPM</Trans>
+            ) : (
+              <Trans>Duty {dutyText}</Trans>
+            )}
           </div>
         )}
       </div>
@@ -138,6 +145,12 @@ export function PumpDriveCard({ pumpDrive, inCard = false }) {
               alert: limit > 0 && !missing(pump.mt) && pump.mt >= limit,
             }))}
           />
+          <Row
+            label={t`Duty %`}
+            cells={cells(pump => ({
+              text: missing(pump.d) ? '—' : formatNumber(pump.d * 100, 1),
+            }))}
+          />
           <Row label={t`FET °C`} cells={cells(pump => ({ text: formatNumber(pump.ft, 1) }))} />
           <Row
             label={t`Input`}
@@ -172,6 +185,9 @@ PumpDriveCard.propTypes = {
     bus: PropTypes.number,
     txf: PropTypes.number,
     cd: PropTypes.number,
+    sm: PropTypes.bool,
+    ce: PropTypes.number,
+    me: PropTypes.number,
     dual: PropTypes.bool,
     lim: PropTypes.number,
     trip: PropTypes.number,
