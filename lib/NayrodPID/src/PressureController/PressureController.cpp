@@ -159,10 +159,79 @@ void PressureController::resetFlowLoop() {
     _cutoffLatched = false;
     _cutoffArmed = false;
     _flowTargetEff = 0.0f;
-    if (_gainsPending) { // gains that arrived during the phase (meterlink.7)
+    if (_gainsPending && !_capArmed) { // gains that arrived during the phase (meterlink.7)
         _flowGains = _pendingGains;
         _gainsPending = false;
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Flow cap on power phases (fork, maxa4turbo.18)
+// ---------------------------------------------------------------------------------------------
+
+void PressureController::resetPowerCap() {
+    _capLimiting = false;
+    _capIntegral = 0.0f;
+    _capFlow = 0.0f;
+    if (_capArmed) {
+        _capArmed = false;
+        if (_gainsPending && !_flowLoopArmed) { // gains that arrived while the cap was in use
+            _flowGains = _pendingGains;
+            _gainsPending = false;
+        }
+    }
+}
+
+// Power phase with a flow cap: power = min(ramp power, power the flow PI asks for to hold the cap).
+//
+// Under the cap the ramp runs the pump and the PI does not exist: no integral is kept, so nothing can wind up, and
+// a step or a rise of the ramp goes to the pump at once. The moment the meter reads more than the cap, the PI
+// starts with its integral set so that its first output is the power the pump already runs at (the ramp power; or
+// less, when a phase begins with the flow already over its cap, e.g. after a flow phase: the pump then does not
+// step up to the ramp power first). From there it is the flow PI of a flow phase, on the measured flow only:
+//   out = kp * (cap - flow) + integral,  integral += ki * (cap - flow) * dt
+// in loop units (see pumpFromLoop: the share of the power range above the dead zone), so kp and ki act as they do
+// in a flow phase. The pump gets min(ramp, out). When out reaches the ramp power the cap lets go: the flow has
+// dropped under the cap and the loop has brought the power back up to the ramp, or the ramp has come down to what
+// the loop was giving. Either way the two are equal at that moment, so there is no step in that direction either.
+// The PI never stops the pump: its lowest output is the pump's slowest speed (the dead zone), and its integral
+// stops going down there.
+// Without a fresh meter reading there is nothing to hold the pump back with: the ramp runs it, as in a power
+// phase without a cap.
+float PressureController::limitPowerToFlow(float rampPowerPct, float runningPowerPct, float maxFlow) {
+    const bool usable = _flowLoopEnabled && _measuredFlowValid && maxFlow > 0.0f && rampPowerPct > 0.0f &&
+                        (_flowGains.kp > 0.0f || _flowGains.ki > 0.0f);
+    if (!usable) {
+        resetPowerCap();
+        return rampPowerPct;
+    }
+    _capArmed = true;
+    const float rampU = loopFromPump(std::clamp(rampPowerPct * 0.01f, 0.0f, 1.0f));
+    const float e = maxFlow - _measuredFlow;
+    if (!_capLimiting) {
+        if (e >= 0.0f) { // under the cap
+            _capFlow = maxFlow;
+            return rampPowerPct;
+        }
+        const float runningU = loopFromPump(std::clamp(runningPowerPct * 0.01f, 0.0f, 1.0f));
+        _capIntegral = std::min(runningU, rampU) - _flowGains.kp * e;
+        _capLimiting = true;
+    } else if (maxFlow != _capFlow) {
+        // The next phase has another cap while this one is holding: keep the output where it is.
+        _capIntegral += _flowGains.kp * (_capFlow - maxFlow);
+    }
+    _capFlow = maxFlow;
+
+    const bool atSlowest = _flowGains.kp * e + _capIntegral <= 0.0f && e < 0.0f;
+    if (!atSlowest)
+        _capIntegral += _flowGains.ki * e * _dt;
+    const float out = _flowGains.kp * e + _capIntegral;
+    if (out >= rampU) { // the loop asks for at least the ramp power: the ramp runs the pump again
+        _capLimiting = false;
+        _capIntegral = 0.0f;
+        return rampPowerPct;
+    }
+    return std::min(rampPowerPct, pumpFromLoop(std::max(0.0f, out)) * 100.0f);
 }
 
 // Slews the phase's flow target so a step (phase change, profile ramp, loop start) does not kick

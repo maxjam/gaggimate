@@ -293,6 +293,9 @@ class Controller {
     float currentCoffeeVolume = 0.0f;
     float currentWaterPumped = 0.0f;
     float targetFlow = 0.0f;
+    // Fork (maxa4turbo.18): what the controller reports about the flow cap of a power phase: the cap in ml/s while
+    // its measured-flow loop holds the pump under the profile's power, 0 otherwise.
+    float currentFlowCap = 0.0f;
     int tofDistance = 0;
 
     SystemInfo systemInfo{};

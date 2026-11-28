@@ -6,6 +6,10 @@ GaggiMateClient::GaggiMateClient() {
         if (_sensorCb)
             _sensorCb(t, t2, p, pf, mf, pr, pp, hp, wp);
     };
+    _mock.onFlowCap = [this](float cap) {
+        if (_flowCapCb)
+            _flowCapCb(cap);
+    };
     _mock.onVolumetric = [this](float v) {
         if (_volumetricCb)
             _volumetricCb(v);

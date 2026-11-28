@@ -141,6 +141,12 @@
         "pump": {
           "$ref": "#/definitions/pump"
         },
+        "maxFlow": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Fork maxa4turbo.18. Flow cap in **ml/s** for a power phase, i.e. a phase whose `pump` is the simple integer percent. The pump runs at the phase's power (and follows its `transition` ramp) until the flow measured by the flow meter rises above this value; from then on the controller's measured-flow loop holds the flow at the cap, so the pump gets the lower of the ramp power and the power needed for `maxFlow`. When the flow falls back under the cap the pump returns to the ramp. `0` or omitted = no cap. Ignored, and not written back on save, when `pump` is the advanced object. Works on the flow meter's reading, not on the pump model. Parsed at `src/display/models/profile.h` next to `pump`."
+        },
         "targets": {
           "type": "array",
           "description": "Stop conditions evaluated every 100 ms. Targets are OR-combined — the first target whose comparison fires ends the phase. Omit or leave empty to run the phase for its full `duration`.",
@@ -170,6 +176,17 @@
             "Starts slowly, accelerates to target.",
             "Starts fast, decelerates to target.",
             "Accelerates at start, decelerates at end."
+          ]
+        },
+        "target": {
+          "type": "string",
+          "default": "time",
+          "description": "What the ramp runs along. The firmware writes this field on every save (`src/display/models/profile.h`, `writeProfile`); any other value, or none, is read as `\"time\"`. With `volumetric` or `pumped`, `duration` is the length of the ramp in that unit (g in the cup, ml pumped in this phase); if it is `0` the phase's own volumetric or pumped target is used.",
+          "enum": ["time", "volumetric", "pumped"],
+          "enumDescriptions": [
+            "Ramp over `duration` seconds.",
+            "Ramp over the weight in the cup gained in this phase.",
+            "Ramp over the water pumped in this phase."
           ]
         },
         "duration": {

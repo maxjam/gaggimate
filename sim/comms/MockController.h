@@ -12,6 +12,7 @@ class MockController {
                                         float puckResistance, float pumpPower, float heaterPower, float waterPumped)>;
     using VolumetricFn = std::function<void(float volume)>;
     using TofFn = std::function<void(uint32_t distance)>;
+    using FlowCapFn = std::function<void(float capMlS)>; // fork (maxa4turbo.18)
 
     void begin();
     void update();
@@ -24,6 +25,7 @@ class MockController {
     SensorFn onSensor;
     VolumetricFn onVolumetric;
     TofFn onTof;
+    FlowCapFn onFlowCap; // the flow cap of a power phase while it holds the pump, else 0
 
   private:
     bool active = false;
@@ -40,6 +42,10 @@ class MockController {
     float targetPressure = 0.0f; // bar
     float targetFlow = 0.0f;     // ml/s
     bool brewValveOpen = false;
+    // Fork (maxa4turbo.18): flow cap of a power phase, see update()
+    float flowCap = 0.0f;  // ml/s, 0 = none
+    float capPower = 0.0f; // power the cap allows while it holds
+    bool capHolding = false;
 
     float pressure = 0.0f; // bar
     float flow = 0.0f;     // ml/s

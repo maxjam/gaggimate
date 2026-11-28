@@ -18,7 +18,9 @@ void MockController::setPump(const PumpCommand &c) {
     pumpMode = c.mode;
     pumpPower = c.power;
     targetPressure = c.pressure;
-    targetFlow = c.flow;
+    // Fork (maxa4turbo.18): the flow of a power command is the phase's flow cap, not a target
+    targetFlow = c.mode == PumpControlMode::Power ? 0.0f : c.flow;
+    flowCap = c.mode == PumpControlMode::Power ? c.flow : 0.0f;
 }
 
 void MockController::setRelay(const RelayCommand &c) {
@@ -43,6 +45,27 @@ void MockController::update() {
     const float gain = (dest - temperature) * (1.0f - expf(-dt / tau));
     temperature += gain;
 
+    // Fork (maxa4turbo.18): flow cap of a power phase. A crude stand-in for the Pro's measured-flow loop: once the
+    // flow passes the cap an integrator takes the pump power down until the flow sits on the cap, and it hands
+    // the pump back when it is at the commanded power again. Enough for the display side: the power it reports
+    // drops under the commanded one and the cap is reported while it holds.
+    float drive = pumpPower;
+    if (pumpMode == PumpControlMode::Power && flowCap > 0.0f && pumpPower > 1.0f) {
+        if (!capHolding && flow > flowCap) {
+            capHolding = true;
+            capPower = pumpPower;
+        }
+        if (capHolding) {
+            capPower += (flowCap - flow) * 20.0f * dt; // % per ml/s of error per second
+            if (capPower >= pumpPower)
+                capHolding = false;
+            else
+                drive = std::max(0.0f, capPower);
+        }
+    } else {
+        capHolding = false;
+    }
+
     // The pump is "active" when the display asks for any drive.
     const bool pumpActive = pumpPower > 1.0f || targetPressure > 0.1f || targetFlow > 0.1f;
     float pDest = 0.0f, fDest = 0.0f;
@@ -53,9 +76,9 @@ void MockController::update() {
         } else if (pumpMode == PumpControlMode::Flow) {
             fDest = targetFlow;
             pDest = std::min(11.0f, targetFlow * 4.0f);
-        } else {                                                          // power
-            pDest = pumpPower / 100.0f * (brewValveOpen ? 10.0f : 12.0f); // closed valve: deadhead up to the OPV
-            fDest = std::max(0.3f, pumpPower / 40.0f);
+        } else {                                                      // power
+            pDest = drive / 100.0f * (brewValveOpen ? 10.0f : 12.0f); // closed valve: deadhead up to the OPV
+            fDest = std::max(0.3f, drive / 40.0f);
         }
     }
     pressure += (pDest - pressure) * (1.0f - expf(-dt / 0.4f));
@@ -69,8 +92,10 @@ void MockController::update() {
         lastSensorMs = now;
         const float puckResistance = flow > 0.05f ? pressure / flow : 0.0f;
         if (onSensor)
-            onSensor(temperature, temperature + 40.0f, pressure, flow, flow, puckResistance, pumpPower,
+            onSensor(temperature, temperature + 40.0f, pressure, flow, flow, puckResistance, drive,
                      constrain(gain * 100.0, 0.0f, 100.0f), 0.0f);
+        if (onFlowCap)
+            onFlowCap(capHolding ? flowCap : 0.0f);
         if (onVolumetric)
             onVolumetric(weight);
     }

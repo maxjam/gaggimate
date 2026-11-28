@@ -332,7 +332,12 @@ void GaggiMateController::setup() {
             return;
         }
         if (mode == PumpControlMode::Power) {
-            this->pump->setPower(power); // the gear pump task applies a new power, including 0, within 30 ms
+            // Fork (maxa4turbo.18): `flow` of a power command is the phase's flow cap in ml/s, 0 = none. Stock
+            // displays and phases without a cap send 0 there.
+            if (_config.capabilites.dimming && flow > 0.0f)
+                static_cast<DimmedPump *>(pump.get())->setPower(power, flow);
+            else
+                this->pump->setPower(power); // the gear pump task applies a new power, including 0, within 30 ms
             updateScaleActivity();
             return;
         }
@@ -869,6 +874,7 @@ void GaggiMateController::sendSensorData() {
     float puckResistance = 0.0f;
     float pressure = 0.0f;
     float waterPumped = 0.0f;
+    float flowCap = 0.0f; // fork (maxa4turbo.18): the flow cap of a power phase while it holds the pump
     gm::Payload batch[2];
     size_t n = 0;
     if (_config.capabilites.pressure) {
@@ -879,6 +885,7 @@ void GaggiMateController::sendSensorData() {
             pumpFlow = dimmedPump->getPumpFlow();
             puckResistance = dimmedPump->getPuckResistance();
             waterPumped = dimmedPump->getPumpedWater();
+            flowCap = dimmedPump->getFlowCapReport();
             if (this->valve->getState()) {
                 batch[n++] = _comms.buildVolumetricMeasurement(dimmedPump->getCoffeeVolume());
             }
@@ -905,6 +912,7 @@ void GaggiMateController::sendSensorData() {
     p.content.sensor.puck_resistance = puckResistance;
     p.content.sensor.pump_power = pumpPower;
     p.content.sensor.water_pumped = waterPumped;
+    p.content.sensor.flow_cap = flowCap;
     batch[n++] = p;
     _comms.sendUnreliableBatch(batch, n);
 }
@@ -1096,6 +1104,9 @@ void GaggiMateController::printStatus() {
                  static_cast<int>(dimmedPump->getMode()), dimmedPump->getFlowTarget(), dimmedPump->getEffectiveFlowTarget(),
                  dimmedPump->isPressureLimiting() ? " (ceiling)" : "", *dimmedPump->getPumpPowerPtr(),
                  dimmedPump->isFlowLoopFaulted());
+        ESP_LOGI("Controller", "║  ├─ Flow cap (power phase): %.2f ml/s%s, power asked %.1f%%, power sent %.1f%%",
+                 dimmedPump->getFlowCap(), dimmedPump->isFlowCapLimiting() ? " (holding)" : "", dimmedPump->getPowerSetpoint(),
+                 *dimmedPump->getPumpPowerPtr());
         ESP_LOGI("Controller", "║  └─ Gains: kp=%.4f ki=%.4f start=%.0f%% ff=%.2f ramp=%.1f limKp=%.2f limKi=%.2f deadzone=%.0f%%", g.kp,
                  g.ki, g.startDuty * 100.0f, g.ff, g.ramp, g.limKp, g.limKi, g.deadZone * 100.0f);
         ESP_LOGI("Controller", "║");

@@ -40,6 +40,9 @@ class GaggiMateClient {
     // ErrorCallback when one is registered.
     using VescStatusCallback = std::function<void(const VescStatusReport &report)>;
     using PumpStopCallback = std::function<void(int code, uint8_t pump, int32_t detail)>;
+    // Fork (maxa4turbo.18): comes with every sensor update. The flow cap of the power phase (ml/s) while it holds
+    // the pump under the power that was sent, 0 otherwise.
+    using FlowCapCallback = std::function<void(float capMlS)>;
 
     GaggiMateClient();
 
@@ -153,6 +156,7 @@ class GaggiMateClient {
     void onError(ErrorCallback cb) { _errorCb = std::move(cb); }
     void onVescStatus(VescStatusCallback cb) { _vescStatusCb = std::move(cb); }
     void onPumpStop(PumpStopCallback cb) { _pumpStopCb = std::move(cb); }
+    void onFlowCap(FlowCapCallback cb) { _flowCapCb = std::move(cb); }
 
   private:
     BleClientTransport _ble;
@@ -193,6 +197,7 @@ class GaggiMateClient {
     ErrorCallback _errorCb;
     VescStatusCallback _vescStatusCb;
     PumpStopCallback _pumpStopCb;
+    FlowCapCallback _flowCapCb;
 
     void registerHandlers();
     void onLinkSelected(LinkType active);

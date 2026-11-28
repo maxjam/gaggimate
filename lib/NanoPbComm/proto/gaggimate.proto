@@ -96,7 +96,9 @@ message PumpControl {
     PumpMode mode = 2;
     float power = 3;    // 0..100 %, used in POWER mode
     float pressure = 4; // bar
-    float flow = 5;     // ml/s
+    // ml/s. Fork (maxa4turbo.18): in POWER mode this is the phase's flow cap, 0 = none (what stock sends there):
+    // the pump runs at `power` until the measured flow passes the cap, then the measured-flow loop holds the cap.
+    float flow = 5;
 }
 
 // Binary on/off output (solenoid valve or relay). index selects the output:
@@ -260,6 +262,9 @@ message SensorData {
     bool tank_level_ok = 9;
     reserved 10 to 16;
     optional bool steam_boiler_low = 17; // Present once the enabled level sensor has a debounced reading.
+    // Fork (maxa4turbo.18), number kept clear of upstream's: the flow cap of a power phase, in ml/s, while it holds
+    // the pump under the power the display sent (and for half a second after); 0 otherwise.
+    float flow_cap = 50;
 }
 
 message ButtonState {

@@ -154,6 +154,7 @@ class GaggiMateClient {
     void onError(ErrorCallback cb) { _errorCb = std::move(cb); }
     void onVescStatus(std::function<void(const VescStatusReport &)>) {} // fork (maxa4turbo.15)
     void onPumpStop(std::function<void(int, uint8_t, int32_t)>) {}
+    void onFlowCap(std::function<void(float)> cb) { _flowCapCb = std::move(cb); } // fork (maxa4turbo.18)
 
   private:
     MockController _mock;
@@ -168,6 +169,7 @@ class GaggiMateClient {
     IncompatibleCallback _incompatibleCb;
     SystemInfoCallback _systemInfoCb;
     SensorCallback _sensorCb;
+    std::function<void(float)> _flowCapCb;
     ButtonCallback _buttonCb;
     AutotuneResultCallback _autotuneResultCb;
     VolumetricCallback _volumetricCb;

@@ -316,6 +316,8 @@ void GaggiMateClient::registerHandlers() {
             _tankLevelCb(p.content.sensor.has_tank_level, p.content.sensor.tank_level_ok);
         if (p.content.sensor.has_steam_boiler_low && _steamLevelCb)
             _steamLevelCb(p.content.sensor.steam_boiler_low);
+        if (_flowCapCb) // fork (maxa4turbo.18); 0 from a controller that does not know the field
+            _flowCapCb(p.content.sensor.flow_cap);
         if (!_sensorCb)
             return;
         // The display tracks a single boiler today; read boiler 0 if present.

@@ -120,6 +120,14 @@ class BrewProcess : public Process {
         return phaseStartPower + (currentPhase.pumpSimple - phaseStartPower) * a;
     }
 
+    // Fork (maxa4turbo.18): flow cap of the power phase that is running, ml/s; 0 = none. It belongs to the phase,
+    // like its targets: it applies from the phase's first moment, whatever the power ramp is doing.
+    float getPumpMaxFlow() const {
+        if (processPhase == ProcessPhase::FINISHED || !currentPhase.pumpIsSimple)
+            return 0.0f;
+        return currentPhase.maxFlow > 0.0f ? currentPhase.maxFlow : 0.0f;
+    }
+
     bool isAdvancedPump() const { return processPhase != ProcessPhase::FINISHED && !currentPhase.pumpIsSimple; }
 
     [[nodiscard]] PumpTarget getPumpTarget() const { return currentPhase.pumpAdvanced.target; }

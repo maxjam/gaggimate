@@ -46,6 +46,7 @@ export function ExtendedPhase({ phase, index, onChange, pressureAvailable }) {
   const targets = phase?.targets || [];
 
   const pumpPower = isNumber(phase.pump) ? phase.pump : 100;
+  const maxFlow = isNumber(phase.maxFlow) ? phase.maxFlow : 0; // fork (maxa4turbo.18): power phases only
   const pressure = !isNumber(phase.pump) ? phase.pump.pressure : 0;
   const flow = !isNumber(phase.pump) ? phase.pump.flow : 0;
   let mode = isNumber(phase.pump) ? (phase.pump === 0 ? 'off' : 'power') : phase.pump.target;
@@ -274,25 +275,49 @@ export function ExtendedPhase({ phase, index, onChange, pressureAvailable }) {
       </div>
 
       {mode === 'power' && (
-        <div className='form-control'>
-          <label htmlFor={`phase-${index}-power`} className='mb-2 block text-sm font-medium'>
-            <Trans>Pump Power</Trans>
-          </label>
-          <div className='input-group'>
-            <label htmlFor={`phase-${index}-power`} className='input w-full'>
-              <input
-                id={`phase-${index}-power`}
-                className='grow'
-                type='number'
-                step='1'
-                min={0}
-                max={100}
-                value={pumpPower.toString()}
-                onChange={e => onFieldChange('pump', parseFloat(e.target.value))}
-                aria-label={t`Pump power as percentage`}
-              />
-              <span aria-label={t`percent`}>%</span>
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          <div className='form-control'>
+            <label htmlFor={`phase-${index}-power`} className='mb-2 block text-sm font-medium'>
+              <Trans>Pump Power</Trans>
             </label>
+            <div className='input-group'>
+              <label htmlFor={`phase-${index}-power`} className='input w-full'>
+                <input
+                  id={`phase-${index}-power`}
+                  className='grow'
+                  type='number'
+                  step='1'
+                  min={0}
+                  max={100}
+                  value={pumpPower.toString()}
+                  onChange={e => onFieldChange('pump', parseFloat(e.target.value))}
+                  aria-label={t`Pump power as percentage`}
+                />
+                <span aria-label={t`percent`}>%</span>
+              </label>
+            </div>
+          </div>
+          {/* Fork (maxa4turbo.18): flow cap of a power phase, "maxFlow" in the profile JSON. The pump follows the
+              power until the measured flow passes the cap; then the controller holds the cap. 0 = no cap. */}
+          <div className='form-control'>
+            <label htmlFor={`phase-${index}-max-flow`} className='mb-2 block text-sm font-medium'>
+              <Trans>Maximum Flow (0 = No Limit)</Trans>
+            </label>
+            <div className='input-group'>
+              <label htmlFor={`phase-${index}-max-flow`} className='input w-full'>
+                <input
+                  id={`phase-${index}-max-flow`}
+                  className='grow'
+                  type='number'
+                  step='0.1'
+                  min='0'
+                  value={maxFlow.toString()}
+                  onChange={e => onFieldChange('maxFlow', parseFloat(e.target.value))}
+                  aria-label={t`Maximum flow in milliliters per second`}
+                />
+                <span aria-label={t`milliliter per second`}>ml/s</span>
+              </label>
+            </div>
           </div>
         </div>
       )}

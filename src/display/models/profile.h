@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <cmath>
 
 enum class TargetType { TARGET_TYPE_VOLUMETRIC, TARGET_TYPE_PRESSURE, TARGET_TYPE_FLOW, TARGET_TYPE_PUMPED, TARGET_TYPE_RATIO };
 enum class TargetOperator { LTE, GTE };
@@ -62,6 +63,10 @@ struct Phase {
     float duration;
     bool pumpIsSimple;
     int pumpSimple; // Used if pumpIsSimple == true
+    // Fork (maxa4turbo.18): flow cap of a power phase in ml/s, "maxFlow" in the profile JSON next to "pump": <int>.
+    // The pump runs at the phase's power until the measured flow passes the cap; then the controller's
+    // measured-flow loop holds the cap. 0 = no cap. Only used if pumpIsSimple == true.
+    float maxFlow = 0.0f;
     float temperature;
     Transition transition;
     PumpAdvanced pumpAdvanced;
@@ -349,6 +354,9 @@ inline bool parseProfile(const JsonObject &obj, Profile &profile) {
         if (p["pump"].is<int>()) {
             phase.pumpIsSimple = true;
             phase.pumpSimple = p["pump"].as<int>();
+            // Fork (maxa4turbo.18): optional flow cap; missing, 0, negative or not a number = none
+            const float maxFlow = p["maxFlow"].is<float>() ? p["maxFlow"].as<float>() : 0.0f;
+            phase.maxFlow = std::isfinite(maxFlow) && maxFlow > 0.0f ? maxFlow : 0.0f;
         } else {
             phase.pumpIsSimple = false;
             auto pump = p["pump"].as<JsonObject>();
@@ -482,6 +490,8 @@ inline void writeProfile(JsonObject &obj, const Profile &profile) {
 
         if (phase.pumpIsSimple) {
             p["pump"] = phase.pumpSimple;
+            if (phase.maxFlow > 0.0f) // fork (maxa4turbo.18); phases without a cap are written as before
+                p["maxFlow"] = phase.maxFlow;
         } else {
             auto pump = p["pump"].to<JsonObject>();
             pump["target"] = phase.pumpAdvanced.target == PumpTarget::PUMP_TARGET_PRESSURE ? "pressure" : "flow";

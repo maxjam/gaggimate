@@ -39,6 +39,8 @@ void DimmedPump::loop() {
     if (mode != _lastLoopMode) {
         if (_lastLoopMode == ControlMode::FLOW)
             _pressureController.resetFlowLoop();
+        if (_lastLoopMode == ControlMode::POWER)
+            _pressureController.resetPowerCap(); // a flow cap ends with its power phase (maxa4turbo.18)
         _lastLoopMode = mode;
     }
     updatePower(fresh, _pressureSensor->getSampleTime(), elapsed);
@@ -62,20 +64,23 @@ void DimmedPump::fillDiagnostics(MeterDiagnostics &d) const {
     const ControlMode mode = _mode;
     const float power = _power;
     const bool measuredLoop = mode == ControlMode::FLOW && _meter != nullptr;
+    // Power phase with a flow cap (maxa4turbo.18): target_ml_s is the cap, ctrl_ml_s the cap while it holds the pump.
+    const float cap = mode == ControlMode::POWER ? _capMaxFlow : 0.0f;
+    const bool capLimiting = cap > 0.0f && _pressureController.isPowerCapLimiting();
     d.pumpPct = power;
     d.pressure = _currentPressure;
     d.mode = static_cast<uint8_t>(mode);
     d.targetBar = _ctrlPressure;
-    d.targetFlow = _ctrlFlow;
+    d.targetFlow = cap > 0.0f ? cap : _ctrlFlow;
     d.ctrlBar = _pressureController.getFilteredSetpoint();
-    d.ctrlFlow = measuredLoop ? _pressureController.getEffectiveFlowTarget() : 0.0f;
+    d.ctrlFlow = measuredLoop ? _pressureController.getEffectiveFlowTarget() : (capLimiting ? cap : 0.0f);
     d.modelFlow = _pressureController.getModelPumpFlow(power);
     if (measuredLoop)
         d.iPct = _pressureController.getFlowLoopIntegral() * 100.0f;
     else if (mode != ControlMode::POWER)
         d.iPct = _pressureController.getPressureITerm() * 100.0f;
     else
-        d.iPct = 0.0f;
+        d.iPct = capLimiting ? _pressureController.getPowerCapIntegral() * 100.0f : 0.0f;
     uint8_t flags = 0;
     if (_valveStatus)
         flags |= MeterDiagnostics::VALVE_OPEN;
@@ -88,11 +93,15 @@ void DimmedPump::fillDiagnostics(MeterDiagnostics &d) const {
         if (_pressureController.isCutoffLatched())
             flags |= MeterDiagnostics::CUTOFF;
     }
+    if (capLimiting)
+        flags |= MeterDiagnostics::FLOW_CAP;
     d.flags = flags;
 }
 
 void DimmedPump::setPower(float setpoint) {
     ESP_LOGV(LOG_TAG, "Setting power to %2f", setpoint);
+    _capMaxFlow = 0.0f; // no flow cap (maxa4turbo.18)
+    _rampPower = std::clamp(setpoint, 0.0f, 100.0f);
     _ctrlPressure = setpoint > 0 ? 20.0f : 0.0f;
     _mode = ControlMode::POWER;
     _power = std::clamp(setpoint, 0.0f, 100.0f);
@@ -103,6 +112,22 @@ void DimmedPump::setPower(float setpoint) {
         _currentFlow = 0.0f;
     }
     _psm.set(static_cast<int>(_binaryMode ? (_power > 0 ? 100.0f : 0.0f) : _power));
+}
+
+// Fork (maxa4turbo.18): power phase with a flow cap. Runs in the BLE task, like setPower(). It only leaves the
+// request; the control task turns it into the pump power within one cycle (17 ms): min(setpoint, flow loop).
+// Writing the setpoint to _power here would put the uncapped power on the pump for part of a cycle on every step
+// of a power ramp (ten times a second), while the cap holds it lower.
+void DimmedPump::setPower(float setpoint, float maxFlow) {
+    if (!(maxFlow > 0.0f) || !std::isfinite(maxFlow) || !(setpoint > 0.0f) || _meter == nullptr || _binaryMode) {
+        setPower(setpoint);
+        return;
+    }
+    _rampPower = std::clamp(setpoint, 0.0f, 100.0f);
+    _capMaxFlow = maxFlow;
+    _mode = ControlMode::POWER; // before the targets are cleared, as in setPower(): a flow phase never sees target 0
+    _ctrlFlow = 0.0f;
+    _ctrlPressure = 0.0f;
 }
 
 float DimmedPump::getCoffeeVolume() { return _pressureController.getCoffeeOutputEstimate(); }
@@ -139,7 +164,25 @@ void DimmedPump::updatePower(bool freshPressure, float sampleTime, float elapsed
         const bool floor = (_ctrlPressure > 0.0f || _ctrlFlow > 0.0f) && _controllerPower < _minPower &&
                            !_pressureController.isCutoffLatched();
         _power = floor ? _minPower : _controllerPower;
+        _capReport = 0.0f;
+        _capSeenUs = 0;
     } else {
+        // Fork (maxa4turbo.18): the pump power of a power phase is worked out here from what setPower() asked for:
+        // the power itself, or with a flow cap the lower of it and what the measured-flow loop gives. Without a
+        // cap this is the value setPower() already wrote, so nothing changes; and a control cycle that was
+        // mid-flight when setPower() ran can no longer leave another mode's power standing in a power phase.
+        const float cap = _capMaxFlow;
+        const float ramp = _rampPower;
+        if (cap > 0.0f) {
+            _power = _pressureController.limitPowerToFlow(ramp, _power, cap);
+        } else {
+            _pressureController.resetPowerCap();
+            _power = ramp;
+        }
+        const int64_t nowUs = esp_timer_get_time();
+        if (cap > 0.0f && _pressureController.isPowerCapLimiting())
+            _capSeenUs = nowUs;
+        _capReport = cap > 0.0f && _capSeenUs != 0 && nowUs - _capSeenUs < CAP_REPORT_HOLD_US ? cap : 0.0f;
         // Re-assert the manual power here in the control task: setPower() runs in the BLE task and a control
         // cycle that was mid-flight when the shot ended could leave the last flow duty in _controllerPower,
         // which the next flow phase would then start from (meterlink.7).

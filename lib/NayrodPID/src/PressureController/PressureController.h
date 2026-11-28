@@ -57,7 +57,7 @@ class PressureController {
     // New gains take effect when the loop is not running a flow phase (meterlink.7): a dead-zone change
     // re-maps the loop output to a different pump power, so applying it mid-phase would jump the pump.
     void setFlowLoopGains(const FlowLoopGains &gains) {
-        if (_flowLoopArmed) {
+        if (_flowLoopArmed || _capArmed) { // a power phase with a flow cap counts too (maxa4turbo.18)
             _pendingGains = gains;
             _gainsPending = true;
         } else {
@@ -74,6 +74,21 @@ class PressureController {
     float getFlowLoopIntegral() const { return _flowReset; }        // flow PI reset state (duty)
     float getPressureLoopIntegral() const { return _pressReset; }   // ceiling PI reset state (duty)
     float getRampedFlowSetpoint() const { return _flowSetpointRamped; }
+
+    // === Flow cap on power phases (fork, maxa4turbo.18) ===
+    // A power phase can carry a flow cap (ml/s). The pump runs at the power the display sends (the profile's
+    // power ramp) while the meter reads less than the cap. When it reads more, the flow PI of the measured-flow
+    // loop takes the pump and holds the cap: power = min(ramp power, PI). Same kp, ki, dead zone and low-power
+    // band as a flow phase; measured flow only, so no pump-model feedforward (gains.ff is not used here) and no
+    // setpoint slew. See limitPowerToFlow() in the .cpp for the hand-over in both directions.
+    //   rampPowerPct     power the display asks for, 0..100 %
+    //   runningPowerPct  power the pump got in the last control cycle, 0..100 %
+    //   maxFlow          the cap in ml/s; 0 or less = no cap
+    // Returns the power to apply, never more than rampPowerPct. Call once per control cycle, after update().
+    float limitPowerToFlow(float rampPowerPct, float runningPowerPct, float maxFlow);
+    void resetPowerCap();                                      // no cap any more, or the power phase ended
+    bool isPowerCapLimiting() const { return _capLimiting; }   // the cap holds the pump under the ramp power
+    float getPowerCapIntegral() const { return _capIntegral; } // cap PI integral (share of the range above the dead zone)
 
     // === Diagnostics (fork, for the meter board's shot log) ===
     float getModelPumpFlow(float powerPct) const;                   // pump model: ml/s at this power and the current pressure
@@ -184,6 +199,12 @@ class PressureController {
     float _flowDuty = 0.0f;      // last applied duty (fraction)
     bool _limBinding = false;    // the ceiling PI is the one in charge
     float _flowTargetEff = 0.0f; // slewed flow target (ml/s)
+
+    // === Flow cap on power phases (fork, maxa4turbo.18) ===
+    bool _capArmed = false;    // a power phase with a cap is running: new gains wait, as in a flow phase
+    bool _capLimiting = false; // the cap PI runs the pump (it asks for less than the ramp power)
+    float _capIntegral = 0.0f; // cap PI integral, loop units (share of the power range above the dead zone)
+    float _capFlow = 0.0f;     // cap of the last cycle (ml/s), to take a changed cap without a step
 };
 
 #endif // PRESSURE_CONTROLLER_H

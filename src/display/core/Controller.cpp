@@ -335,6 +335,7 @@ void Controller::setupBluetooth() {
         pluginManager->trigger("pump:puck-resistance:change", "value", puckResistance);
         pluginManager->trigger("pump:volume:change", "value", waterPumped);
     });
+    comms.onFlowCap([this](float cap) { this->currentFlowCap = cap; }); // fork (maxa4turbo.18)
     comms.onMachineHardware([this](uint32_t hash, bool ready, bool error) {
         const bool wasReady = isMachineHardwareReady();
         appliedHardwareHash = hash;
@@ -1279,6 +1280,16 @@ void Controller::updateControl() {
         relay.open = active && proc->isRelayActive();
         pump.mode = PumpControlMode::Power;
         pump.power = active ? proc->getPumpValue() : 0;
+        // Fork (maxa4turbo.18): a power phase of a profile can have a flow cap ("maxFlow", ml/s). It travels in the
+        // power command's flow field, which stock leaves at 0. The controller runs the pump at pump.power until the
+        // measured flow passes the cap, then holds the cap with its measured-flow loop. While it does (it says so
+        // in its sensor data), the cap is this shot's target flow: the charts and the shot history draw it, and it
+        // is back to 0 as soon as the pump follows the power ramp again.
+        if (active && proc->getType() == MODE_BREW) {
+            pump.flow = static_cast<BrewProcess *>(proc)->getPumpMaxFlow();
+            if (pump.flow > 0.0f && currentFlowCap > 0.0f)
+                targetFlow = pump.flow;
+        }
     }
     // Fork (meterlink.8): with nothing running, vent the trapped circuit pressure with a short pulse of the brew valve.
     if (!handled && !active && pressureReleaseOpen(active)) {

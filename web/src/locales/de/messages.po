@@ -2976,6 +2976,14 @@ msgid "Maximum Flow (0 = Ignore)"
 msgstr "Maximaler Durchfluss (0 = ignorieren)"
 
 #: src/pages/ProfileEdit/ExtendedPhase.jsx
+msgid "Maximum Flow (0 = No Limit)"
+msgstr ""
+
+#: src/pages/ProfileEdit/ExtendedPhase.jsx
+msgid "Maximum flow in milliliters per second"
+msgstr ""
+
+#: src/pages/ProfileEdit/ExtendedPhase.jsx
 msgid "Maximum Pressure"
 msgstr "Maximaler Druck"
 
@@ -3011,6 +3019,7 @@ msgstr "Metriken – letzter Bezug"
 msgid "Metrics Columns"
 msgstr "Metrikspalten"
 
+#: src/pages/ProfileEdit/ExtendedPhase.jsx
 #: src/pages/Settings/tabs/MachineTab.jsx
 msgid "milliliter per second"
 msgstr "Milliliter pro Sekunde"

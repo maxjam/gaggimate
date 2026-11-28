@@ -22,6 +22,7 @@ struct MeterDiagnostics {
         FLOW_FAULT = 1 << 2,    // flow phase held at 0 because the meter data is stale
         MEASURED_LOOP = 1 << 3, // flow phase running closed loop on the meter
         CUTOFF = 1 << 4,        // flow phase: the 12.5 bar hard cutoff tripped, pump off until the phase ends (meterlink.7)
+        FLOW_CAP = 1 << 5,      // power phase: its flow cap holds the pump under the profile's power (maxa4turbo.18)
     };
 
     float pumpPct = 0.0f;    // pump power sent to the pump, 0..100 % (the DAC level on the Velofuso)
