@@ -118,8 +118,12 @@ void DimmedPump::setPower(float setpoint) {
 // request; the control task turns it into the pump power within one cycle (17 ms): min(setpoint, flow loop).
 // Writing the setpoint to _power here would put the uncapped power on the pump for part of a cycle on every step
 // of a power ramp (ten times a second), while the cap holds it lower.
+// maxa4turbo.19: _binaryMode does not switch the cap off any more. It only makes the mains output on / off; the
+// BLDC pump takes its speed from _power through the CAN drive (or the adapter), and that is the mode Max's machine
+// always runs in (setupVescCan). With the check in place the cap never took effect there: shots 572 / 573 ran
+// 2.7-3.7 ml/s against a cap of 2.0 with the pump at the plain ramp power.
 void DimmedPump::setPower(float setpoint, float maxFlow) {
-    if (!(maxFlow > 0.0f) || !std::isfinite(maxFlow) || !(setpoint > 0.0f) || _meter == nullptr || _binaryMode) {
+    if (!(maxFlow > 0.0f) || !std::isfinite(maxFlow) || !(setpoint > 0.0f) || _meter == nullptr) {
         setPower(setpoint);
         return;
     }

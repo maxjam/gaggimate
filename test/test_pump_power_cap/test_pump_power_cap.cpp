@@ -3,6 +3,12 @@
 // test_power_flow_cap (pump map and pucks from his shots 567-570), commanded the way the display does it:
 // setFlowTarget / setPower from another task, a new value at most every 100 ms. The hardware side of DimmedPump
 // (dimmer, pressure sensor, meter link, FreeRTOS) is replaced by the stand-ins below.
+//
+// maxa4turbo.19: the pump driver is now set up the way GaggiMateController sets it up on his machine, call for
+// call (see Rig::Rig): meter link, low-power band, the meter board's gains, and setBinaryMode(true) from
+// setupVescCan(). In maxa4turbo.18 the rig left the mains output dimmed, the one thing his machine never does,
+// and setPower(power, maxFlow) dropped the cap in on / off mode: every test passed and the cap did nothing on the
+// machine (shots 572 / 573). The scenario of those two shots is test_shot_573_is_held_at_the_cap.
 // Host-side: pio test -e native -f test_pump_power_cap.
 
 #include <unity.h>
@@ -69,9 +75,13 @@ namespace {
 
 constexpr float kPumpPerPct = 0.2646f, kPumpPerBar = 0.7879f, kPumpOffset = 9.080f;
 float pumpFlow(float powerPct, float bar) { return std::max(0.0f, kPumpPerPct * powerPct - kPumpPerBar * bar - kPumpOffset); }
+// The pump at lower pressure, from shots 572 / 573 (82 samples with steady power, 48-66 % and 3.4-7.1 bar,
+// rms 0.08 ml/s). The map above is 567-570's (55-67 %, 5.9-9 bar) and reads 0.8 ml/s low at 49 % and 3.7 bar.
+float pumpFlowLowPressure(float powerPct, float bar) { return std::max(0.0f, 0.2155f * powerPct - 0.7393f * bar - 6.101f); }
 
-FlowLoopGains maxGains() { // Max's meter page, Nov 27 2026
-    FlowLoopGains g;
+// The meter board's $G: its 8 fields go over the gains the Pro holds, as MeterLink does it. Max's meter page,
+// Nov 27 2026.
+FlowLoopGains meterBoardGains(FlowLoopGains g) {
     g.kp = 0.025f;
     g.ki = 0.075f;
     g.startDuty = 0.20f;
@@ -104,6 +114,7 @@ struct Rig {
 
     std::function<Command(float)> commandAt = [](float) { return Command{}; };
     std::function<float(float)> resistanceAt = [](float) { return 1.0f; };
+    std::function<float(float, float)> pumpMap = pumpFlow; // ml/s at this power (%) and pressure (bar)
     bool useCapCommand = true; // false: a display that does not know the cap (sends the plain power command)
     float pumpLag = 0.15f;
     float powerEff = 0.0f, pressure = 0.0f, trueFlow = 0.0f, volume = 0.0f;
@@ -114,12 +125,26 @@ struct Rig {
     std::vector<float> powerTrace, pressureTrace;
     float maxStep = 0.0f; // largest change of the pump power in one control cycle
 
-    Rig() {
+    // The pump driver as GaggiMateController sets it up in the controller-maxa4turbo-j5-scale-j4 build on Max's
+    // machine, in that order. canDrive = false leaves the mains output dimmed (stock wiring with a meter link),
+    // which his machine never runs.
+    explicit Rig(bool canDrive = true) {
+        // setupMeterLink(): the link, then the low-power band over the default gains
         pump.setMeterLink(&meter);
-        pump.setFlowLoopGains(maxGains());
+        FlowLoopGains g = pump.getFlowLoopGains();
+        g.knee = 0.25f;
+        g.kneeGain = 0.5f;
+        pump.setFlowLoopGains(g);
+        // setupVescCan(): "the pump controller's power goes to the drive, the mains output is on or off"
+        if (canDrive)
+            pump.setBinaryMode(true);
+        // $G from the meter board when the link comes up
+        pump.setFlowLoopGains(meterBoardGains(pump.getFlowLoopGains()));
+        // onPumpSettings() from the display (hasGearPump() is true with the CAN drive)
         pump.setPumpFlowPolyCoeffs(0.0f, 0.122f, -2.7966f, 26.1908f); // his settings; flow phases run with ff = 1
-        pump.setPumpSlipPolyCoeffs(0.0f, -0.122f, 2.7966f, 0.3062f);
         pump.setGains(0.05f, 3.5f, 0.05f);
+        pump.setPumpSlipPolyCoeffs(0.0f, -0.122f, 2.7966f, 0.3062f);
+        // onRelayControl(): brew valve open
         pump.setValveState(true);
     }
 
@@ -129,9 +154,9 @@ struct Rig {
         powerEff = powerPct;
         float p = 6.0f;
         for (int i = 0; i < 200; i++)
-            p = std::max(0.05f, p + 0.2f * (pumpFlow(powerPct, p) - std::sqrt(p) / resistance));
+            p = std::max(0.05f, p + 0.2f * (pumpMap(powerPct, p) - std::sqrt(p) / resistance));
         pressure = p;
-        trueFlow = meter.reading = pumpFlow(powerPct, p);
+        trueFlow = meter.reading = pumpMap(powerPct, p);
     }
 
     void send(const Command &c) {
@@ -140,16 +165,16 @@ struct Rig {
         else if (c.kind == Command::PRESSURE)
             pump.setPressureTarget(c.pressure, c.flow);
         else if (useCapCommand && c.maxFlow > 0.0f)
-            pump.setPower(c.power, c.maxFlow); // what GaggiMateController does with a power command that has a flow
+            pump.setPower(c.power, c.maxFlow); // onPumpControl(): a power command with a flow above 0
         else
-            pump.setPower(c.power);
+            pump.setPower(c.power); // onPumpControl(): a power command with flow 0
         sent = c;
         sentAny = true;
     }
 
     void step() {
         powerEff += (power() - powerEff) * std::min(1.0f, kDt / pumpLag);
-        trueFlow = pumpFlow(powerEff, pressure);
+        trueFlow = pumpMap(powerEff, pressure);
         const float puckFlow = std::sqrt(std::max(0.0f, pressure)) / resistanceAt(t);
         pressure = std::max(0.0f, pressure + (trueFlow - puckFlow) / (3.5f / std::max(pressure, 0.5f)) * kDt);
         sensor.bar = pressure;
@@ -449,21 +474,158 @@ void test_flow_phase_after_a_capped_power_phase() {
     TEST_ASSERT_FLOAT_WITHIN(0.12f, 2.0f, rig.trueFlow);
 }
 
-// No meter link (stock wiring) or a pump in on/off mode: the cap is ignored and the command is the plain one.
+// Without a meter link (stock wiring) the cap is ignored and the command is the plain one.
 void test_no_meter_link_ignores_the_cap() {
     PressureSensor sensor;
     DimmedPump pump(0, 0, &sensor, PressureControlRate::Hz60);
+    pump.setBinaryMode(true);
     pump.setPower(66.0f, 2.0f);
     TEST_ASSERT_EQUAL_FLOAT(66.0f, *pump.getPumpPowerPtr());
     TEST_ASSERT_EQUAL_FLOAT(0.0f, pump.getFlowCap());
     pump.loop();
     TEST_ASSERT_EQUAL_FLOAT(66.0f, *pump.getPumpPowerPtr());
+}
 
-    Rig rig;
-    rig.pump.setBinaryMode(true);
+// The reason for maxa4turbo.19. On the CAN drive (and on the adapter) the pump driver runs with the mains output
+// on / off, setBinaryMode(true); the pump's speed comes from the driver's power value. That mode must take the
+// cap: maxa4turbo.18 fell back to the plain power command there, so on Max's machine the cap never did anything.
+void test_can_drive_takes_the_cap() {
+    Rig rig; // set up as on his machine: setBinaryMode(true)
+    rig.meter.reading = 1.5f;
     rig.pump.setPower(66.0f, 2.0f);
-    TEST_ASSERT_EQUAL_FLOAT(66.0f, rig.power());
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, rig.pump.getFlowCap());
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, rig.pump.getFlowCap());
+    TEST_ASSERT_EQUAL_FLOAT(66.0f, rig.pump.getPowerSetpoint());
+    g_nowUs += 16667;
+    rig.pump.loop();
+    TEST_ASSERT_EQUAL_FLOAT(66.0f, rig.power()); // under the cap: the power that was asked for
+    TEST_ASSERT_EQUAL_INT(100, psmLastLevel());  // mains output on
+    rig.meter.reading = 3.3f;                    // what the meter read in shots 572 / 573 at this power
+    float lowest = 66.0f;
+    for (int i = 0; i < 60; i++) { // one second
+        g_nowUs += 16667;
+        rig.pump.loop();
+        lowest = std::min(lowest, rig.power());
+        TEST_ASSERT_EQUAL_INT(100, psmLastLevel());
+    }
+    TEST_ASSERT_TRUE(rig.pump.isFlowCapLimiting());
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, rig.pump.getFlowCapReport());
+    snprintf(msg, sizeof(msg), "pump power after 1 s at 3.3 ml/s against a cap of 2.0: %.1f %%", rig.power());
+    TEST_ASSERT_TRUE_MESSAGE(rig.power() < 60.0f, msg); // -1.3 ml/s: P 2.9 % at once, I 8.8 % per second
+    TEST_ASSERT_EQUAL_FLOAT(lowest, rig.power());       // and still going down
+    rig.pump.setPower(0.0f);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, rig.power());
+    TEST_ASSERT_EQUAL_INT(0, psmLastLevel()); // mains output off with the pump
+}
+
+// The mains output mode changes nothing about the pump power: the same shot with the output on / off (CAN drive)
+// and dimmed gives the same power in every control cycle, capped or not.
+void test_mains_output_mode_does_not_change_the_pump_power() {
+    for (float cap : {2.0f, 0.0f}) {
+        Rig can(true), dimmed(false);
+        for (Rig *r : {&can, &dimmed}) {
+            r->settleAt(60.2f, 1.4f);
+            r->resistanceAt = easyPuck;
+            r->commandAt = [cap](float t) { return dflowPowerDecline(t, cap); };
+            r->run(kRise + 20.0f);
+        }
+        TEST_ASSERT_EQUAL_UINT32(can.powerTrace.size(), dimmed.powerTrace.size());
+        for (size_t i = 0; i < can.powerTrace.size(); i++) {
+            if (can.powerTrace[i] != dimmed.powerTrace[i]) {
+                snprintf(msg, sizeof(msg), "cap %.1f, cycle %u: power %.4f on the CAN drive, %.4f dimmed", cap,
+                         static_cast<unsigned>(i), can.powerTrace[i], dimmed.powerTrace[i]);
+                TEST_FAIL_MESSAGE(msg);
+            }
+        }
+        TEST_ASSERT_EQUAL(cap > 0.0f, can.pump.isFlowCapLimiting());
+        TEST_ASSERT_EQUAL(cap > 0.0f, dimmed.pump.isFlowCapLimiting());
+    }
+}
+
+// Shots 572 / 573 (Nov 28 2026, both boards on maxa4turbo.18, maxFlow 2.0 on both power phases). The rise ends on
+// its 9 g at 3.7 bar with the flow loop at 49 % and 1.8 ml/s; "Hold power 66" steps the pump to 66 %. On the
+// machine the cap did nothing: the meter read 3.2-3.7 ml/s within half a second, then 2.7-3.1 for the rest of the
+// shot at 6.5-7 bar (puck resistance 0.9), pump power exactly on the ramp, target flow 0.
+// Here: the same shot without a cap is that shot, and with the cap the flow comes down to 2.0 and stays there.
+Command shot573(float t, float cap) { return dflowPowerDecline(t, cap); }
+// Resistance 1.13 while the rise holds 1.7 ml/s at 3.7 bar, then down to 0.9 within 3 s of the power phase.
+float puck573(float t) { return t < kRise ? 1.13f : std::max(0.9f, 1.13f - 0.23f * (t - kRise) / 3.0f); }
+
+void test_shot_573_is_held_at_the_cap() {
+    // 1. Without the cap the model gives the shot he pulled.
+    Rig plain;
+    plain.pumpMap = pumpFlowLowPressure;
+    plain.settleAt(48.9f, 1.13f);
+    plain.resistanceAt = puck573;
+    plain.commandAt = [](float t) { return shot573(t, 0.0f); };
+    plain.run(kRise - 0.05f);
+    snprintf(msg, sizeof(msg), "end of the rise: %.2f ml/s at %.1f bar, pump %.1f %%", plain.trueFlow, plain.pressure,
+             plain.power());
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15f, 1.7f, plain.trueFlow, msg);
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5f, 3.7f, plain.pressure, msg);
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(2.5f, 49.0f, plain.power(), msg);
+    float peak = 0.0f;
+    for (int i = 0; i < 60; i++) {
+        plain.step();
+        peak = std::max(peak, plain.meter.reading);
+    }
+    snprintf(msg, sizeof(msg), "no cap: meter peak %.2f ml/s in the first second (shots: 3.5 and 3.7)", peak);
+    TEST_ASSERT_TRUE_MESSAGE(peak > 3.0f && peak < 4.6f, msg); // the model's hoses are a little softer than his
+    plain.run(5.0f);
+    snprintf(msg, sizeof(msg), "no cap, 6 s in: %.2f ml/s at %.1f bar (shots: 2.7-3.1 at 6.6-7.0)", plain.trueFlow,
+             plain.pressure);
+    TEST_ASSERT_TRUE_MESSAGE(plain.trueFlow > 2.6f && plain.trueFlow < 3.2f, msg);
+    TEST_ASSERT_TRUE_MESSAGE(plain.pressure > 6.2f && plain.pressure < 7.4f, msg);
+    TEST_ASSERT_EQUAL_FLOAT(plain.sent.power, plain.power());
+
+    // 2. The same shot with maxFlow 2.0, pump driver set up as on his machine.
+    Rig rig;
+    rig.pumpMap = pumpFlowLowPressure;
+    rig.settleAt(48.9f, 1.13f);
+    rig.resistanceAt = puck573;
+    rig.commandAt = [](float t) { return shot573(t, 2.0f); };
+    rig.run(kRise - 0.05f);
+    TEST_ASSERT_FALSE(rig.pump.isFlowCapLimiting());
+    float tookOverAt = -1.0f, meterPeak = 0.0f, under2p2At = -1.0f, waterOver = 0.0f;
+    std::vector<float> flowAt; // true pump flow each cycle of the power phases
+    for (int i = 0; i < 60 * 26; i++) {
+        rig.step();
+        if (rig.sent.kind != Command::POWER)
+            continue;
+        if (tookOverAt < 0.0f && rig.pump.isFlowCapLimiting())
+            tookOverAt = rig.t - kRise;
+        meterPeak = std::max(meterPeak, rig.meter.reading);
+        if (tookOverAt >= 0.0f && under2p2At < 0.0f && rig.meter.reading < 2.2f && rig.t - kRise > tookOverAt + 0.2f)
+            under2p2At = rig.t - kRise;
+        waterOver += std::max(0.0f, rig.trueFlow - 2.0f) * Rig::kDt;
+        flowAt.push_back(rig.trueFlow);
+        TEST_ASSERT_TRUE(rig.power() <= rig.sent.power + 1e-4f); // never more than the ramp
+        TEST_ASSERT_EQUAL_INT(100, psmLastLevel());              // mains output stays on
+        if (std::fabs(rig.t - kRise - 1.0f) < 0.009f || std::fabs(rig.t - kRise - 2.0f) < 0.009f ||
+            std::fabs(rig.t - kRise - 3.0f) < 0.009f || std::fabs(rig.t - kRise - 5.0f) < 0.009f ||
+            std::fabs(rig.t - kRise - 10.0f) < 0.009f || std::fabs(rig.t - kRise - 20.0f) < 0.009f)
+            printf("    shot 573 with the cap, %4.1f s: ramp %.1f %%, pump %.1f %%, meter %.2f ml/s, %.1f bar\n", rig.t - kRise,
+                   rig.sent.power, rig.power(), rig.meter.reading, rig.pressure);
+    }
+    printf("    cap took the pump %.2f s into the power phase, meter peak %.2f ml/s, under 2.2 ml/s after %.1f s, "
+           "%.1f ml pumped above the cap\n",
+           tookOverAt, meterPeak, under2p2At, waterOver);
+    snprintf(msg, sizeof(msg), "the cap took the pump %.2f s into the power phase", tookOverAt);
+    TEST_ASSERT_TRUE_MESSAGE(tookOverAt >= 0.0f && tookOverAt < 0.35f, msg);
+    snprintf(msg, sizeof(msg), "meter under 2.2 ml/s %.1f s into the power phase", under2p2At);
+    TEST_ASSERT_TRUE_MESSAGE(under2p2At > 0.0f && under2p2At < 4.0f, msg);
+    // from 6 s on the flow is on the cap
+    for (size_t i = 60 * 6; i < flowAt.size(); i++) {
+        if (std::fabs(flowAt[i] - 2.0f) > 0.12f) {
+            snprintf(msg, sizeof(msg), "%.1f s into the power phase the flow is %.2f ml/s", i / 60.0f, flowAt[i]);
+            TEST_FAIL_MESSAGE(msg);
+        }
+    }
+    TEST_ASSERT_TRUE(rig.pump.isFlowCapLimiting());
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, rig.pump.getFlowCapReport());
+    snprintf(msg, sizeof(msg), "end: pump %.1f %% (ramp %.1f %%), %.2f ml/s, %.1f bar", rig.power(), rig.sent.power, rig.trueFlow,
+             rig.pressure);
+    TEST_ASSERT_TRUE_MESSAGE(rig.power() < rig.sent.power - 8.0f, msg);
+    TEST_ASSERT_TRUE_MESSAGE(rig.pressure > 2.5f && rig.pressure < 4.5f, msg);
 }
 
 // A cap that is not a positive number is no cap.
@@ -491,6 +653,9 @@ int main(int, char **) {
     RUN_TEST(test_diagnostics_line);
     RUN_TEST(test_flow_phase_after_a_capped_power_phase);
     RUN_TEST(test_no_meter_link_ignores_the_cap);
+    RUN_TEST(test_can_drive_takes_the_cap);
+    RUN_TEST(test_mains_output_mode_does_not_change_the_pump_power);
+    RUN_TEST(test_shot_573_is_held_at_the_cap);
     RUN_TEST(test_bad_cap_values);
     return UNITY_END();
 }

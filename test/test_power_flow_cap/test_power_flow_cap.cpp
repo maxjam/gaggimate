@@ -38,6 +38,9 @@ FlowLoopGains maxGains() {
     g.limKp = 3.0f;
     g.limKi = 1.5f;
     g.deadZone = 0.10f;
+    // setupMeterLink() on the Pro: half gain below 25 % pump power (the meter board's $G leaves these two alone)
+    g.knee = 0.25f;
+    g.kneeGain = 0.5f;
     return g;
 }
 

@@ -5,10 +5,19 @@
 
 #include <cstdint>
 
+// Last level written to the mains output (0..100), for the tests: with the CAN drive it is on (100) or off (0).
+inline int &psmLastLevel() {
+    static int level = 0;
+    return level;
+}
+
 class PSM {
   public:
     PSM(uint8_t, uint8_t, int, int, int, int) {}
-    void set(int value) { last = value; }
+    void set(int value) {
+        last = value;
+        psmLastLevel() = value;
+    }
     int cps() { return 60; }
     void setDivider(int) {}
     int last = 0;

@@ -18,8 +18,9 @@ class DimmedPump : public Pump {
     void loop() override;
     void setPower(float setpoint) override;
     // Fork (maxa4turbo.18): power phase with a flow cap. The pump runs at `setpoint` until the meter reads more than
-    // `maxFlow` (ml/s); then the measured-flow loop holds maxFlow: power = min(setpoint, flow loop). maxFlow <= 0,
-    // no meter link or a pump in on/off mode = setPower(setpoint).
+    // `maxFlow` (ml/s); then the measured-flow loop holds maxFlow: power = min(setpoint, flow loop). maxFlow <= 0
+    // or no meter link = setPower(setpoint). Works with the mains output dimmed or on / off (setBinaryMode: the
+    // CAN drive and the adapter, maxa4turbo.19).
     void setPower(float setpoint, float maxFlow);
 
     float getCoffeeVolume();
